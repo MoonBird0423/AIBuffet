@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>反馈 - AI自助餐</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between">
+                <div class="flex space-x-7">
+                    <div>
+                        <a href="index.html" class="flex items-center py-4">
+                            <i class="fas fa-robot text-3xl text-blue-500 mr-2"></i>
+                            <span class="font-semibold text-gray-800 text-lg">AI自助餐</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <a href="index.html" class="py-4 px-2 text-gray-500 font-semibold hover:text-blue-500 transition duration-300">首页</a>
+                    <a href="comparison.html" class="py-4 px-2 text-gray-500 font-semibold hover:text-blue-500 transition duration-300">对比</a>
+                    <a href="learning.html" class="py-4 px-2 text-gray-500 font-semibold hover:text-blue-500 transition duration-300">学习</a>
+                    <a href="community.html" class="py-4 px-2 text-gray-500 font-semibold hover:text-blue-500 transition duration-300">社区</a>
+                    <a href="feedback.html" class="py-4 px-2 text-blue-500 border-b-4 border-blue-500 font-semibold">反馈</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 页面标题 -->
+    <div class="bg-gradient-to-r from-blue-400 to-blue-600 text-white py-8">
+        <div class="container mx-auto px-4">
+            <h1 class="text-3xl font-bold mb-2">分享您的反馈</h1>
+            <p class="text-lg mb-0">通过您的建议和体验帮助我们改进AI自助餐</p>
+        </div>
+    </div>
+
+    <!-- 主要内容 -->
+    <div class="container mx-auto px-4 py-10">
+        <div class="max-w-4xl mx-auto">
+            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-10">
+                <div class="p-8">
+                    <h2 class="text-2xl font-bold mb-6">为什么您的反馈很重要</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="text-center">
+                            <div class="bg-blue-100 text-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-lightbulb text-2xl"></i>
+                            </div>
+                            <h3 class="text-lg font-bold mb-2">塑造未来</h3>
+                            <p class="text-gray-600">您的想法直接影响我们的路线图和即将推出的功能。</p>
+                        </div>
+                        <div class="text-center">
+                            <div class="bg-green-100 text-green-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-users text-2xl"></i>
+                            </div>
+                            <h3 class="text-lg font-bold mb-2">帮助他人学习</h3>
+                            <p class="text-gray-600">您的经验可以帮助改进所有用户使用的平台。</p>
+                        </div>
+                        <div class="text-center">
+                            <div class="bg-purple-100 text-purple-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-star text-2xl"></i>
+                            </div>
+                            <h3 class="text-lg font-bold mb-2">获得您想要的功能</h3>
+                            <p class="text-gray-600">告诉我们缺少什么，我们将努力将其添加到平台中。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 快速反馈 -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-10">
+                <div class="p-8">
+                    <h2 class="text-2xl font-bold mb-6">快速反馈</h2>
+                    <p class="text-gray-600 mb-6">您如何评价AI自助餐的体验？</p>
+                    
+                    <div class="flex flex-wrap justify-center gap-4 mb-8">
+                        <button class="w-16 h-16 bg-red-50 hover:bg-red-100 rounded-full flex flex-col items-center justify-center transition duration-300">
+                            <i class="far fa-sad-tear text-red-500 text-2xl mb-1"></i>
+                            <span class="text-xs text-gray-600">很差</span>
+                        </button>
+                        <button class="w-16 h-16 bg-orange-50 hover:bg-orange-100 rounded-full flex flex-col items-center justify-center transition duration-300">
+                            <i class="far fa-frown text-orange-500 text-2xl mb-1"></i>
+                            <span class="text-xs text-gray-600">一般</span>
+                        </button>
+                        <button class="w-16 h-16 bg-yellow-50 hover:bg-yellow-100 rounded-full flex flex-col items-center justify-center transition duration-300">
+                            <i class="far fa-meh text-yellow-500 text-2xl mb-1"></i>
+                            <span class="text-xs text-gray-600">中等</span>
+                        </button>
+                        <button class="w-16 h-16 bg-green-50 hover:bg-green-100 rounded-full flex flex-col items-center justify-center transition duration-300">
+                            <i class="far fa-smile text-green-500 text-2xl mb-1"></i>
+                            <span class="text-xs text-gray-600">良好</span>
+                        </button>
+                        <button class="w-16 h-16 bg-blue-50 hover:bg-blue-100 rounded-full flex flex-col items-center justify-center transition duration-300">
+                            <i class="far fa-grin-stars text-blue-500 text-2xl mb-1"></i>
+                            <span class="text-xs text-gray-600">极佳</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 详细反馈表单 -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-10">
+                <div class="p-8">
+                    <h2 class="text-2xl font-bold mb-6">详细反馈</h2>
+                    <form>
+                        <div class="mb-6">
+                            <label for="name" class="block text-gray-700 font-medium mb-2">您的姓名</label>
+                            <input type="text" id="name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="输入您的姓名">
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label for="email" class="block text-gray-700 font-medium mb-2">电子邮件地址</label>
+                            <input type="email" id="email" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="输入您的电子邮件">
+                            <p class="text-sm text-gray-500 mt-1">我们只会在需要时用它来跟进您的反馈。</p>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label class="block text-gray-700 font-medium mb-3">评价您对这些功能的体验：</label>
+                            
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-700">模型选择</span>
+                                    <div class="flex space-x-1">
+                                        <button type="button" class="text-gray-300 hover:text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-gray-300 hover:text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-gray-300 hover:text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-gray-300 hover:text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-gray-300 hover:text-yellow-500"><i class="fas fa-star"></i></button>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-700">比较界面</span>
+                                    <div class="flex space-x-1">
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-gray-300 hover:text-yellow-500"><i class="fas fa-star"></i></button>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-700">学习资源</span>
+                                    <div class="flex space-x-1">
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-gray-300 hover:text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-gray-300 hover:text-yellow-500"><i class="fas fa-star"></i></button>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-700">社区论坛</span>
+                                    <div class="flex space-x-1">
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-700">整体体验</span>
+                                    <div class="flex space-x-1">
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-yellow-500"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="text-gray-300 hover:text-yellow-500"><i class="fas fa-star"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label for="feedback-type" class="block text-gray-700 font-medium mb-2">反馈类型</label>
+                            <select id="feedback-type" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option>一般反馈</option>
+                                <option>功能请求</option>
+                                <option>错误报告</option>
+                                <option>内容建议</option>
+                                <option>模型特定反馈</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label for="feedback" class="block text-gray-700 font-medium mb-2">您的反馈</label>
+                            <textarea id="feedback" rows="5" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="请分享您的想法、建议或报告您遇到的任何问题..."></textarea>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label for="suggestions" class="block text-gray-700 font-medium mb-2">我们如何改进AI自助餐？</label>
+                            <textarea id="suggestions" rows="3" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="您希望看到哪些功能或改进？"></textarea>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label class="flex items-center">
+                                <input type="checkbox" class="rounded text-blue-600 focus:ring-blue-500 h-4 w-4">
+                                <span class="ml-2 text-gray-700">我愿意被联系关于我的反馈</span>
+                            </label>
+                        </div>
+                        
+                        <div class="flex justify-end">
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition duration-300 flex items-center">
+                                <i class="fas fa-paper-plane mr-2"></i> 提交反馈
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 功能投票 -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-10">
+                <div class="p-8">
+                    <h2 class="text-2xl font-bold mb-6">为未来功能投票</h2>
+                    <p class="text-gray-600 mb-6">通过投票选择您希望看到的下一个功能，帮助我们确定路线图优先级。</p>
+                    
+                    <div class="space-y-4">
+                        <div class="border rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-bold text-lg">AI模型解释</h3>
+                                    <p class="text-gray-600">关于每个AI模型底层工作原理的详细解释</p>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="font-bold text-lg mr-3">142</span>
+                                    <button class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-lg transition duration-300">
+                                        <i class="fas fa-arrow-up mr-1"></i> 投票
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="border rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-bold text-lg">更多AI模型</h3>
+                                    <p class="text-gray-600">添加对Mistral、DALL-E和Stable Diffusion等其他AI模型的支持</p>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="font-bold text-lg mr-3">204</span>
+                                    <button class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-lg transition duration-300">
+                                        <i class="fas fa-arrow-up mr-1"></i> 投票
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="border rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-bold text-lg">AI模型成本比较</h3>
+                                    <p class="text-gray-600">比较不同AI模型的价格和API成本</p>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="font-bold text-lg mr-3">87</span>
+                                    <button class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-lg transition duration-300">
+                                        <i class="fas fa-arrow-up mr-1"></i> 投票
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="border rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-bold text-lg">保存比较结果</h3>
+                                    <p class="text-gray-600">保存和分享您的模型比较结果</p>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="font-bold text-lg mr-3">176</span>
+                                    <button class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-lg transition duration-300">
+                                        <i class="fas fa-arrow-up mr-1"></i> 投票
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <button class="text-blue-600 hover:text-blue-800 font-medium flex items-center">
+                            <i class="fas fa-plus mr-1.5"></i> 建议新功能
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 感谢信息 -->
+            <div class="text-center py-8">
+                <div class="bg-blue-50 p-6 rounded-xl inline-block">
+                    <i class="fas fa-heart text-4xl text-red-500 mb-3"></i>
+                    <h2 class="text-2xl font-bold mb-2">感谢您的反馈！</h2>
+                    <p class="text-gray-600 max-w-lg">您的意见对于帮助我们改进AI自助餐至关重要。我们会审查所有反馈并用它来确定我们的开发优先事项。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-8">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between">
+                <div class="mb-6 md:mb-0">
+                    <div class="flex items-center">
+                        <i class="fas fa-robot text-3xl text-blue-400 mr-2"></i>
+                        <span class="text-xl font-bold">AI自助餐</span>
+                    </div>
+                    <p class="mt-2 text-gray-400">挑选您的餐盘，开启AI之旅！</p>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-8">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3">探索</h3>
+                        <ul class="space-y-2">
+                            <li><a href="index.html" class="text-gray-400 hover:text-white">首页</a></li>
+                            <li><a href="comparison.html" class="text-gray-400 hover:text-white">比较模型</a></li>
+                            <li><a href="learning.html" class="text-gray-400 hover:text-white">学习资源</a></li>
+                        </ul>
+                    </div>
+                                        
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3">关注我们</h3>
+                        <div class="flex space-x-4">
+                            <a href="#" class="text-gray-400 hover:text-white text-lg"><i class="fab fa-twitter"></i></a>
+                            <a href="#" class="text-gray-400 hover:text-white text-lg"><i class="fab fa-linkedin"></i></a>
+                            <a href="#" class="text-gray-400 hover:text-white text-lg"><i class="fab fa-github"></i></a>
+                            <a href="#" class="text-gray-400 hover:text-white text-lg"><i class="fab fa-discord"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400 text-sm">
+                <p>&copy; 2023 AI自助餐. 版权所有.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
