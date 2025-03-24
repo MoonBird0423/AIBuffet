@@ -1,5 +1,8 @@
-# AIBuffet 项目
+# AIBuffet
 
+AI自助餐，新手用户学习AI的第一站
+
+## 项目介绍
 这是一个前后端分离的项目，前端使用React，后端使用Java Spring。
 
 ## 项目结构
