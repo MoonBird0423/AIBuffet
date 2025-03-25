@@ -5,36 +5,22 @@ import Banner from '../components/home/Banner';
 import ModelCard from '../components/home/ModelCard';
 import Features from '../components/home/Features';
 import Footer from '../components/layout/Footer';
-import { FaAppleAlt, FaLemon, FaCarrot, FaDog } from 'react-icons/fa';
 import { queryModels } from '../services/api';
-
-const iconMap = {
-  'GPT-4': { component: FaAppleAlt, color: 'red' },
-  'Claude': { component: FaLemon, color: 'yellow' },
-  'Gemini': { component: FaCarrot, color: 'green' },
-  'Llama 2': { component: FaDog, color: 'yellow' }
-};
 
 function Home() {
   const [selectedModels, setSelectedModels] = useState([]);
   const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchParams, setSearchParams] = useState({
-    name: '',
-    purpose: ''
-  });
 
-  const fetchModels = useCallback(async (params = {}) => {
+  const fetchModels = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await queryModels(params);
-      const modelsWithIcons = data.map(model => ({
+      const data = await queryModels();
+      const modelsWithTags = data.map(model => ({
         ...model,
-        iconComponent: (iconMap[model.name] || {}).component || FaAppleAlt,
-        iconColor: (iconMap[model.name] || {}).color || 'blue',
         tags: model.purpose ? model.purpose.split(',') : []
       }));
-      setModels(modelsWithIcons);
+      setModels(modelsWithTags);
     } catch (error) {
       console.error('Failed to fetch models:', error);
     } finally {
@@ -42,10 +28,9 @@ function Home() {
     }
   }, []);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    fetchModels(searchParams);
-  };
+  useEffect(() => {
+    fetchModels();
+  }, [fetchModels]);
 
   const navigate = useNavigate();
   
@@ -80,32 +65,6 @@ function Home() {
         <h2 className="text-3xl font-bold text-center mb-8">精选AI模型</h2>
         <p className="text-center text-gray-600 mb-6">选择最多3个模型进行比较，查看它们如何回应您的问题。</p>
         
-        {/* Search Form */}
-        <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-8">
-          <div className="flex flex-wrap gap-4">
-            <input
-              type="text"
-              placeholder="搜索模型名称"
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-              value={searchParams.name}
-              onChange={e => setSearchParams(prev => ({ ...prev, name: e.target.value }))}
-            />
-            <input
-              type="text"
-              placeholder="搜索模型用途"
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-              value={searchParams.purpose}
-              onChange={e => setSearchParams(prev => ({ ...prev, purpose: e.target.value }))}
-            />
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300"
-            >
-              搜索
-            </button>
-          </div>
-        </form>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {loading ? (
             <div className="col-span-full text-center py-8">加载中...</div>
