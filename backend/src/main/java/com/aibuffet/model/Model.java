@@ -34,7 +34,18 @@ public class Model {
     @Column(name = "invocation_method")
     private String invocationMethod = "openAPI";
 
+    @Column
+    private String emoji;
+
     // Getters and Setters
+    
+    public String getEmoji() {
+        return emoji;
+    }
+
+    public void setEmoji(String emoji) {
+        this.emoji = emoji;
+    }
     public Integer getId() {
         return id;
     }

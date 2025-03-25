@@ -1,15 +1,15 @@
 import React from 'react';
 import { FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
+import { getModelEmoji } from '../../config/defaultEmojis';
 
-function ModelCard({ 
-  name, 
-  iconComponent: IconComponent,
-  iconBgColor, 
-  rating, 
-  description, 
+function ModelCard({
+  name,
+  emoji,
+  rating,
+  description,
   tags,
   isSelected,
-  onSelect 
+  onSelect
 }) {
   // 生成评分星星
   const renderStars = (rating) => {
@@ -48,8 +48,8 @@ function ModelCard({
     }`}>
       <div className="p-6">
         <div className="flex items-center mb-3">
-          <div className={`text-2xl mr-3 bg-${iconBgColor}-100 p-3 rounded-full`}>
-            <IconComponent className={`text-${iconBgColor}-600`} />
+          <div className="text-3xl mr-3 flex items-center justify-center w-12 h-12 bg-gray-50 rounded-full">
+            {getModelEmoji(name, emoji)}
           </div>
           <div>
             <h3 className="text-xl font-bold">{name}</h3>
@@ -84,7 +84,7 @@ function ModelCard({
           className="text-blue-500 hover:text-blue-700 font-medium flex items-center transition duration-300"
           onClick={() => onSelect(name)}
         >
-          {isSelected ? '取消选择' : '单独品尝'} 
+          {isSelected ? '取消选择' : '立即尝鲜'} 
           <svg
             className="w-4 h-4 ml-1"
             fill="none"
