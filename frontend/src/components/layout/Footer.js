@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import Logo from '../common/Logo';
 import { 
-  FaRobot, 
   FaTwitter, 
   FaLinkedin, 
   FaGithub, 
@@ -28,10 +28,7 @@ function Footer() {
         <div className="flex flex-col md:flex-row justify-between">
           {/* 左侧Logo部分 */}
           <div className="mb-6 md:mb-0">
-            <div className="flex items-center">
-              <FaRobot className="text-3xl text-blue-400 mr-2" />
-              <span className="text-xl font-bold">AI自助餐</span>
-            </div>
+            <Logo theme="light" />
             <p className="mt-2 text-gray-400">拿起您的餐盘，开启AI之旅！</p>
           </div>
           

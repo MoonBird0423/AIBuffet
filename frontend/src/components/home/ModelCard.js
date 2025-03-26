@@ -9,7 +9,8 @@ function ModelCard({
   description,
   tags,
   isSelected,
-  onSelect
+  onSelect,
+  purpose
 }) {
   // 生成评分星星
   const renderStars = (rating) => {
@@ -40,6 +41,16 @@ function ModelCard({
       'bg-indigo-100 text-indigo-800'
     ];
     return colors[index % colors.length];
+  };
+
+  // 处理"立即尝鲜"按钮点击
+  const handleTryClick = () => {
+    const queryParams = new URLSearchParams({
+      model: name,
+      emoji: emoji || '',
+      purpose: purpose || ''
+    }).toString();
+    window.open(`/chat?${queryParams}`, '_blank');
   };
 
   return (
@@ -80,26 +91,34 @@ function ModelCard({
             </span>
           ))}
         </div>
-        <button 
-          className="text-blue-500 hover:text-blue-700 font-medium flex items-center transition duration-300"
-          onClick={() => onSelect(name)}
-        >
-          {isSelected ? '取消选择' : '立即尝鲜'} 
-          <svg
-            className="w-4 h-4 ml-1"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
+        <div className="flex space-x-2">
+          <button 
+            className="text-blue-500 hover:text-blue-700 font-medium flex items-center transition duration-300"
+            onClick={handleTryClick}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
+            立即尝鲜
+            <svg
+              className="w-4 h-4 ml-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </button>
+          <button 
+            className="text-gray-500 hover:text-gray-700 font-medium flex items-center transition duration-300"
+            onClick={() => onSelect(name)}
+          >
+            {isSelected ? '取消选择' : '加入对比'}
+          </button>
+        </div>
       </div>
     </div>
   );
