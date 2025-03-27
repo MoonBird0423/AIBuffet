@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 function UserProfile({ className = '' }) {
-  const { user, updateAvatar } = useAuth();
+  const { user, updateAvatar, updateUsername, logout } = useAuth();
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleClick = () => {
     if (!user) {
@@ -17,6 +20,29 @@ function UserProfile({ className = '' }) {
 
   const handleClose = () => {
     setIsModalOpen(false);
+    setEditingUsername(false);
+    setShowLogoutConfirm(false);
+  };
+
+  const handleStartEditUsername = () => {
+    setNewUsername(user?.username || '');
+    setEditingUsername(true);
+  };
+
+  const handleSaveUsername = () => {
+    if (newUsername.trim()) {
+      updateUsername(newUsername.trim());
+      setEditingUsername(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const handleConfirmLogout = () => {
+    logout();
+    handleClose();
   };
 
   const handleFileUpload = (event) => {
@@ -44,13 +70,13 @@ function UserProfile({ className = '' }) {
   return (
     <>
       <div
-        className={`flex items-center space-x-3 cursor-pointer ${className}`}
+        className={`flex items-center space-x-3 cursor-pointer hover:bg-gray-100 rounded-lg p-2 ${className}`}
         onClick={handleClick}
       >
         <img
           src={user?.avatar || "/head.png"}
           alt={user ? "用户头像" : "默认头像"}
-          className="w-8 h-8 rounded-full"
+          className="w-8 h-8 rounded-full bg-gray-50"
         />
         <span className="text-gray-700 font-medium">
           {user ? user.username : "点击登录"}
@@ -79,7 +105,7 @@ function UserProfile({ className = '' }) {
                 <img
                   src={user?.avatar || "/head.png"}
                   alt="用户头像"
-                  className="w-24 h-24 rounded-full mb-2"
+                  className="w-24 h-24 rounded-full mb-2 bg-gray-100"
                 />
                 <label className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
                   <span className="text-white text-sm">点击更换头像</span>
@@ -99,9 +125,35 @@ function UserProfile({ className = '' }) {
                 <span className="text-gray-500 w-24">账号：</span>
                 <span>{user?.account || '-'}</span>
               </div>
-              <div className="flex border-b py-2">
+              <div className="flex items-center border-b py-2">
                 <span className="text-gray-500 w-24">用户名：</span>
-                <span>{user?.username || '-'}</span>
+                <div className="flex items-center gap-2">
+                  {editingUsername ? (
+                    <input
+                      type="text"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      onBlur={() => {
+                        if (newUsername.trim()) {
+                          updateUsername(newUsername.trim());
+                        }
+                        setEditingUsername(false);
+                      }}
+                      className="border-none focus:outline-none bg-transparent"
+                      autoFocus
+                    />
+                  ) : (
+                    <>
+                      <span>{user?.username || '-'}</span>
+                      <button
+                        onClick={handleStartEditUsername}
+                        className="text-blue-500 hover:text-blue-600 text-sm"
+                      >
+                        编辑
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
               <div className="flex border-b py-2">
                 <span className="text-gray-500 w-24">手机号：</span>
@@ -111,6 +163,40 @@ function UserProfile({ className = '' }) {
                 <span className="text-gray-500 w-24">微信号：</span>
                 <span>{user?.wechat || '-'}</span>
               </div>
+            </div>
+
+            {/* 退出按钮 */}
+            <div className="mt-6">
+              <button
+                onClick={handleLogout}
+                className="w-full py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                退出登录
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 退出确认弹窗 */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-80">
+            <h3 className="text-lg font-semibold mb-4">确认退出</h3>
+            <p className="text-gray-600 mb-6">确定要退出登录吗？</p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmLogout}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+              >
+                确认退出
+              </button>
             </div>
           </div>
         </div>
