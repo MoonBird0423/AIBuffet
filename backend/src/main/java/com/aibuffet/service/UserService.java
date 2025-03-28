@@ -1,5 +1,6 @@
 package com.aibuffet.service;
 
+import com.aibuffet.common.ApiResponse;
 import com.aibuffet.common.ErrorCode;
 import com.aibuffet.dto.UserDTO;
 import com.aibuffet.model.User;
@@ -17,17 +18,25 @@ public class UserService {
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Transactional
-    public UserDTO loginWithPhone(String phone, String code) {
+    public ApiResponse loginWithPhone(String phone, String code) {
         // 验证手机验证码
         if (!verificationCodeService.verifyCode(phone, code)) {
-            throw new RuntimeException(ErrorCode.SMS_CODE_INVALID.getMessage());
+            return ApiResponse.error(ErrorCode.SMS_CODE_INVALID);
         }
 
-        // 查找用户，不存在则注册
-        User user = userRepository.findByPhone(phone)
-                .orElseGet(() -> registerNewUser(phone));
+        try {
+            // 查找用户
+            boolean isNewUser = !userRepository.existsByPhone(phone);
+            User user = userRepository.findByPhone(phone)
+                    .orElseGet(() -> registerNewUser(phone));
 
-        return UserDTO.fromUser(user);
+            // 使用新的fromUser方法，直接传入isNewUser标记
+            UserDTO userDTO = UserDTO.fromUser(user, isNewUser);
+
+            return ApiResponse.success(userDTO);
+        } catch (Exception e) {
+            return ApiResponse.error(ErrorCode.LOGIN_FAILED);
+        }
     }
 
     private User registerNewUser(String phone) {
