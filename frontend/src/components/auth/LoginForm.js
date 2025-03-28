@@ -76,10 +76,21 @@ function LoginForm() {
         code
       });
       
+      // 登录成功，保存用户信息
       login(userData);
+
+      // 如果是新用户，显示欢迎消息
+      if (userData.newUser) {
+        // 使用toast或alert显示欢迎消息
+        alert(`欢迎加入AI自助餐！您的默认用户名为：${userData.username}`);
+      }
+      
       navigate(-1);
     } catch (error) {
-      setError(error.message);
+      setError(error.message || '登录失败，请稍后重试');
+      if (error.response?.data?.code === 2004) {
+        setCode(''); // 清空验证码输入
+      }
     }
   };
 

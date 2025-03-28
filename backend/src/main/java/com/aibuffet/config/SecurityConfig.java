@@ -32,7 +32,7 @@ public class SecurityConfig {
             })
             .sessionManagement(session -> {
                 System.out.println("配置Session管理...");
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+                session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED);
             })
             .authorizeHttpRequests(auth -> {
                 System.out.println("配置请求授权规则...");
@@ -56,7 +56,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000")); // 前端开发服务器地址
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:8080")); // 前端开发服务器地址
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

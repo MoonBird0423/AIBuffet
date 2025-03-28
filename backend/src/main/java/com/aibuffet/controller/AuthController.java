@@ -4,6 +4,7 @@ import com.aibuffet.common.ApiResponse;
 import com.aibuffet.common.ErrorCode;
 import com.aibuffet.dto.CaptchaResponse;
 import com.aibuffet.service.CaptchaService;
+import com.aibuffet.service.UserService;
 import com.aibuffet.service.VerificationCodeService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,9 @@ public class AuthController {
 
     @Autowired
     private VerificationCodeService verificationCodeService;
+    
+    @Autowired
+    private UserService userService;
 
     @GetMapping("/captcha/generate")
     public ApiResponse generateCaptcha(HttpServletRequest request) {
@@ -76,6 +80,21 @@ public class AuthController {
     /**
      * 获取客户端真实IP地址
      */
+    @PostMapping("/login/phone")
+    public ApiResponse loginWithPhone(@RequestBody Map<String, String> request) {
+        String phone = request.get("phone");
+        String code = request.get("code");
+
+        System.out.println("收到手机登录请求 - phone: " + phone);
+
+        if (phone == null || code == null) {
+            System.out.println("参数错误 - phone: " + phone + ", code: " + code);
+            return ApiResponse.error(ErrorCode.PARAM_ERROR);
+        }
+
+        return userService.loginWithPhone(phone, code);
+    }
+
     private String getClientIp(HttpServletRequest request) {
         String ipAddress = request.getHeader("X-Forwarded-For");
         if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
