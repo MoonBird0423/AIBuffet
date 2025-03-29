@@ -19,7 +19,7 @@ export const updateUserAvatar = async (file) => {
     
     // 使用apiClient直接发送请求，它会自动处理Content-Type
     const response = await apiClient.post('/user/avatar', formData);
-    return response.data.data;
+    return { avatarUrl: response.data.data };
   } catch (error) {
     console.error('Error updating avatar:', error);
     throw error;
@@ -30,10 +30,19 @@ export const updateUserAvatar = async (file) => {
 export const updateUserUsername = async (username) => {
   try {
     const response = await apiClient.put('/user/username', { username });
+    console.log('updateUserUsername API response:', response.data);
+    
+    // 检查响应格式
+    if (response.data.code !== 200) {
+      throw new Error(response.data.message || '更新用户名失败');
+    }
+    
+    // 返回data字段的值
     return response.data.data;
   } catch (error) {
     console.error('Error updating username:', error);
-    throw error;
+    // 确保错误消息被正确传递
+    throw new Error(error.response?.data?.message || error.message || '更新用户名失败');
   }
 };
 

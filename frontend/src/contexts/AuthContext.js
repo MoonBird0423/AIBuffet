@@ -89,13 +89,29 @@ export function AuthProvider({ children }) {
 
     try {
       setLoading(true);
-      const { username } = await updateUserUsername(newUsername);
-      setUser({
+      const response = await updateUserUsername(newUsername);
+      
+      // 检查响应数据是否有效
+      if (!response) {
+        throw new Error('更新用户名失败：服务器返回数据无效');
+      }
+
+      // API返回的是直接的用户名字符串
+      const updatedUsername = response;
+
+      console.log('Previous user state:', user);
+      console.log('New username from API:', updatedUsername);
+      
+      const updatedUser = {
         ...user,
-        username
-      });
+        username: updatedUsername
+      };
+      
+      console.log('Updated user state:', updatedUser);
+      setUser(updatedUser);
     } catch (err) {
-      setError(err.message);
+      console.error('Update username error:', err);
+      setError(err.message || '更新用户名失败，请重试');
       throw err;
     } finally {
       setLoading(false);

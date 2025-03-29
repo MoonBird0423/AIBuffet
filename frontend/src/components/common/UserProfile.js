@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -45,12 +45,20 @@ function UserProfile({ className = '' }) {
     if (!newUsername.trim()) return;
 
     try {
+      console.log('Saving new username:', newUsername.trim());
       await updateUsername(newUsername.trim());
+      console.log('Username saved, current user:', user);
       setEditingUsername(false);
     } catch (err) {
+      console.error('Error saving username:', err);
       // 错误已在AuthContext中处理
     }
   };
+
+  // 添加 useEffect 来监控 user 对象的变化
+  useEffect(() => {
+    console.log('User object updated in UserProfile:', user);
+  }, [user]);
 
   const handleLogout = () => {
     setShowLogoutConfirm(true);
@@ -181,7 +189,7 @@ function UserProfile({ className = '' }) {
                     </div>
                   ) : (
                     <>
-                      <span>{user?.username || '-'}</span>
+                      <span>{user?.username || '-'} {/* username: ${JSON.stringify(user)} */}</span>
                       <button
                         onClick={handleStartEditUsername}
                         disabled={loading}
