@@ -3,7 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 function UserProfile({ className = '' }) {
-  const { user, updateAvatar, updateUsername, logout } = useAuth();
+  // 格式化手机号，隐藏中间4位
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return '-';
+    return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
+  };
+
+  // 处理图片加载错误
+  const handleImageError = (e) => {
+    e.target.src = "/head.png";
+  };
+
+  const { user, loading, error, updateAvatar, updateUsername, logout, clearError } = useAuth();
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUsername, setEditingUsername] = useState(false);
@@ -22,6 +33,7 @@ function UserProfile({ className = '' }) {
     setIsModalOpen(false);
     setEditingUsername(false);
     setShowLogoutConfirm(false);
+    clearError();  // 关闭弹窗时清除错误
   };
 
   const handleStartEditUsername = () => {
@@ -29,10 +41,14 @@ function UserProfile({ className = '' }) {
     setEditingUsername(true);
   };
 
-  const handleSaveUsername = () => {
-    if (newUsername.trim()) {
-      updateUsername(newUsername.trim());
+  const handleSaveUsername = async () => {
+    if (!newUsername.trim()) return;
+
+    try {
+      await updateUsername(newUsername.trim());
       setEditingUsername(false);
+    } catch (err) {
+      // 错误已在AuthContext中处理
     }
   };
 
@@ -40,14 +56,17 @@ function UserProfile({ className = '' }) {
     setShowLogoutConfirm(true);
   };
 
-  const handleConfirmLogout = () => {
-    logout();
-    handleClose();
+  const handleConfirmLogout = async () => {
+    try {
+      await logout();
+      handleClose();
+    } catch (err) {
+      // 错误已在AuthContext中处理
+    }
   };
 
-  const handleFileUpload = (event) => {
+  const handleFileUpload = async (event) => {
     const file = event.target.files[0];
-    
     if (!file) return;
 
     // 验证文件类型
@@ -62,9 +81,11 @@ function UserProfile({ className = '' }) {
       return;
     }
 
-    // 创建本地预览URL
-    const imageUrl = URL.createObjectURL(file);
-    updateAvatar(imageUrl);
+    try {
+      await updateAvatar(file);
+    } catch (err) {
+      // 错误已在AuthContext中处理
+    }
   };
 
   return (
@@ -75,6 +96,7 @@ function UserProfile({ className = '' }) {
       >
         <img
           src={user?.avatar || "/head.png"}
+          onError={handleImageError}
           alt={user ? "用户头像" : "默认头像"}
           className="w-8 h-8 rounded-full bg-gray-50"
         />
@@ -99,21 +121,32 @@ function UserProfile({ className = '' }) {
 
             <h2 className="text-xl font-semibold mb-6">账户信息</h2>
 
+            {/* 错误提示 */}
+            {error && (
+              <div className="mb-4 p-2 bg-red-50 text-red-600 rounded">
+                {error}
+              </div>
+            )}
+
             {/* 头像上传区域 */}
             <div className="flex flex-col items-center mb-6">
               <div className="relative group">
                 <img
                   src={user?.avatar || "/head.png"}
+                  onError={handleImageError}
                   alt="用户头像"
                   className="w-24 h-24 rounded-full mb-2 bg-gray-100"
                 />
-                <label className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-white text-sm">点击更换头像</span>
+                <label className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer ${loading ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100 transition-opacity`}>
+                  <span className="text-white text-sm">
+                    {loading ? '上传中...' : '点击更换头像'}
+                  </span>
                   <input
                     type="file"
                     accept=".jpg,.jpeg,.png"
                     onChange={handleFileUpload}
                     className="hidden"
+                    disabled={loading}
                   />
                 </label>
               </div>
@@ -123,31 +156,36 @@ function UserProfile({ className = '' }) {
             <div className="space-y-4">
               <div className="flex border-b py-2">
                 <span className="text-gray-500 w-24">账号：</span>
-                <span>{user?.account || '-'}</span>
+                <span>{user?.userId || '-'}</span>
               </div>
               <div className="flex items-center border-b py-2">
                 <span className="text-gray-500 w-24">用户名：</span>
                 <div className="flex items-center gap-2">
                   {editingUsername ? (
-                    <input
-                      type="text"
-                      value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      onBlur={() => {
-                        if (newUsername.trim()) {
-                          updateUsername(newUsername.trim());
-                        }
-                        setEditingUsername(false);
-                      }}
-                      className="border-none focus:outline-none bg-transparent"
-                      autoFocus
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newUsername}
+                        onChange={(e) => setNewUsername(e.target.value)}
+                        className="border-none focus:outline-none bg-transparent"
+                        disabled={loading}
+                        autoFocus
+                      />
+                      <button
+                        onClick={handleSaveUsername}
+                        disabled={loading}
+                        className="text-blue-500 hover:text-blue-600 text-sm disabled:opacity-50"
+                      >
+                        {loading ? '保存中...' : '保存'}
+                      </button>
+                    </div>
                   ) : (
                     <>
                       <span>{user?.username || '-'}</span>
                       <button
                         onClick={handleStartEditUsername}
-                        className="text-blue-500 hover:text-blue-600 text-sm"
+                        disabled={loading}
+                        className="text-blue-500 hover:text-blue-600 text-sm disabled:opacity-50"
                       >
                         编辑
                       </button>
@@ -157,11 +195,11 @@ function UserProfile({ className = '' }) {
               </div>
               <div className="flex border-b py-2">
                 <span className="text-gray-500 w-24">手机号：</span>
-                <span>{user?.phone || '-'}</span>
+                <span>{formatPhoneNumber(user?.phone)}</span>
               </div>
               <div className="flex border-b py-2">
                 <span className="text-gray-500 w-24">微信号：</span>
-                <span>{user?.wechat || '-'}</span>
+                <span>{user?.wechat || '未绑定'}</span>
               </div>
             </div>
 
@@ -169,7 +207,8 @@ function UserProfile({ className = '' }) {
             <div className="mt-6">
               <button
                 onClick={handleLogout}
-                className="w-full py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                disabled={loading}
+                className="w-full py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
               >
                 退出登录
               </button>
@@ -187,15 +226,17 @@ function UserProfile({ className = '' }) {
             <div className="flex justify-end space-x-4">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                disabled={loading}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50"
               >
                 取消
               </button>
               <button
                 onClick={handleConfirmLogout}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                disabled={loading}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
               >
-                确认退出
+                {loading ? '退出中...' : '确认退出'}
               </button>
             </div>
           </div>
