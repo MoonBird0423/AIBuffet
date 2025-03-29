@@ -1,106 +1,43 @@
 package com.aibuffet.service;
 
 import com.aibuffet.common.ApiResponse;
-import com.aibuffet.common.ErrorCode;
-import com.aibuffet.dto.UserDTO;
-import com.aibuffet.model.User;
-import com.aibuffet.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import java.util.Map;
 
-@Service
-@RequiredArgsConstructor
-public class UserService {
-    private final UserRepository userRepository;
-    private final VerificationCodeService verificationCodeService;
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+public interface UserService {
+    /**
+     * 手机号验证码登录
+     * @param phone 手机号
+     * @param code 验证码
+     * @return 登录结果
+     */
+    ApiResponse loginWithPhone(String phone, String code);
 
-    @Transactional
-    public ApiResponse loginWithPhone(String phone, String code) {
-        // 验证手机验证码
-        if (!verificationCodeService.verifyCode(phone, code)) {
-            return ApiResponse.error(ErrorCode.SMS_CODE_INVALID);
-        }
+    /**
+     * 获取用户信息
+     * @param userId 用户ID
+     * @return 用户信息
+     */
+    Map<String, Object> getUserProfile(Long userId);
 
-        try {
-            // 查找用户
-            boolean isNewUser = !userRepository.existsByPhone(phone);
-            User user = userRepository.findByPhone(phone)
-                    .orElseGet(() -> registerNewUser(phone));
+    /**
+     * 更新用户头像
+     * @param userId 用户ID
+     * @param avatarUrl 头像URL
+     * @return 更新后的头像URL
+     */
+    String updateAvatar(Long userId, String avatarUrl);
 
-            // 使用新的fromUser方法，直接传入isNewUser标记
-            UserDTO userDTO = UserDTO.fromUser(user, isNewUser);
+    /**
+     * 更新用户名
+     * @param userId 用户ID
+     * @param username 新用户名
+     * @return 更新后的用户名
+     */
+    String updateUsername(Long userId, String username);
 
-            return ApiResponse.success(userDTO);
-        } catch (Exception e) {
-            return ApiResponse.error(ErrorCode.LOGIN_FAILED);
-        }
-    }
-
-    private User registerNewUser(String phone) {
-        // 生成默认用户名和密码
-        String defaultUsername = phone.substring(phone.length() - 4) + "用户";
-        String defaultPassword = "ai" + phone.substring(phone.length() - 4);
-        
-        // 检查用户名是否已存在
-        String username = defaultUsername;
-        int suffix = 1;
-        while (userRepository.findByUsername(username).isPresent()) {
-            username = defaultUsername + suffix++;
-        }
-
-        User user = new User();
-        user.setPhone(phone);
-        user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(defaultPassword));
-        user.setAvatar("https://www.gravatar.com/avatar/" + phone.hashCode() + "?d=mp");
-        
-        return userRepository.save(user);
-    }
-
-    @Transactional
-    public UserDTO registerUser(String phone, String username, String wechat, String avatar) {
-        // 验证手机号是否已注册
-        if (userRepository.existsByPhone(phone)) {
-            throw new RuntimeException(ErrorCode.PHONE_EXISTS.getMessage());
-        }
-
-        // 如果未提供用户名，使用默认用户名
-        if (username == null || username.trim().isEmpty()) {
-            username = phone.substring(phone.length() - 4) + "用户";
-        }
-
-        // 检查用户名是否已存在
-        String finalUsername = username;
-        int suffix = 1;
-        while (userRepository.findByUsername(finalUsername).isPresent()) {
-            finalUsername = username + suffix++;
-        }
-
-        // 设置默认密码
-        String defaultPassword = "ai" + phone.substring(phone.length() - 4);
-
-        // 如果未提供头像，使用默认头像
-        if (avatar == null || avatar.trim().isEmpty()) {
-            avatar = "https://www.gravatar.com/avatar/" + phone.hashCode() + "?d=mp";
-        }
-
-        User user = new User();
-        user.setPhone(phone);
-        user.setUsername(finalUsername);
-        user.setPassword(passwordEncoder.encode(defaultPassword));
-        user.setAvatar(avatar);
-        if (wechat != null && !wechat.trim().isEmpty()) {
-            user.setWechat(wechat);
-        }
-
-        user = userRepository.save(user);
-        return UserDTO.fromUser(user);
-    }
-
-    public boolean isPhoneRegistered(String phone) {
-        return userRepository.existsByPhone(phone);
-    }
+    /**
+     * 退出登录
+     * @param userId 用户ID
+     */
+    void logout(Long userId);
 }
