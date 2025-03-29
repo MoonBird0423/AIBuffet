@@ -60,20 +60,31 @@ apiClient.interceptors.request.use((config) => {
 
 // 添加响应拦截器处理认证错误
 apiClient.interceptors.response.use(
-  response => response,
+  response => {
+    // 检查响应中是否包含会话过期信息
+    if (response.data && response.data.message && response.data.message.includes('session has been expired')) {
+      // 清除认证信息
+      localStorage.removeItem('auth_user');
+      // 如果不在登录页面，重定向到登录
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+      // 返回一个标准化的错误响应
+      throw new Error('会话已过期，请重新登录');
+    }
+    return response;
+  },
   error => {
-    // 只处理特定的认证错误
-    if (error.response && error.response.status === 403) {
-      // 检查是否是用户配置接口
-      const isProfileRequest = error.config.url.includes('/user/profile');
-      
-      // 只有在获取用户配置失败时才清除认证并重定向
-      if (isProfileRequest) {
+    // 处理各种认证相关错误
+    if (error.response) {
+      if (error.response.status === 403 ||
+          error.response.status === 401 ||
+          (error.response.data && error.response.data.message && error.response.data.message.includes('session'))) {
         localStorage.removeItem('auth_user');
-        // 使用 history 进行导航而不是直接修改 location
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
         }
+        throw new Error('认证失败，请重新登录');
       }
     }
     return Promise.reject(error);
