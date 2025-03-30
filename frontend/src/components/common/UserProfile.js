@@ -162,10 +162,6 @@ function UserProfile({ className = '' }) {
 
             {/* 用户信息展示 */}
             <div className="space-y-4">
-              <div className="flex border-b py-2">
-                <span className="text-gray-500 w-24">账号：</span>
-                <span>{user?.userId || '-'}</span>
-              </div>
               <div className="flex items-center border-b py-2">
                 <span className="text-gray-500 w-24">用户名：</span>
                 <div className="flex items-center gap-2">

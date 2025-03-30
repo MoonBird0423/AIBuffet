@@ -29,8 +29,6 @@ apiClient.interceptors.request.use((config) => {
       if (user.token) {
         // 设置认证头
         config.headers['Authorization'] = `Bearer ${user.token}`;
-        // 设置CSRF头
-        config.headers['X-CSRF-TOKEN'] = user.token;
       }
     } catch (e) {
       console.error('解析认证信息失败:', e);
@@ -44,14 +42,6 @@ apiClient.interceptors.request.use((config) => {
     config.headers['Content-Type'] = originalContentType;
   }
 
-  // 添加DEBUG日志
-  console.log('Request config:', {
-    url: config.url,
-    method: config.method,
-    headers: config.headers,
-    data: config.data
-  });
-
   return config;
 }, (error) => {
   console.error('Request interceptor error:', error);
@@ -60,20 +50,7 @@ apiClient.interceptors.request.use((config) => {
 
 // 添加响应拦截器处理认证错误
 apiClient.interceptors.response.use(
-  response => {
-    // 检查响应中是否包含会话过期信息
-    if (response.data && response.data.message && response.data.message.includes('session has been expired')) {
-      // 清除认证信息
-      localStorage.removeItem('auth_user');
-      // 如果不在登录页面，重定向到登录
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
-      // 返回一个标准化的错误响应
-      throw new Error('会话已过期，请重新登录');
-    }
-    return response;
-  },
+  response => response,
   error => {
     // 处理各种认证相关错误
     if (error.response) {
@@ -90,6 +67,66 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// 聊天相关API
+export const getChatSessions = async () => {
+  try {
+    console.log('Fetching chat sessions...');
+    const response = await apiClient.get('/chats');
+    console.log('Chat sessions response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching chat sessions:', error);
+    throw error;
+  }
+};
+
+export const getChatSession = async (sessionId) => {
+  try {
+    console.log('Fetching chat session:', sessionId);
+    const response = await apiClient.get(`/chats/${sessionId}`);
+    console.log('Chat session response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching chat session:', error);
+    throw error;
+  }
+};
+
+export const createChatSession = async (message) => {
+  try {
+    console.log('Creating chat session with message:', message);
+    const response = await apiClient.post('/chats', { message });
+    console.log('Created chat session:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating chat session:', error);
+    throw error;
+  }
+};
+
+export const updateChatSession = async (sessionId, messages) => {
+  try {
+    console.log('Updating chat session:', sessionId);
+    const response = await apiClient.put(`/chats/${sessionId}`, { messages });
+    console.log('Updated chat session:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating chat session:', error);
+    throw error;
+  }
+};
+
+export const deleteChatSession = async (sessionId) => {
+  try {
+    console.log('Deleting chat session:', sessionId);
+    await apiClient.delete(`/chats/${sessionId}`);
+    console.log('Deleted chat session:', sessionId);
+  } catch (error) {
+    console.error('Error deleting chat session:', error);
+    throw error;
+  }
+};
 
 export const getExample = async () => {
   try {
