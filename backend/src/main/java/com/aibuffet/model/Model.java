@@ -2,6 +2,7 @@ package com.aibuffet.model;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.util.Set;
 
 @Entity
 @Table(name = "models")
@@ -37,6 +38,12 @@ public class Model {
     @Column
     private String emoji;
 
+    @Column(name = "supported_input_types", columnDefinition = "json")
+    private Set<String> supportedInputTypes;
+
+    @Column(name = "invoke_config", columnDefinition = "TEXT")
+    private String invokeConfig;
+
     // Getters and Setters
     
     public String getEmoji() {
@@ -46,6 +53,7 @@ public class Model {
     public void setEmoji(String emoji) {
         this.emoji = emoji;
     }
+
     public Integer getId() {
         return id;
     }
@@ -124,5 +132,21 @@ public class Model {
 
     public void setInvocationMethod(String invocationMethod) {
         this.invocationMethod = invocationMethod;
+    }
+
+    public Set<String> getSupportedInputTypes() {
+        return supportedInputTypes;
+    }
+
+    public void setSupportedInputTypes(Set<String> supportedInputTypes) {
+        this.supportedInputTypes = supportedInputTypes;
+    }
+
+    public String getInvokeConfig() {
+        return invokeConfig;
+    }
+
+    public void setInvokeConfig(String invokeConfig) {
+        this.invokeConfig = invokeConfig;
     }
 }

@@ -8,8 +8,6 @@ function ModelCard({
   rating,
   description,
   tags,
-  isSelected,
-  onSelect,
   purpose
 }) {
   // 生成评分星星
@@ -54,16 +52,14 @@ function ModelCard({
   };
 
   return (
-    <div className={`bg-white rounded-xl shadow-md overflow-hidden transition duration-300 ${
-      isSelected ? 'ring-2 ring-blue-500 shadow-xl' : 'hover:shadow-xl'
-    }`}>
-      <div className="p-6">
-        <div className="flex items-center mb-3">
-          <div className="text-3xl mr-3 flex items-center justify-center w-12 h-12 bg-gray-50 rounded-full">
+    <div className="bg-white rounded-xl shadow-md overflow-hidden transition duration-300 hover:shadow-xl">
+      <div className="p-8">
+        <div className="flex items-center mb-4">
+          <div className="text-3xl mr-4 flex items-center justify-center w-14 h-14 bg-gray-50 rounded-full">
             {getModelEmoji(name, emoji)}
           </div>
           <div>
-            <h3 className="text-xl font-bold">{name}</h3>
+            <h3 className="text-xl font-bold mb-1">{name}</h3>
             <div className="flex items-center">
               <div className="flex">
                 {renderStars(rating)}
@@ -71,17 +67,9 @@ function ModelCard({
               <span className="text-gray-600 text-sm ml-2">({rating}/5)</span>
             </div>
           </div>
-          <div className="ml-auto">
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={() => onSelect(name)}
-              className="rounded text-blue-500 focus:ring-blue-500 h-6 w-6 cursor-pointer"
-            />
-          </div>
         </div>
-        <p className="text-gray-600 mb-4">{description}</p>
-        <div className="flex flex-wrap gap-2 mb-4">
+        <p className="text-gray-600 mb-6">{description}</p>
+        <div className="flex flex-wrap gap-2 mb-6">
           {tags.map((tag, index) => (
             <span
               key={tag}
@@ -91,34 +79,26 @@ function ModelCard({
             </span>
           ))}
         </div>
-        <div className="flex space-x-2">
-          <button 
-            className="text-blue-500 hover:text-blue-700 font-medium flex items-center transition duration-300"
-            onClick={handleTryClick}
+        <button
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg flex items-center justify-center transition duration-300"
+          onClick={handleTryClick}
+        >
+          立即尝鲜
+          <svg
+            className="w-5 h-5 ml-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
           >
-            立即尝鲜
-            <svg
-              className="w-4 h-4 ml-1"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
-          <button 
-            className="text-gray-500 hover:text-gray-700 font-medium flex items-center transition duration-300"
-            onClick={() => onSelect(name)}
-          >
-            {isSelected ? '取消选择' : '加入对比'}
-          </button>
-        </div>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </button>
       </div>
     </div>
   );
