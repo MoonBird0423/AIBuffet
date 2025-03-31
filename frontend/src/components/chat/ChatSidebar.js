@@ -1,13 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FaPlus, FaEllipsisV, FaTrashAlt } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
 import Logo from '../common/Logo';
 import UserProfile from '../common/UserProfile';
 import { getChatSessions, deleteChatSession } from '../../services/api';
+import ChatItem from './ChatItem';
 
-function ChatSidebar({ onNewChat, onDeleteSuccess }) {
-  const [chatSessions, setChatSessions] = useState([]);
-  const [loading, setLoading] = useState(true);
+// 防抖函数
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+const ChatSidebar = React.forwardRef(({ onNewChat, onDeleteSuccess }, ref) => {
+  // 使用Map存储对话数据
+  const [chatSessionsMap, setChatSessionsMap] = useState(new Map());
+  // 分类存储对话ID
+  const [categories, setCategories] = useState({
+    today: [],
+    week: [],
+    month: [],
+    earlier: []
+  });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -18,21 +39,130 @@ function ChatSidebar({ onNewChat, onDeleteSuccess }) {
   const location = useLocation();
   const currentSessionId = new URLSearchParams(location.search).get('session');
 
-  const fetchChatSessions = async () => {
+  // 工具函数：根据日期判断分类
+  const findCategoryByDate = useCallback((date) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    if (date >= today) return 'today';
+    if (date >= weekAgo) return 'week';
+    if (date >= monthAgo) return 'month';
+    return 'earlier';
+  }, []);
+
+  // 暴露方法给父组件
+  React.useImperativeHandle(ref, () => ({
+    handleChatCreated: (newChat) => {
+      // 添加到Map
+      setChatSessionsMap(prev => {
+        const newMap = new Map(prev);
+        newMap.set(newChat.sessionId, newChat);
+        return newMap;
+      });
+
+      // 添加到today分类顶部
+      setCategories(prev => ({
+        ...prev,
+        today: [newChat.sessionId, ...prev.today]
+      }));
+    },
+
+    handleChatUpdated: (updatedChat) => {
+      const oldChat = chatSessionsMap.get(updatedChat.sessionId);
+      if (!oldChat) return;
+
+      // 1. 获取新旧分类
+      const oldCategory = findCategoryByDate(new Date(oldChat.lastMessageAt));
+      const newCategory = findCategoryByDate(new Date(updatedChat.lastMessageAt));
+
+      // 2. 更新Map数据
+      setChatSessionsMap(prev => {
+        const newMap = new Map(prev);
+        newMap.set(updatedChat.sessionId, updatedChat);
+        return newMap;
+      });
+
+      // 3. 更新分类和位置
+      setCategories(prev => {
+        const newCategories = { ...prev };
+
+        if (oldCategory === newCategory) {
+          // 同一分类内，移动到顶部
+          newCategories[newCategory] = [
+            updatedChat.sessionId,
+            ...newCategories[newCategory].filter(id => id !== updatedChat.sessionId)
+          ];
+        } else {
+          // 不同分类，从旧分类移除并添加到新分类顶部
+          newCategories[oldCategory] = newCategories[oldCategory].filter(
+            id => id !== updatedChat.sessionId
+          );
+          newCategories[newCategory] = [
+            updatedChat.sessionId,
+            ...newCategories[newCategory]
+          ];
+        }
+
+        return newCategories;
+      });
+    },
+
+    handleChatDeleted: (deletedSessionId) => {
+      // 从Map中移除
+      setChatSessionsMap(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(deletedSessionId);
+        return newMap;
+      });
+      
+      // 从所有分类中移除
+      setCategories(prev => {
+        const newCategories = { ...prev };
+        Object.keys(newCategories).forEach(key => {
+          newCategories[key] = newCategories[key].filter(id => id !== deletedSessionId);
+        });
+        return newCategories;
+      });
+    }
+  }));
+
+  // 初始获取对话列表
+  const fetchChatSessions = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
-      console.log('Fetching chat sessions...');
       const sessions = await getChatSessions();
-      console.log('Received chat sessions:', sessions);
-      setChatSessions(sessions);
+      if (!Array.isArray(sessions)) return;
+
+      // 构建新的Map
+      const newMap = new Map();
+      sessions.forEach(session => {
+        if (session && session.sessionId) {
+          newMap.set(session.sessionId, session);
+        }
+      });
+      setChatSessionsMap(newMap);
+
+      // 对对话进行分类
+      const newCategories = {
+        today: [],
+        week: [],
+        month: [],
+        earlier: []
+      };
+
+      sessions.forEach(chat => {
+        if (!chat || !chat.lastMessageAt) return;
+        const category = findCategoryByDate(new Date(chat.lastMessageAt));
+        newCategories[category].unshift(chat.sessionId);
+      });
+
+      setCategories(newCategories);
     } catch (error) {
       console.error('获取对话列表失败:', error);
       setError('获取对话列表失败，请稍后重试');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [findCategoryByDate]);
 
   useEffect(() => {
     const authUser = localStorage.getItem('auth_user');
@@ -40,38 +170,37 @@ function ChatSidebar({ onNewChat, onDeleteSuccess }) {
       console.log('Current auth user:', JSON.parse(authUser));
     }
     fetchChatSessions();
-  }, []);
+  }, [fetchChatSessions]);
 
-  const handleChatClick = (sessionId) => {
+  const handleChatClick = useCallback((sessionId) => {
     setOpenMoreMenu(null);
     navigate(`/chat?session=${sessionId}`);
-  };
+  }, [navigate]);
 
-  const handleNewChat = () => {
+  const handleNewChat = useCallback(() => {
     setOpenMoreMenu(null);
     if (onNewChat) {
       onNewChat();
     }
     navigate('/chat');
-  };
+  }, [navigate, onNewChat]);
 
-  const toggleMoreMenu = (sessionId, event) => {
-    event.stopPropagation();
-    if (openMoreMenu === sessionId) {
-      setOpenMoreMenu(null);
-    } else {
-      setOpenMoreMenu(sessionId);
+  const toggleMoreMenu = useCallback((sessionId, event) => {
+    if (event) {
+      event.stopPropagation();
     }
-  };
+    setOpenMoreMenu(prev => prev === sessionId ? null : sessionId);
+  }, []);
 
-  const handleDeleteClick = (sessionId, event) => {
-    event.stopPropagation();
+  const handleDeleteClick = useCallback((sessionId) => {
     setOpenMoreMenu(null);
     setSessionToDelete(sessionId);
     setShowDeleteConfirm(true);
-  };
+  }, []);
 
   const handleDeleteConfirm = async () => {
+    if (!sessionToDelete) return;
+
     try {
       setDeleteLoading(true);
       await deleteChatSession(sessionToDelete);
@@ -79,9 +208,7 @@ function ChatSidebar({ onNewChat, onDeleteSuccess }) {
         navigate('/chat');
       }
       if (onDeleteSuccess) {
-        onDeleteSuccess();
-      } else {
-        await fetchChatSessions();
+        onDeleteSuccess(sessionToDelete);
       }
     } catch (error) {
       console.error('删除对话失败:', error);
@@ -93,22 +220,43 @@ function ChatSidebar({ onNewChat, onDeleteSuccess }) {
     }
   };
 
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diff = now - date;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const CategoryTitle = React.memo(({ title, count }) => (
+    count > 0 ? (
+      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">
+        {title} ({count})
+      </h3>
+    ) : null
+  ));
 
-    if (days === 0) {
-      return `今天 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-    } else if (days === 1) {
-      return '昨天';
-    } else if (days < 7) {
-      return `${days}天前`;
-    } else {
-      return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-    }
-  };
+  CategoryTitle.displayName = 'CategoryTitle';
+
+  const ChatList = React.memo(({ sessionIds = [], className = "" }) => {
+    if (sessionIds.length === 0) return null;
+    
+    return (
+      <ul className={`relative isolate space-y-2 mb-4 ${className}`}>
+        {sessionIds.map((sessionId, index) => {
+          const chat = chatSessionsMap.get(sessionId);
+          if (!chat) return null;
+
+          return (
+            <div key={sessionId} className="relative" style={{ zIndex: openMoreMenu === sessionId ? 10 : 1 }}>
+              <ChatItem
+                chat={chat}
+                currentSessionId={currentSessionId}
+                onChatClick={handleChatClick}
+                onDeleteClick={handleDeleteClick}
+                isMoreMenuOpen={openMoreMenu === sessionId}
+                onToggleMoreMenu={toggleMoreMenu}
+              />
+            </div>
+          );
+        })}
+      </ul>
+    );
+  });
+
+  ChatList.displayName = 'ChatList';
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -141,69 +289,50 @@ function ChatSidebar({ onNewChat, onDeleteSuccess }) {
         </button>
       </div>
 
-      {/* 对话历史 */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      {/* 对话列表 */}
+      <div className="flex-1 overflow-y-auto min-h-0 overscroll-none">
         <div className="p-3">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            对话历史
-          </h3>
           {error && (
             <div className="text-red-500 text-sm mb-2 text-center">
               {error}
             </div>
           )}
-          {loading ? (
-            <div className="flex justify-center items-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+          {chatSessionsMap.size > 0 ? (
+            <div className="relative">
+              <div className="space-y-2">
+                {categories.today.length > 0 && (
+                  <div className="relative">
+                    <CategoryTitle title="今天" count={categories.today.length} />
+                    <ChatList sessionIds={categories.today} className="relative" />
+                  </div>
+                )}
+                
+                {categories.week.length > 0 && (
+                  <div className="relative">
+                    <CategoryTitle title="近一周" count={categories.week.length} />
+                    <ChatList sessionIds={categories.week} className="relative" />
+                  </div>
+                )}
+                
+                {categories.month.length > 0 && (
+                  <div className="relative">
+                    <CategoryTitle title="近一月" count={categories.month.length} />
+                    <ChatList sessionIds={categories.month} className="relative" />
+                  </div>
+                )}
+                
+                {categories.earlier.length > 0 && (
+                  <div className="relative">
+                    <CategoryTitle title="更早" count={categories.earlier.length} />
+                    <ChatList sessionIds={categories.earlier} className="relative" />
+                  </div>
+                )}
+              </div>
             </div>
-          ) : chatSessions.length === 0 ? (
+          ) : (
             <div className="text-center text-gray-500 py-4">
               暂无对话记录
             </div>
-          ) : (
-            <ul className="space-y-2">
-              {chatSessions.map((chat) => (
-                <li 
-                  key={chat.sessionId}
-                  onClick={() => handleChatClick(chat.sessionId)}
-                  className={`${
-                    currentSessionId === chat.sessionId ? 'bg-blue-50' : 'hover:bg-gray-100'
-                  } rounded-lg p-3 cursor-pointer group relative`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 mr-2 min-w-0">
-                      <p className={`text-sm font-medium ${
-                        currentSessionId === chat.sessionId ? 'text-blue-700' : 'text-gray-700'
-                      } truncate`}>
-                        {chat.chatName}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {formatTime(chat.lastMessageAt)}
-                      </p>
-                    </div>
-                    <div className="relative more-menu">
-                      <button 
-                        onClick={(e) => toggleMoreMenu(chat.sessionId, e)}
-                        className="text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                      >
-                        <FaEllipsisV />
-                      </button>
-                      {openMoreMenu === chat.sessionId && (
-                        <div className="absolute right-0 mt-1 py-1 w-32 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                          <button
-                            onClick={(e) => handleDeleteClick(chat.sessionId, e)}
-                            className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center"
-                          >
-                            <FaTrashAlt className="mr-2" />
-                            删除对话
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
           )}
         </div>
       </div>
@@ -240,6 +369,8 @@ function ChatSidebar({ onNewChat, onDeleteSuccess }) {
       )}
     </div>
   );
-}
+});
 
-export default ChatSidebar;
+ChatSidebar.displayName = 'ChatSidebar';
+
+export default React.memo(ChatSidebar);

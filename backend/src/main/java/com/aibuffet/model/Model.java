@@ -2,6 +2,7 @@ package com.aibuffet.model;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -38,8 +39,12 @@ public class Model {
     @Column
     private String emoji;
 
-    @Column(name = "supported_input_types", columnDefinition = "json")
-    private Set<String> supportedInputTypes;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "model_input_types",
+        joinColumns = @JoinColumn(name = "model_id"))
+    @Column(name = "input_type")
+    @Enumerated(EnumType.STRING)
+    private Set<InputType> supportedInputTypes = new HashSet<>();
 
     @Column(name = "invoke_config", columnDefinition = "TEXT")
     private String invokeConfig;
@@ -134,11 +139,11 @@ public class Model {
         this.invocationMethod = invocationMethod;
     }
 
-    public Set<String> getSupportedInputTypes() {
+    public Set<InputType> getSupportedInputTypes() {
         return supportedInputTypes;
     }
 
-    public void setSupportedInputTypes(Set<String> supportedInputTypes) {
+    public void setSupportedInputTypes(Set<InputType> supportedInputTypes) {
         this.supportedInputTypes = supportedInputTypes;
     }
 
