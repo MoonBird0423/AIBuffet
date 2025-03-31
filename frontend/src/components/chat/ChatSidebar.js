@@ -290,7 +290,7 @@ const ChatSidebar = React.forwardRef(({ onNewChat, onDeleteSuccess }, ref) => {
       </div>
 
       {/* 对话列表 */}
-      <div className="flex-1 overflow-y-auto min-h-0 overscroll-none">
+      <div className="flex-1 overflow-y-auto min-h-0 overscroll-none scrollbar">
         <div className="p-3">
           {error && (
             <div className="text-red-500 text-sm mb-2 text-center">
