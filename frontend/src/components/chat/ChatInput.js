@@ -1,9 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import PromptTemplates from './PromptTemplates';
+import FileUploadButton from './FileUploadButton';
+import FilePreviewGrid from './FilePreviewGrid';
+import { ToastManager } from '../common/Toast';
+import { 
+  validateFileType, 
+  validateFileSize, 
+  FILE_CONSTRAINTS 
+} from '../../utils/fileUtils';
 
-function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates }) {
+function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates, supportedTypes = [] }) {
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const textareaRef = useRef(null);
 
   // 组件挂载时自动聚焦
@@ -15,19 +25,21 @@ function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!message.trim() || isSubmitting) return;
+    if ((!message.trim() && !selectedFiles.length) || isSubmitting) return;
 
     try {
       setIsSubmitting(true);
-      await onSend(message);
+      await onSend(message, selectedFiles);
       setMessage('');
+      setSelectedFiles([]);
       // 发送消息后自动聚焦
       setTimeout(() => {
         textareaRef.current?.focus();
       }, 0);
+      ToastManager.success('发送成功');
     } catch (error) {
       console.error('发送消息失败:', error);
-      // 可以添加错误提示
+      ToastManager.error('发送失败，请重试');
     } finally {
       setIsSubmitting(false);
     }
@@ -49,6 +61,39 @@ function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates }) {
     }, 0);
   };
 
+  const handleFileSelect = (e, type) => {
+    const files = Array.from(e.target.files);
+    
+    // 检查文件总数限制
+    if (selectedFiles.length + files.length > FILE_CONSTRAINTS.maxCount) {
+      ToastManager.warning(`最多只能上传${FILE_CONSTRAINTS.maxCount}个文件`);
+      return;
+    }
+    
+    // 验证文件
+    const invalidFiles = files.filter(
+      file => !validateFileType(file, type) || !validateFileSize(file, type)
+    );
+
+    if (invalidFiles.length > 0) {
+      const invalidFile = invalidFiles[0];
+      if (!validateFileType(invalidFile, type)) {
+        ToastManager.error(`不支持的文件类型：${invalidFile.name}`);
+      } else {
+        ToastManager.error(`文件大小超出限制：${invalidFile.name}`);
+      }
+      return;
+    }
+
+    setSelectedFiles(prev => [...prev, ...files]);
+    ToastManager.info(`已添加 ${files.length} 个文件`);
+  };
+
+  const handleFileRemove = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    ToastManager.info('已移除文件');
+  };
+
   return (
     <div className="border-t border-gray-200 p-4">
       {/* 操作按钮 */}
@@ -67,24 +112,49 @@ function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates }) {
           onClose={onTogglePromptTemplates} 
         />
       ) : (
-        <form onSubmit={handleSubmit} className="relative rounded-lg shadow-sm">
-          <textarea
-            ref={textareaRef}
-            rows="3"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="block w-full px-4 py-3 border-0 resize-none focus:ring-0 rounded-lg"
-            placeholder="输入消息..."
-            disabled={isSubmitting}
-            autoFocus // 添加自动聚焦属性
-          />
-          <div className="absolute bottom-2 right-2 flex space-x-1">
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {/* 输入框 */}
+          <div className="relative rounded-lg shadow-sm">
+            <textarea
+              ref={textareaRef}
+              rows="3"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="block w-full px-4 py-3 border-0 resize-none focus:ring-0 rounded-lg"
+              placeholder="输入消息..."
+              disabled={isSubmitting}
+            />
+          </div>
+
+          {/* 文件预览区 */}
+          {selectedFiles.length > 0 && (
+            <FilePreviewGrid 
+              files={selectedFiles} 
+              onRemove={handleFileRemove}
+            />
+          )}
+          
+          {/* 底部工具栏 */}
+          <div className="flex items-center justify-between">
+            {/* 文件上传按钮组 */}
+            <div className="flex space-x-2">
+              {supportedTypes.map(type => (
+                <FileUploadButton
+                  key={type}
+                  type={type}
+                  onChange={(e) => handleFileSelect(e, type)}
+                  disabled={isSubmitting || selectedFiles.length >= FILE_CONSTRAINTS.maxCount}
+                />
+              ))}
+            </div>
+
+            {/* 发送按钮 */}
             <button 
               type="submit"
-              disabled={!message.trim() || isSubmitting}
+              disabled={(!message.trim() && !selectedFiles.length) || isSubmitting}
               className={`p-2 rounded-full ${
-                message.trim() && !isSubmitting
+                (message.trim() || selectedFiles.length) && !isSubmitting
                   ? 'bg-blue-500 hover:bg-blue-600 text-white' 
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
@@ -92,18 +162,24 @@ function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates }) {
               {isSubmitting ? (
                 <i className="fas fa-spinner fa-spin"></i>
               ) : (
-                <i className="fas fa-paper-plane"></i>
+                <i className="fas fa-arrow-up"></i>
               )}
             </button>
           </div>
         </form>
       )}
 
-      <div className="mt-2 text-xs text-gray-500 text-center">
-        AI自助餐中的模型仅用于演示。请勿分享个人敏感信息。
-      </div>
     </div>
   );
 }
+
+ChatInput.propTypes = {
+  onSend: PropTypes.func.isRequired,
+  showPromptTemplates: PropTypes.bool.isRequired,
+  onTogglePromptTemplates: PropTypes.func.isRequired,
+  supportedTypes: PropTypes.arrayOf(
+    PropTypes.oneOf(['IMAGE', 'VIDEO', 'AUDIO', 'FILE'])
+  )
+};
 
 export default ChatInput;

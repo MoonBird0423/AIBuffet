@@ -58,7 +58,7 @@ function ChatMessages({ messages }) {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar">
       {messages.map((message, index) => {
         if (message.role === 'system') {
           return (

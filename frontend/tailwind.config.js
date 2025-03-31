@@ -36,12 +36,59 @@ module.exports = {
             transform: 'translateY(0)'
           },
         },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' }
+        },
+        toast: {
+          '0%': { 
+            opacity: '0',
+            transform: 'translateY(-20px)'
+          },
+          '10%': {
+            opacity: '1',
+            transform: 'translateY(0)'
+          },
+          '90%': {
+            opacity: '1',
+            transform: 'translateY(0)'
+          },
+          '100%': {
+            opacity: '0',
+            transform: 'translateY(-20px)'
+          }
+        }
       },
       animation: {
         'float': 'float 3s ease-in-out infinite',
         'fadeIn': 'fadeIn 0.6s ease-out forwards',
+        'fade-in': 'fade-in 0.2s ease-in-out',
+        'toast': 'toast 2s ease-in-out forwards'
       },
     },
   },
-  plugins: [],
+  plugins: [
+    function({ addUtilities }) {
+      addUtilities({
+        '.scrollbar': {
+          '&::-webkit-scrollbar': {
+            width: '8px',
+            height: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f1f1',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#888',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            background: '#666',
+          },
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#888 #f1f1f1',
+        },
+      });
+    },
+  ],
 }

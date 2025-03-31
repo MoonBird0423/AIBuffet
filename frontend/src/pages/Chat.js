@@ -4,12 +4,13 @@ import ChatHeader from '../components/chat/ChatHeader';
 import ChatMessages from '../components/chat/ChatMessages';
 import ChatInput from '../components/chat/ChatInput';
 import ChatSidebar from '../components/chat/ChatSidebar';
-import { getChatSession, createChatSession, updateChatSession } from '../services/api';
+import { getChatSession, createChatSession, updateChatSession, queryModels } from '../services/api';
 
 function Chat() {
   const location = useLocation();
   const navigate = useNavigate();
   const [selectedModel, setSelectedModel] = useState(null);
+  const [currentModel, setCurrentModel] = useState(null);
   const [modelEmoji, setModelEmoji] = useState('');
   const [modelPurpose, setModelPurpose] = useState('');
   const [messages, setMessages] = useState([]);
@@ -43,6 +44,26 @@ function Chat() {
     }
   }, [location, navigate]);
 
+  // 获取模型完整信息
+  const fetchModelDetails = useCallback(async (modelName) => {
+    if (!modelName) return;
+    try {
+      console.log('Fetching details for model:', modelName);  // 添加日志
+      const response = await queryModels({ name: modelName });
+      console.log('Model details response:', response);
+      if (response && response.length > 0) {
+        const model = response[0];
+        console.log('Selected model details:', model);
+        console.log('Supported input types:', model.supportedInputTypes);
+        setCurrentModel(model);
+      } else {
+        console.log('No model found with name:', modelName);  // 添加日志
+      }
+    } catch (error) {
+      console.error('获取模型详情失败:', error);
+    }
+  }, []);
+
   useEffect(() => {
     // 从 URL 参数中获取模型信息
     const params = new URLSearchParams(location.search);
@@ -50,14 +71,20 @@ function Chat() {
     const emoji = params.get('emoji');
     const purpose = params.get('purpose');
 
+    console.log('Current URL:', location.search);  // 添加日志
+    console.log('URL params:', { modelName, emoji, purpose });  // 添加日志
+
     if (modelName) {
+      console.log('Setting selected model:', modelName);  // 添加日志
       setSelectedModel(modelName);
       setModelEmoji(emoji || '');
       setModelPurpose(purpose || '');
+      fetchModelDetails(modelName);
     }
-  }, [location]);
+  }, [location, fetchModelDetails]);
 
-  // 加载对话内容
+  // ... rest of the code remains exactly the same
+  
   useEffect(() => {
     const loadSession = async () => {
       if (sessionId) {
@@ -66,7 +93,6 @@ function Chat() {
           const session = await getChatSession(sessionId);
           setCurrentSession(session);
           setMessages(JSON.parse(session.messages));
-          // 切换对话后触发输入框聚焦
           setInputFocusKey(prev => prev + 1);
         } catch (error) {
           console.error('加载对话失败:', error);
@@ -85,7 +111,6 @@ function Chat() {
             content: [{ type: 'text', text: '这是一个新对话。AI助手随时为您服务。' }]
           }
         ]);
-        // 新对话时触发输入框聚焦
         setInputFocusKey(prev => prev + 1);
       }
     };
@@ -93,8 +118,8 @@ function Chat() {
     loadSession();
   }, [sessionId, navigate, location]);
 
-  const handleSendMessage = async (content) => {
-    if (!content.trim() || isProcessing) return;
+  const handleSendMessage = async (content, files) => {
+    if ((!content.trim() && (!files || !files.length)) || isProcessing) return;
 
     try {
       setIsProcessing(true);
@@ -103,25 +128,27 @@ function Chat() {
       // 添加用户消息
       const userMessage = {
         role: 'user',
-        content: [{ type: 'text', text: content }]
+        content: [
+          { type: 'text', text: content },
+          ...(files || []).map(file => ({
+            type: file.type.startsWith('image/') ? 'image' : 'file',
+            file
+          }))
+        ]
       };
 
       const newMessages = [...messages, userMessage];
       setMessages(newMessages);
 
       if (!sessionId) {
-        // 如果是新对话，创建会话
         const newSession = await createChatSession(content);
         console.log('Created new session:', newSession);
-        // 通知侧边栏添加新对话
         if (sidebarRef.current) {
           sidebarRef.current.handleChatCreated(newSession);
         }
         navigate(`/chat?session=${newSession.sessionId}`);
       } else {
-        // 更新现有对话
         const updatedChat = await updateChatSession(sessionId, JSON.stringify(newMessages));
-        // 通知侧边栏更新对话
         if (sidebarRef.current) {
           sidebarRef.current.handleChatUpdated(updatedChat);
         }
@@ -140,10 +167,8 @@ function Chat() {
         setMessages(updatedMessages);
         
         try {
-          // 更新服务器上的消息
           if (sessionId) {
             const updatedChat = await updateChatSession(sessionId, JSON.stringify(updatedMessages));
-            // 通知侧边栏更新对话
             if (sidebarRef.current) {
               sidebarRef.current.handleChatUpdated(updatedChat);
             }
@@ -175,7 +200,6 @@ function Chat() {
       }
     ]);
     setCurrentSession(null);
-    // 新建对话时触发输入框聚焦
     setInputFocusKey(prev => prev + 1);
   };
 
@@ -189,7 +213,6 @@ function Chat() {
         ref={sidebarRef}
         onNewChat={handleNewChat}
         onDeleteSuccess={async (deletedSessionId) => {
-          // 删除成功后直接从Map中移除，不需要刷新整个列表
           if (sidebarRef.current) {
             sidebarRef.current.handleChatDeleted(deletedSessionId);
           }
@@ -221,6 +244,7 @@ function Chat() {
           showPromptTemplates={showPromptTemplates}
           onTogglePromptTemplates={togglePromptTemplates}
           disabled={isProcessing}
+          supportedTypes={currentModel?.supportedInputTypes || []}
         />
       </div>
     </div>
