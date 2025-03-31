@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ChatHeader from '../components/chat/ChatHeader';
 import ChatMessages from '../components/chat/ChatMessages';
@@ -16,8 +16,10 @@ function Chat() {
   const [showPromptTemplates, setShowPromptTemplates] = useState(false);
   const [currentSession, setCurrentSession] = useState(null);
   const [error, setError] = useState(null);
-  const [sidebarKey, setSidebarKey] = useState(0);
-  const [inputFocusKey, setInputFocusKey] = useState(0); // 用于触发输入框聚焦
+  const [inputFocusKey, setInputFocusKey] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  const sidebarRef = useRef(null);
 
   // 从URL参数获取会话ID
   const sessionId = new URLSearchParams(location.search).get('session');
@@ -91,54 +93,66 @@ function Chat() {
     loadSession();
   }, [sessionId, navigate, location]);
 
-  const refreshSidebar = useCallback(() => {
-    setSidebarKey(prev => prev + 1);
-  }, []);
-
   const handleSendMessage = async (content) => {
-    if (!content.trim()) return;
-
-    // 添加用户消息
-    const userMessage = {
-      role: 'user',
-      content: [{ type: 'text', text: content }]
-    };
-
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
+    if (!content.trim() || isProcessing) return;
 
     try {
+      setIsProcessing(true);
       setError(null);
+
+      // 添加用户消息
+      const userMessage = {
+        role: 'user',
+        content: [{ type: 'text', text: content }]
+      };
+
+      const newMessages = [...messages, userMessage];
+      setMessages(newMessages);
+
       if (!sessionId) {
         // 如果是新对话，创建会话
         const newSession = await createChatSession(content);
         console.log('Created new session:', newSession);
-        refreshSidebar(); // 刷新侧边栏
+        // 通知侧边栏添加新对话
+        if (sidebarRef.current) {
+          sidebarRef.current.handleChatCreated(newSession);
+        }
         navigate(`/chat?session=${newSession.sessionId}`);
       } else {
         // 更新现有对话
-        await updateChatSession(sessionId, JSON.stringify(newMessages));
+        const updatedChat = await updateChatSession(sessionId, JSON.stringify(newMessages));
+        // 通知侧边栏更新对话
+        if (sidebarRef.current) {
+          sidebarRef.current.handleChatUpdated(updatedChat);
+        }
       }
 
       // 模拟AI回复
-      setTimeout(() => {
+      setTimeout(async () => {
         const aiMessage = {
           role: 'assistant',
-          content: [{ 
-            type: 'text', 
+          content: [{
+            type: 'text',
             text: `这是来自 ${selectedModel || 'AI助手'} 的回复示例。在实际开发中，这里需要调用后端API获取真实的AI回复。`
           }]
         };
         const updatedMessages = [...newMessages, aiMessage];
         setMessages(updatedMessages);
         
-        // 更新服务器上的消息
-        if (sessionId) {
-          updateChatSession(sessionId, JSON.stringify(updatedMessages))
-            .catch(error => {
-              console.error('更新对话失败:', error);
-              setError('更新对话失败，请稍后重试');
-            });
+        try {
+          // 更新服务器上的消息
+          if (sessionId) {
+            const updatedChat = await updateChatSession(sessionId, JSON.stringify(updatedMessages));
+            // 通知侧边栏更新对话
+            if (sidebarRef.current) {
+              sidebarRef.current.handleChatUpdated(updatedChat);
+            }
+          }
+        } catch (error) {
+          console.error('更新对话失败:', error);
+          setError('更新对话失败，请稍后重试');
+        } finally {
+          setIsProcessing(false);
         }
       }, 1000);
     } catch (error) {
@@ -148,6 +162,7 @@ function Chat() {
       } else {
         setError('发送消息失败，请稍后重试');
       }
+      setIsProcessing(false);
     }
   };
 
@@ -170,10 +185,15 @@ function Chat() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <ChatSidebar 
-        key={sidebarKey} 
+      <ChatSidebar
+        ref={sidebarRef}
         onNewChat={handleNewChat}
-        onDeleteSuccess={refreshSidebar}
+        onDeleteSuccess={async (deletedSessionId) => {
+          // 删除成功后直接从Map中移除，不需要刷新整个列表
+          if (sidebarRef.current) {
+            sidebarRef.current.handleChatDeleted(deletedSessionId);
+          }
+        }}
       />
       <div className="flex-1 flex flex-col">
         <ChatHeader
@@ -196,10 +216,11 @@ function Chat() {
         )}
         <ChatMessages messages={messages} />
         <ChatInput
-          key={inputFocusKey} // 使用key来触发重新渲染和自动聚焦
+          key={inputFocusKey}
           onSend={handleSendMessage}
           showPromptTemplates={showPromptTemplates}
           onTogglePromptTemplates={togglePromptTemplates}
+          disabled={isProcessing}
         />
       </div>
     </div>

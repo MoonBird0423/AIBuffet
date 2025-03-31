@@ -53,9 +53,18 @@ sequenceDiagram
             }
         ]
     },
+    // 基础参数，均为可选
     "stream": true,
     "temperature": 0.7,
-    "max_tokens": 2000
+    "max_tokens": 2000,
+    
+    // 扩展参数，均为可选
+    "top_p": 0.9,               // 控制采样概率阈值
+    "presence_penalty": 0.0,    // 控制重复使用已出现token的倾向
+    "frequency_penalty": 0.0,   // 控制重复使用高频token的倾向
+    "stop": ["##"],            // 指定停止生成的终止序列
+    "top_k": 50,               // 限制每一步采样时考虑的token数量
+    "repetition_penalty": 1.1   // 重复惩罚因子
 }
 ```
 
@@ -99,10 +108,30 @@ public class ModelService {
         
         // 3. 构造请求体
         ObjectNode requestBody = objectMapper.createObjectNode();
+        // 3.1 设置必需参数
         requestBody.put("model", modelConfig.get("model").asText());
-        requestBody.put("stream", modelConfig.get("stream").asBoolean());
-        requestBody.put("temperature", modelConfig.get("temperature").asDouble());
-        requestBody.put("max_tokens", modelConfig.get("max_tokens").asInt());
+        
+        // 3.2 设置可选参数
+        List<String> optionalParams = Arrays.asList(
+            "stream", "temperature", "max_tokens", "top_p", 
+            "presence_penalty", "frequency_penalty", "stop",
+            "top_k", "repetition_penalty"
+        );
+        
+        for (String param : optionalParams) {
+            if (modelConfig.has(param)) {
+                JsonNode value = modelConfig.get(param);
+                if (value.isBoolean()) {
+                    requestBody.put(param, value.asBoolean());
+                } else if (value.isNumber()) {
+                    requestBody.put(param, value.asDouble());
+                } else if (value.isArray()) {
+                    requestBody.set(param, value);
+                } else {
+                    requestBody.put(param, value.asText());
+                }
+            }
+        }
         
         // 4. 组装消息
         ArrayNode messages = objectMapper.createArrayNode();
@@ -158,6 +187,11 @@ public class ModelService {
    - 处理逻辑集中
    - 易于调试和修改
 
+5. 灵活的参数配置：
+   - 支持多种类型的参数
+   - 易于添加新参数
+   - 根据不同模型动态调整
+
 ## 注意事项
 
 1. JSON处理：
@@ -174,3 +208,8 @@ public class ModelService {
    - 合理使用JsonNode的API
    - 避免不必要的JSON解析
    - 考虑大量数据时的处理
+
+4. 参数使用：
+   - 了解不同参数的作用和影响
+   - 根据场景选择合适的参数
+   - 注意参数之间的相互影响
