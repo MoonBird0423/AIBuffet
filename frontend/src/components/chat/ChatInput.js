@@ -36,9 +36,7 @@ function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates, suppo
       setTimeout(() => {
         textareaRef.current?.focus();
       }, 0);
-      ToastManager.success('发送成功');
     } catch (error) {
-      console.error('发送消息失败:', error);
       ToastManager.error('发送失败，请重试');
     } finally {
       setIsSubmitting(false);
@@ -61,7 +59,7 @@ function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates, suppo
     }, 0);
   };
 
-  const handleFileSelect = (e, type) => {
+  const handleFileSelect = async (e, type) => {
     const files = Array.from(e.target.files);
     
     // 检查文件总数限制
@@ -85,13 +83,26 @@ function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates, suppo
       return;
     }
 
+    // 检查是否已有其他类型的文件
+    if (selectedFiles.length > 0) {
+      const currentFileType = selectedFiles[0].type;
+      const newFileType = files[0].type;
+      
+      // 如果选择了不同类型的文件，显示确认对话框
+      if (currentFileType !== newFileType) {
+        const confirmed = window.confirm('选择新类型文件将会清空之前的选择，是否继续？');
+        if (confirmed) {
+          setSelectedFiles(files);
+        }
+        return;
+      }
+    }
+
     setSelectedFiles(prev => [...prev, ...files]);
-    ToastManager.info(`已添加 ${files.length} 个文件`);
   };
 
   const handleFileRemove = (index) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    ToastManager.info('已移除文件');
   };
 
   return (

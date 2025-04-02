@@ -34,12 +34,11 @@ function Chat() {
     }
     try {
       const user = JSON.parse(authUser);
-      console.log('Current user:', user);
       if (!user.token) {
         navigate('/login', { state: { from: location.pathname + location.search } });
       }
     } catch (error) {
-      console.error('解析用户信息失败:', error);
+      setError('登录信息无效,请重新登录');
       navigate('/login', { state: { from: location.pathname + location.search } });
     }
   }, [location, navigate]);
@@ -48,19 +47,13 @@ function Chat() {
   const fetchModelDetails = useCallback(async (modelName) => {
     if (!modelName) return;
     try {
-      console.log('Fetching details for model:', modelName);  // 添加日志
       const response = await queryModels({ name: modelName });
-      console.log('Model details response:', response);
       if (response && response.length > 0) {
         const model = response[0];
-        console.log('Selected model details:', model);
-        console.log('Supported input types:', model.supportedInputTypes);
         setCurrentModel(model);
-      } else {
-        console.log('No model found with name:', modelName);  // 添加日志
       }
     } catch (error) {
-      console.error('获取模型详情失败:', error);
+      setError('获取模型信息失败');
     }
   }, []);
 
@@ -71,11 +64,8 @@ function Chat() {
     const emoji = params.get('emoji');
     const purpose = params.get('purpose');
 
-    console.log('Current URL:', location.search);  // 添加日志
-    console.log('URL params:', { modelName, emoji, purpose });  // 添加日志
 
     if (modelName) {
-      console.log('Setting selected model:', modelName);  // 添加日志
       setSelectedModel(modelName);
       setModelEmoji(emoji || '');
       setModelPurpose(purpose || '');
@@ -95,11 +85,11 @@ function Chat() {
           setMessages(JSON.parse(session.messages));
           setInputFocusKey(prev => prev + 1);
         } catch (error) {
-          console.error('加载对话失败:', error);
           if (error.response && error.response.status === 401) {
+            setError('未登录或登录已过期,请重新登录');
             navigate('/login', { state: { from: location.pathname + location.search } });
           } else {
-            setError('加载对话失败，请稍后重试');
+            setError('加载对话失败,请稍后重试');
             navigate('/chat');
           }
         }
@@ -108,7 +98,7 @@ function Chat() {
         setMessages([
           {
             role: 'system',
-            content: [{ type: 'text', text: '这是一个新对话。AI助手随时为您服务。' }]
+            content: '这是一个新对话。AI助手随时为您服务。'
           }
         ]);
         setInputFocusKey(prev => prev + 1);
@@ -128,13 +118,13 @@ function Chat() {
       // 添加用户消息
       const userMessage = {
         role: 'user',
-        content: [
+        content: files && files.length > 0 ? [
           { type: 'text', text: content },
           ...(files || []).map(file => ({
             type: file.type.startsWith('image/') ? 'image' : 'file',
             file
           }))
-        ]
+        ] : content
       };
 
       const newMessages = [...messages, userMessage];
@@ -142,7 +132,6 @@ function Chat() {
 
       if (!sessionId) {
         const newSession = await createChatSession(content);
-        console.log('Created new session:', newSession);
         if (sidebarRef.current) {
           sidebarRef.current.handleChatCreated(newSession);
         }
@@ -158,10 +147,7 @@ function Chat() {
       setTimeout(async () => {
         const aiMessage = {
           role: 'assistant',
-          content: [{
-            type: 'text',
-            text: `这是来自 ${selectedModel || 'AI助手'} 的回复示例。在实际开发中，这里需要调用后端API获取真实的AI回复。`
-          }]
+          content: `这是来自 ${selectedModel || 'AI助手'} 的回复示例。在实际开发中，这里需要调用后端API获取真实的AI回复。`
         };
         const updatedMessages = [...newMessages, aiMessage];
         setMessages(updatedMessages);
@@ -174,18 +160,17 @@ function Chat() {
             }
           }
         } catch (error) {
-          console.error('更新对话失败:', error);
-          setError('更新对话失败，请稍后重试');
+          setError('更新对话失败,请稍后重试');
         } finally {
           setIsProcessing(false);
         }
       }, 1000);
     } catch (error) {
-      console.error('发送消息失败:', error);
       if (error.response && error.response.status === 401) {
+        setError('未登录或登录已过期,请重新登录');
         navigate('/login', { state: { from: location.pathname + location.search } });
       } else {
-        setError('发送消息失败，请稍后重试');
+        setError('发送消息失败,请稍后重试');
       }
       setIsProcessing(false);
     }
@@ -196,7 +181,7 @@ function Chat() {
     setMessages([
       {
         role: 'system',
-        content: [{ type: 'text', text: '这是一个新对话。AI助手随时为您服务。' }]
+        content: '这是一个新对话。AI助手随时为您服务。'
       }
     ]);
     setCurrentSession(null);

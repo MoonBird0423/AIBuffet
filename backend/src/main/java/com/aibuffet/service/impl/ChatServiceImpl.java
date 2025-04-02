@@ -47,8 +47,8 @@ public class ChatServiceImpl implements ChatService {
 
         // 初始化消息数组
         String initialMessages = String.format(
-            "[{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"You are a helpful assistant.\"}]}," +
-            "{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"%s\"}]}]",
+            "[{\"role\":\"system\",\"content\":\"You are a helpful assistant.\"}," +
+            "{\"role\":\"user\",\"content\":\"%s\"}]",
             firstMessage.replace("\"", "\\\"")
         );
         chatSession.setMessages(initialMessages);
