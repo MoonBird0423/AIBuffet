@@ -71,9 +71,7 @@ apiClient.interceptors.response.use(
 // 聊天相关API
 export const getChatSessions = async () => {
   try {
-    console.log('Fetching chat sessions...');
     const response = await apiClient.get('/chats');
-    console.log('Chat sessions response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching chat sessions:', error);
@@ -83,9 +81,7 @@ export const getChatSessions = async () => {
 
 export const getChatSession = async (sessionId) => {
   try {
-    console.log('Fetching chat session:', sessionId);
     const response = await apiClient.get(`/chats/${sessionId}`);
-    console.log('Chat session response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching chat session:', error);
@@ -95,9 +91,7 @@ export const getChatSession = async (sessionId) => {
 
 export const createChatSession = async (message) => {
   try {
-    console.log('Creating chat session with message:', message);
     const response = await apiClient.post('/chats', { message });
-    console.log('Created chat session:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error creating chat session:', error);
@@ -107,9 +101,7 @@ export const createChatSession = async (message) => {
 
 export const updateChatSession = async (sessionId, messages) => {
   try {
-    console.log('Updating chat session:', sessionId);
     const response = await apiClient.put(`/chats/${sessionId}`, { messages });
-    console.log('Updated chat session:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error updating chat session:', error);
@@ -119,9 +111,7 @@ export const updateChatSession = async (sessionId, messages) => {
 
 export const deleteChatSession = async (sessionId) => {
   try {
-    console.log('Deleting chat session:', sessionId);
     await apiClient.delete(`/chats/${sessionId}`);
-    console.log('Deleted chat session:', sessionId);
   } catch (error) {
     console.error('Error deleting chat session:', error);
     throw error;

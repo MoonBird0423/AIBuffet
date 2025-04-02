@@ -37,24 +37,50 @@ function ChatMessages({ messages }) {
     );
   };
 
-  // 渲染单个内容项
-  const renderContentItem = (item) => {
-    switch (item.type) {
-      case 'text':
-        return item.text.split('\n').map((line, i) => (
-          <p key={i} className="mb-1 last:mb-0">{line}</p>
-        ));
-      case 'input_audio':
-        return (
-          <div className="flex items-center space-x-2">
-            <i className="fas fa-music text-gray-500"></i>
-            <span>语音输入</span>
-            <audio src={item.input_audio.data} controls className="max-w-full" />
-          </div>
-        );
-      default:
-        return <p>不支持的内容类型: {item.type}</p>;
+  // 渲染消息内容
+  const renderContent = (content) => {
+    // 如果是纯文本字符串
+    if (typeof content === 'string') {
+      return content.split('\n').map((line, i) => (
+        <p key={i} className="mb-1 last:mb-0">{line}</p>
+      ));
     }
+    
+    // 如果是包含多媒体的数组
+    if (Array.isArray(content)) {
+      return content.map((item, i) => {
+        switch (item.type) {
+          case 'text':
+            return item.text.split('\n').map((line, j) => (
+              <p key={`${i}-${j}`} className="mb-1 last:mb-0">{line}</p>
+            ));
+          case 'input_audio':
+            return (
+              <div key={i} className="flex items-center space-x-2">
+                <i className="fas fa-music text-gray-500"></i>
+                <span>语音输入</span>
+                <audio src={item.input_audio.data} controls className="max-w-full" />
+              </div>
+            );
+          case 'image':
+            return (
+              <div key={i} className="mt-2">
+                <img src={item.file} alt="用户上传的图片" className="max-w-full rounded-lg" />
+              </div>
+            );
+          case 'video':
+            return (
+              <div key={i} className="mt-2">
+                <video src={item.file} controls className="max-w-full rounded-lg" />
+              </div>
+            );
+          default:
+            return <p key={i}>不支持的内容类型: {item.type}</p>;
+        }
+      });
+    }
+    
+    return <p>无法显示的内容</p>;
   };
 
   return (
@@ -63,9 +89,7 @@ function ChatMessages({ messages }) {
         if (message.role === 'system') {
           return (
             <div key={index} className="bg-blue-50 rounded-lg p-4 text-sm text-center text-blue-700">
-              {message.content.map((item, i) => (
-                <div key={i}>{renderContentItem(item)}</div>
-              ))}
+              {renderContent(message.content)}
             </div>
           );
         }
@@ -83,11 +107,9 @@ function ChatMessages({ messages }) {
                 isUser ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'
               }`}
             >
-              {message.content.map((item, i) => (
-                <div key={i} className={isUser && item.type === 'text' ? 'text-white' : ''}>
-                  {renderContentItem(item)}
-                </div>
-              ))}
+              <div className={isUser ? 'text-white' : ''}>
+                {renderContent(message.content)}
+              </div>
             </div>
             {isUser && (
               <div className="flex-shrink-0 ml-3">

@@ -167,7 +167,6 @@ const ChatSidebar = React.forwardRef(({ onNewChat, onDeleteSuccess }, ref) => {
   useEffect(() => {
     const authUser = localStorage.getItem('auth_user');
     if (authUser) {
-      console.log('Current auth user:', JSON.parse(authUser));
     }
     fetchChatSessions();
   }, [fetchChatSessions]);

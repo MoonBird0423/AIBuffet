@@ -45,9 +45,7 @@ function UserProfile({ className = '' }) {
     if (!newUsername.trim()) return;
 
     try {
-      console.log('Saving new username:', newUsername.trim());
       await updateUsername(newUsername.trim());
-      console.log('Username saved, current user:', user);
       setEditingUsername(false);
     } catch (err) {
       console.error('Error saving username:', err);
@@ -57,7 +55,6 @@ function UserProfile({ className = '' }) {
 
   // 添加 useEffect 来监控 user 对象的变化
   useEffect(() => {
-    console.log('User object updated in UserProfile:', user);
   }, [user]);
 
   const handleLogout = () => {

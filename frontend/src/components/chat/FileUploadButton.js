@@ -32,6 +32,7 @@ const FileUploadButton = ({ type, onChange, disabled = false }) => {
           ref={fileInputRef}
           onChange={onChange}
           accept={getAcceptByType(type)}
+          multiple
           disabled={disabled}
         />
       </button>
