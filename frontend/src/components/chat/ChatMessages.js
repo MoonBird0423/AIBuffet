@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
-function ChatMessages({ messages }) {
+function ChatMessages({ messages, partialResponse }) {
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -9,7 +9,7 @@ function ChatMessages({ messages }) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, partialResponse]);
 
   const getMessageIcon = (role, model) => {
     if (role === 'user') {
@@ -38,11 +38,16 @@ function ChatMessages({ messages }) {
   };
 
   // 渲染消息内容
-  const renderContent = (content) => {
+  const renderContent = (content, isPartial = false) => {
     // 如果是纯文本字符串
     if (typeof content === 'string') {
       return content.split('\n').map((line, i) => (
-        <p key={i} className="mb-1 last:mb-0">{line}</p>
+        <p key={i} className="mb-1 last:mb-0">
+          {line}
+          {isPartial && i === content.split('\n').length - 1 && (
+            <span className="inline-block w-2 h-4 ml-1 bg-gray-600 animate-pulse"></span>
+          )}
+        </p>
       ));
     }
     
@@ -52,7 +57,12 @@ function ChatMessages({ messages }) {
         switch (item.type) {
           case 'text':
             return item.text.split('\n').map((line, j) => (
-              <p key={`${i}-${j}`} className="mb-1 last:mb-0">{line}</p>
+              <p key={`${i}-${j}`} className="mb-1 last:mb-0">
+                {line}
+                {isPartial && i === content.length - 1 && j === item.text.split('\n').length - 1 && (
+                  <span className="inline-block w-2 h-4 ml-1 bg-gray-600 animate-pulse"></span>
+                )}
+              </p>
             ));
           case 'input_audio':
             return (
@@ -65,13 +75,23 @@ function ChatMessages({ messages }) {
           case 'image':
             return (
               <div key={i} className="mt-2">
-                <img src={item.file} alt="用户上传的图片" className="max-w-full rounded-lg" />
+                <img 
+                  src={item.file} 
+                  alt="用户上传的图片" 
+                  className="max-w-full rounded-lg"
+                  loading="lazy"
+                />
               </div>
             );
           case 'video':
             return (
               <div key={i} className="mt-2">
-                <video src={item.file} controls className="max-w-full rounded-lg" />
+                <video 
+                  src={item.file} 
+                  controls 
+                  className="max-w-full rounded-lg"
+                  preload="metadata"
+                />
               </div>
             );
           default:
@@ -86,6 +106,9 @@ function ChatMessages({ messages }) {
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar">
       {messages.map((message, index) => {
+        const isLastMessage = index === messages.length - 1;
+        const showPartialResponse = isLastMessage && message.role === 'assistant' && partialResponse;
+
         if (message.role === 'system') {
           return (
             <div key={index} className="bg-blue-50 rounded-lg p-4 text-sm text-center text-blue-700">
@@ -108,7 +131,10 @@ function ChatMessages({ messages }) {
               }`}
             >
               <div className={isUser ? 'text-white' : ''}>
-                {renderContent(message.content)}
+                {showPartialResponse 
+                  ? renderContent(message.content + partialResponse, true)
+                  : renderContent(message.content)
+                }
               </div>
             </div>
             {isUser && (
@@ -124,4 +150,4 @@ function ChatMessages({ messages }) {
   );
 }
 
-export default ChatMessages;
+export default React.memo(ChatMessages);
