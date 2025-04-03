@@ -4,7 +4,7 @@ import ChatHeader from '../components/chat/ChatHeader';
 import ChatMessages from '../components/chat/ChatMessages';
 import ChatInput from '../components/chat/ChatInput';
 import ChatSidebar from '../components/chat/ChatSidebar';
-import { getChatSession, createChatSession, updateChatSession, queryModels } from '../services/api';
+import { getChatSession, createChatSession, updateChatSession, queryModels, invokeModel } from '../services/api';
 
 function Chat() {
   const location = useLocation();
@@ -19,13 +19,16 @@ function Chat() {
   const [error, setError] = useState(null);
   const [inputFocusKey, setInputFocusKey] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [partialResponse, setPartialResponse] = useState('');
+  const [loadingRetryCount, setLoadingRetryCount] = useState(0);
   
   const sidebarRef = useRef(null);
+  const abortControllerRef = useRef(null);
+  const retryTimeoutRef = useRef(null);
 
   // 从URL参数获取会话ID
   const sessionId = new URLSearchParams(location.search).get('session');
 
-  // 检查用户登录状态
   useEffect(() => {
     const authUser = localStorage.getItem('auth_user');
     if (!authUser) {
@@ -38,12 +41,11 @@ function Chat() {
         navigate('/login', { state: { from: location.pathname + location.search } });
       }
     } catch (error) {
-      setError('登录信息无效,请重新登录');
+      setError('登录信息无效，请重新登录');
       navigate('/login', { state: { from: location.pathname + location.search } });
     }
   }, [location, navigate]);
 
-  // 获取模型完整信息
   const fetchModelDetails = useCallback(async (modelName) => {
     if (!modelName) return;
     try {
@@ -58,12 +60,10 @@ function Chat() {
   }, []);
 
   useEffect(() => {
-    // 从 URL 参数中获取模型信息
     const params = new URLSearchParams(location.search);
     const modelName = params.get('model');
     const emoji = params.get('emoji');
     const purpose = params.get('purpose');
-
 
     if (modelName) {
       setSelectedModel(modelName);
@@ -73,27 +73,44 @@ function Chat() {
     }
   }, [location, fetchModelDetails]);
 
-  // ... rest of the code remains exactly the same
-  
   useEffect(() => {
     const loadSession = async () => {
+      // 清除之前的重试定时器
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+
+      setError(null);
       if (sessionId) {
         try {
-          setError(null);
           const session = await getChatSession(sessionId);
-          setCurrentSession(session);
-          setMessages(JSON.parse(session.messages));
-          setInputFocusKey(prev => prev + 1);
+          if (session) {
+            setCurrentSession(session);
+            setMessages(JSON.parse(session.messages));
+            setInputFocusKey(prev => prev + 1);
+            setLoadingRetryCount(0); // 重置重试计数
+          } else if (loadingRetryCount < 3) { // 最多重试3次
+            // 如果session为null且未超过重试次数，延迟1秒后重试
+            retryTimeoutRef.current = setTimeout(() => {
+              setLoadingRetryCount(prev => prev + 1);
+            }, 1000);
+          }
         } catch (error) {
+          console.error('Load session error:', error);
           if (error.response && error.response.status === 401) {
-            setError('未登录或登录已过期,请重新登录');
+            setError('未登录或登录已过期，请重新登录');
             navigate('/login', { state: { from: location.pathname + location.search } });
+          } else if (loadingRetryCount < 3) { // 最多重试3次
+            // 如果出错且未超过重试次数，延迟1秒后重试
+            retryTimeoutRef.current = setTimeout(() => {
+              setLoadingRetryCount(prev => prev + 1);
+            }, 1000);
           } else {
-            setError('加载对话失败,请稍后重试');
-            navigate('/chat');
+            setError('加载对话失败，但可以继续聊天');
           }
         }
       } else {
+        // 如果没有sessionId，直接初始化新对话
         setCurrentSession(null);
         setMessages([
           {
@@ -106,77 +123,136 @@ function Chat() {
     };
 
     loadSession();
-  }, [sessionId, navigate, location]);
+
+    // 清理函数
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, [sessionId, navigate, loadingRetryCount]);
+
+  // 取消当前请求
+  const cancelCurrentRequest = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsProcessing(false);
+  };
 
   const handleSendMessage = async (content, files) => {
     if ((!content.trim() && (!files || !files.length)) || isProcessing) return;
 
+    // 取消之前的请求（如果有）
+    cancelCurrentRequest();
+
     try {
       setIsProcessing(true);
       setError(null);
+      setPartialResponse('');
 
       // 添加用户消息
       const userMessage = {
         role: 'user',
-        content: files && files.length > 0 ? [
-          { type: 'text', text: content },
-          ...(files || []).map(file => ({
-            type: file.type.startsWith('image/') ? 'image' : 'file',
-            file
-          }))
-        ] : content
+        content: content.trim()  // 修改：直接使用纯文本内容
       };
 
       const newMessages = [...messages, userMessage];
       setMessages(newMessages);
 
+      // 创建新会话或更新现有会话
+      let currentSessionId = sessionId;
       if (!sessionId) {
-        const newSession = await createChatSession(content);
-        if (sidebarRef.current) {
-          sidebarRef.current.handleChatCreated(newSession);
+        try {
+          const newSession = await createChatSession(content);
+          currentSessionId = newSession.sessionId;
+          if (sidebarRef.current) {
+            sidebarRef.current.handleChatCreated(newSession);
+          }
+          setCurrentSession(newSession); // 立即更新当前会话
+          navigate(`/chat?session=${newSession.sessionId}`);
+        } catch (error) {
+          console.error('Create session error:', error);
+          setError('创建对话失败，但可以继续聊天');
+          // 即使创建会话失败，也继续进行对话
         }
-        navigate(`/chat?session=${newSession.sessionId}`);
       } else {
-        const updatedChat = await updateChatSession(sessionId, JSON.stringify(newMessages));
-        if (sidebarRef.current) {
-          sidebarRef.current.handleChatUpdated(updatedChat);
+        try {
+          const updatedChat = await updateChatSession(sessionId, JSON.stringify(newMessages));
+          if (sidebarRef.current) {
+            sidebarRef.current.handleChatUpdated(updatedChat);
+          }
+        } catch (error) {
+          console.error('Update session error:', error);
+          setError('更新对话失败，但可以继续聊天');
+          // 即使更新会话失败，也继续进行对话
         }
       }
 
-      // 模拟AI回复
-      setTimeout(async () => {
-        const aiMessage = {
-          role: 'assistant',
-          content: `这是来自 ${selectedModel || 'AI助手'} 的回复示例。在实际开发中，这里需要调用后端API获取真实的AI回复。`
-        };
-        const updatedMessages = [...newMessages, aiMessage];
-        setMessages(updatedMessages);
-        
-        try {
-          if (sessionId) {
-            const updatedChat = await updateChatSession(sessionId, JSON.stringify(updatedMessages));
+      // 创建新的AbortController
+      abortControllerRef.current = new AbortController();
+
+      // 调用模型
+      let aiMessage = {
+        role: 'assistant',
+        content: ''
+      };
+      setMessages([...newMessages, aiMessage]);
+
+      // 开始流式调用
+      invokeModel({
+        messages: newMessages,
+        model: selectedModel || 'deepseek-chat',
+        onMessage: (data) => {
+          // 从SSE响应中提取content
+          const content = data.choices?.[0]?.delta?.content || '';
+          if (content) {
+            console.debug('Received content:', content);
+            setPartialResponse(prev => prev + content);
+            aiMessage.content = aiMessage.content + content;
+            setMessages([...newMessages, { ...aiMessage }]);
+          }
+        },
+        onError: (error) => {
+          console.error('Model invocation error:', error);
+          setError('模型调用失败，请重试');
+          setIsProcessing(false);
+        },
+        onFinish: async () => {
+          setPartialResponse('');
+          setIsProcessing(false);
+          
+          // 更新会话
+          const finalMessages = [...newMessages, aiMessage];
+          try {
+            const updatedChat = await updateChatSession(currentSessionId, JSON.stringify(finalMessages));
             if (sidebarRef.current) {
               sidebarRef.current.handleChatUpdated(updatedChat);
             }
+          } catch (error) {
+            console.error('Update session error after completion:', error);
+            setError('更新对话失败，但对话已完成');
           }
-        } catch (error) {
-          setError('更新对话失败,请稍后重试');
-        } finally {
-          setIsProcessing(false);
-        }
-      }, 1000);
+        },
+        signal: abortControllerRef.current.signal
+      });
     } catch (error) {
-      if (error.response && error.response.status === 401) {
-        setError('未登录或登录已过期,请重新登录');
+      console.error('Send message error:', error);
+      if (error.name === 'AbortError') {
+        setError('请求已取消');
+      } else if (error.response && error.response.status === 401) {
+        setError('未登录或登录已过期，请重新登录');
         navigate('/login', { state: { from: location.pathname + location.search } });
       } else {
-        setError('发送消息失败,请稍后重试');
+        setError('发送消息失败，请重试');
       }
       setIsProcessing(false);
     }
   };
 
   const handleNewChat = () => {
+    cancelCurrentRequest();
     setError(null);
     setMessages([
       {
@@ -191,6 +267,15 @@ function Chat() {
   const togglePromptTemplates = () => {
     setShowPromptTemplates(!showPromptTemplates);
   };
+
+  useEffect(() => {
+    return () => {
+      cancelCurrentRequest();
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -222,7 +307,10 @@ function Chat() {
             </div>
           </div>
         )}
-        <ChatMessages messages={messages} />
+        <ChatMessages 
+          messages={messages} 
+          partialResponse={partialResponse}
+        />
         <ChatInput
           key={inputFocusKey}
           onSend={handleSendMessage}

@@ -9,15 +9,12 @@ import com.aibuffet.service.VerificationCodeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -26,7 +23,7 @@ public class UserServiceImpl implements UserService {
     private UserRepository userRepository;
 
     @Autowired
-    private SessionRegistry sessionRegistry;
+    private VerificationCodeService verificationCodeService;
 
     @Override
     @Transactional
@@ -58,8 +55,8 @@ public class UserServiceImpl implements UserService {
             );
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            // 生成session ID作为token
-            String token = user.getUsername() + "_" + System.currentTimeMillis();
+            // 生成token（使用手机号而不是用户名）
+            String token = phone + "_" + System.currentTimeMillis();
 
             // 返回用户信息
             Map<String, Object> data = new HashMap<>();
@@ -67,16 +64,13 @@ public class UserServiceImpl implements UserService {
             data.put("username", user.getUserDisplayName());
             data.put("phone", user.getPhone());
             data.put("avatar", user.getAvatar());
-            data.put("token", token);  // 添加token到响应中
+            data.put("token", token);
 
             return ApiResponse.success(data);
         } catch (Exception e) {
             return ApiResponse.error(ErrorCode.LOGIN_FAILED);
         }
     }
-
-    @Autowired
-    private VerificationCodeService verificationCodeService;
 
     @Override
     public Map<String, Object> getUserProfile(Long userId) {
@@ -136,14 +130,7 @@ public class UserServiceImpl implements UserService {
         user.setLastLoginTime(LocalDateTime.now());
         userRepository.save(user);
 
-        // 清除用户会话
-        sessionRegistry.getAllPrincipals().stream()
-                .filter(principal -> principal instanceof User)
-                .map(principal -> (User) principal)
-                .filter(u -> u.getId().equals(userId))
-                .forEach(u -> {
-                    sessionRegistry.getAllSessions(u, false)
-                            .forEach(session -> session.expireNow());
-                });
+        // 清除认证信息
+        SecurityContextHolder.clearContext();
     }
 }

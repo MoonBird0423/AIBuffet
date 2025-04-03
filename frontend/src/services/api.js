@@ -52,7 +52,6 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   response => response,
   error => {
-    // 处理各种认证相关错误
     if (error.response) {
       if (error.response.status === 403 ||
           error.response.status === 401 ||
@@ -118,14 +117,106 @@ export const deleteChatSession = async (sessionId) => {
   }
 };
 
-export const getExample = async () => {
-  try {
-    const response = await apiClient.get('/example');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching data:', error);
-    throw error;
+// 模型调用相关API
+export const invokeModel = ({ messages, model, onMessage, onError, onFinish, signal }) => {
+  // 获取认证信息
+  const authUser = localStorage.getItem('auth_user');
+  let token = '';
+  if (authUser) {
+    try {
+      const user = JSON.parse(authUser);
+      token = user.token;
+    } catch (e) {
+      console.error('解析认证信息失败:', e);
+    }
   }
+
+  const requestBody = {
+    messages,
+    model,
+    stream: true,
+    temperature: 0.7,
+  };
+
+  console.log('Sending request to model service:', {
+    url: `${API_URL}/chat/completions`,
+    model,
+    messageCount: messages.length,
+    lastMessage: messages[messages.length - 1]
+  });
+
+  // 使用fetch API发送请求并处理SSE响应
+  fetch(`${API_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'text/event-stream',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(requestBody),
+    signal
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    console.log('SSE connection established');
+    
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    const processText = (text) => {
+      buffer += text;
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      lines.forEach(line => {
+        if (!line.trim()) return;
+        
+        if (line.trim() === 'data: [DONE]') {
+          console.log('Received [DONE] signal');
+          onFinish?.();
+          return;
+        }
+
+        try {
+          // 检查并删除"data:"前缀
+          const jsonStr = line.startsWith('data:') ? line.slice(5) : line;
+          const data = JSON.parse(jsonStr);
+          console.debug('Received chunk:', data);
+          onMessage?.(data);
+        } catch (error) {
+          console.warn('Error parsing SSE message:', error, line);
+        }
+      });
+    };
+
+    const pump = () => reader.read()
+      .then(({ value, done }) => {
+        if (done) {
+          console.log('Stream complete');
+          onFinish?.();
+          return;
+        }
+        processText(decoder.decode(value, { stream: true }));
+        return pump();
+      });
+
+    return pump();
+  })
+  .catch(error => {
+    console.error('Error in SSE connection:', error);
+    onError?.(error);
+  });
+
+  // 返回一个取消函数
+  return () => {
+    console.log('Cancelling model invocation');
+    if (signal) {
+      signal.abort();
+    }
+  };
 };
 
 export const queryModels = async (params) => {
