@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FaPlus } from 'react-icons/fa';
 import Logo from '../common/Logo';
@@ -18,6 +18,31 @@ function debounce(func, wait) {
     timeout = setTimeout(later, wait);
   };
 }
+
+// ChatItem包装器组件
+const ChatItemWrapper = memo(({ chat, currentSessionId, onChatClick, onDeleteClick, isMoreMenuOpen, onToggleMoreMenu, zIndex }) => {
+  return (
+    <div className="relative" style={{ zIndex }}>
+      <ChatItem
+        chat={chat}
+        currentSessionId={currentSessionId}
+        onChatClick={onChatClick}
+        onDeleteClick={onDeleteClick}
+        isMoreMenuOpen={isMoreMenuOpen}
+        onToggleMoreMenu={onToggleMoreMenu}
+      />
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.chat.sessionId === nextProps.chat.sessionId &&
+    prevProps.currentSessionId === nextProps.currentSessionId &&
+    prevProps.isMoreMenuOpen === nextProps.isMoreMenuOpen &&
+    prevProps.zIndex === nextProps.zIndex
+  );
+});
+
+ChatItemWrapper.displayName = 'ChatItemWrapper';
 
 const ChatSidebar = React.forwardRef(({ onNewChat, onDeleteSuccess }, ref) => {
   // 使用Map存储对话数据
@@ -53,80 +78,85 @@ const ChatSidebar = React.forwardRef(({ onNewChat, onDeleteSuccess }, ref) => {
   }, []);
 
   // 暴露方法给父组件
+  const memoizedHandleChatCreated = useCallback((newChat) => {
+    // 添加到Map
+    setChatSessionsMap(prev => {
+      const newMap = new Map(prev);
+      newMap.set(newChat.sessionId, newChat);
+      return newMap;
+    });
+
+    // 添加到today分类顶部
+    setCategories(prev => ({
+      ...prev,
+      today: [newChat.sessionId, ...prev.today]
+    }));
+  }, []);
+
+  // 将回调函数移到外部定义
+  const handleChatUpdated = useCallback((updatedChat) => {
+    const oldChat = chatSessionsMap.get(updatedChat.sessionId);
+    if (!oldChat) return;
+
+    // 1. 获取新旧分类
+    const oldCategory = findCategoryByDate(new Date(oldChat.lastMessageAt));
+    const newCategory = findCategoryByDate(new Date(updatedChat.lastMessageAt));
+
+    // 2. 更新Map数据
+    setChatSessionsMap(prev => {
+      const newMap = new Map(prev);
+      newMap.set(updatedChat.sessionId, updatedChat);
+      return newMap;
+    });
+
+    // 3. 更新分类和位置
+    setCategories(prev => {
+      const newCategories = { ...prev };
+
+      if (oldCategory === newCategory) {
+        // 同一分类内，移动到顶部
+        newCategories[newCategory] = [
+          updatedChat.sessionId,
+          ...newCategories[newCategory].filter(id => id !== updatedChat.sessionId)
+        ];
+      } else {
+        // 不同分类，从旧分类移除并添加到新分类顶部
+        newCategories[oldCategory] = newCategories[oldCategory].filter(
+          id => id !== updatedChat.sessionId
+        );
+        newCategories[newCategory] = [
+          updatedChat.sessionId,
+          ...newCategories[newCategory]
+        ];
+      }
+
+      return newCategories;
+    });
+  }, [chatSessionsMap, findCategoryByDate]);
+
+  const handleChatDeleted = useCallback((deletedSessionId) => {
+    // 从Map中移除
+    setChatSessionsMap(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(deletedSessionId);
+      return newMap;
+    });
+    
+    // 从所有分类中移除
+    setCategories(prev => {
+      const newCategories = { ...prev };
+      Object.keys(newCategories).forEach(key => {
+        newCategories[key] = newCategories[key].filter(id => id !== deletedSessionId);
+      });
+      return newCategories;
+    });
+  }, []);
+
   React.useImperativeHandle(ref, () => ({
-    handleChatCreated: (newChat) => {
-      // 添加到Map
-      setChatSessionsMap(prev => {
-        const newMap = new Map(prev);
-        newMap.set(newChat.sessionId, newChat);
-        return newMap;
-      });
-
-      // 添加到today分类顶部
-      setCategories(prev => ({
-        ...prev,
-        today: [newChat.sessionId, ...prev.today]
-      }));
-    },
-
-    handleChatUpdated: (updatedChat) => {
-      const oldChat = chatSessionsMap.get(updatedChat.sessionId);
-      if (!oldChat) return;
-
-      // 1. 获取新旧分类
-      const oldCategory = findCategoryByDate(new Date(oldChat.lastMessageAt));
-      const newCategory = findCategoryByDate(new Date(updatedChat.lastMessageAt));
-
-      // 2. 更新Map数据
-      setChatSessionsMap(prev => {
-        const newMap = new Map(prev);
-        newMap.set(updatedChat.sessionId, updatedChat);
-        return newMap;
-      });
-
-      // 3. 更新分类和位置
-      setCategories(prev => {
-        const newCategories = { ...prev };
-
-        if (oldCategory === newCategory) {
-          // 同一分类内，移动到顶部
-          newCategories[newCategory] = [
-            updatedChat.sessionId,
-            ...newCategories[newCategory].filter(id => id !== updatedChat.sessionId)
-          ];
-        } else {
-          // 不同分类，从旧分类移除并添加到新分类顶部
-          newCategories[oldCategory] = newCategories[oldCategory].filter(
-            id => id !== updatedChat.sessionId
-          );
-          newCategories[newCategory] = [
-            updatedChat.sessionId,
-            ...newCategories[newCategory]
-          ];
-        }
-
-        return newCategories;
-      });
-    },
-
-    handleChatDeleted: (deletedSessionId) => {
-      // 从Map中移除
-      setChatSessionsMap(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(deletedSessionId);
-        return newMap;
-      });
-      
-      // 从所有分类中移除
-      setCategories(prev => {
-        const newCategories = { ...prev };
-        Object.keys(newCategories).forEach(key => {
-          newCategories[key] = newCategories[key].filter(id => id !== deletedSessionId);
-        });
-        return newCategories;
-      });
-    }
-  }));
+    handleChatCreated: memoizedHandleChatCreated,
+    handleChatUpdated,
+    handleChatDeleted
+  }), [memoizedHandleChatCreated, handleChatUpdated, handleChatDeleted]);
 
   // 初始获取对话列表
   const fetchChatSessions = useCallback(async () => {
@@ -172,9 +202,15 @@ const ChatSidebar = React.forwardRef(({ onNewChat, onDeleteSuccess }, ref) => {
   }, [fetchChatSessions]);
 
   const handleChatClick = useCallback((sessionId) => {
-    setOpenMoreMenu(null);
-    navigate(`/chat?session=${sessionId}`);
-  }, [navigate]);
+    // 使用requestAnimationFrame进行状态更新优化
+    requestAnimationFrame(() => {
+      // 如果已经是当前会话，不做任何操作
+      if (sessionId === currentSessionId) return;
+      
+      setOpenMoreMenu(null);
+      navigate(`/chat?session=${sessionId}`, { replace: true });
+    });
+  }, [navigate, currentSessionId]);
 
   const handleNewChat = useCallback(() => {
     setOpenMoreMenu(null);
@@ -219,39 +255,50 @@ const ChatSidebar = React.forwardRef(({ onNewChat, onDeleteSuccess }, ref) => {
     }
   };
 
-  const CategoryTitle = React.memo(({ title, count }) => (
-    count > 0 ? (
+  const CategoryTitle = React.memo(({ title, count }) => {
+    if (count <= 0) return null;
+    
+    return (
       <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">
         {title} ({count})
       </h3>
-    ) : null
-  ));
+    );
+  }, (prev, next) => prev.count === next.count && prev.title === next.title);
 
   CategoryTitle.displayName = 'CategoryTitle';
 
   const ChatList = React.memo(({ sessionIds = [], className = "" }) => {
+    // 移到组件顶部，避免条件判断
+    const memoizedSessionIds = React.useMemo(() => sessionIds, [sessionIds]);
+    
     if (sessionIds.length === 0) return null;
     
     return (
       <ul className={`relative isolate space-y-2 mb-4 ${className}`}>
-        {sessionIds.map((sessionId, index) => {
+        {memoizedSessionIds.map((sessionId) => {
           const chat = chatSessionsMap.get(sessionId);
           if (!chat) return null;
 
           return (
-            <div key={sessionId} className="relative" style={{ zIndex: openMoreMenu === sessionId ? 10 : 1 }}>
-              <ChatItem
-                chat={chat}
-                currentSessionId={currentSessionId}
-                onChatClick={handleChatClick}
-                onDeleteClick={handleDeleteClick}
-                isMoreMenuOpen={openMoreMenu === sessionId}
-                onToggleMoreMenu={toggleMoreMenu}
-              />
-            </div>
+            <ChatItemWrapper
+              key={sessionId}
+              chat={chat}
+              currentSessionId={currentSessionId}
+              onChatClick={handleChatClick}
+              onDeleteClick={handleDeleteClick}
+              isMoreMenuOpen={openMoreMenu === sessionId}
+              onToggleMoreMenu={toggleMoreMenu}
+              zIndex={openMoreMenu === sessionId ? 10 : 1}
+            />
           );
         })}
       </ul>
+    );
+  }, (prevProps, nextProps) => {
+    return (
+      prevProps.sessionIds.length === nextProps.sessionIds.length &&
+      prevProps.sessionIds.every((id, index) => id === nextProps.sessionIds[index]) &&
+      prevProps.className === nextProps.className
     );
   });
 
@@ -372,4 +419,10 @@ const ChatSidebar = React.forwardRef(({ onNewChat, onDeleteSuccess }, ref) => {
 
 ChatSidebar.displayName = 'ChatSidebar';
 
-export default React.memo(ChatSidebar);
+export default React.memo(ChatSidebar, (prevProps, nextProps) => {
+  return (
+    prevProps.onNewChat === nextProps.onNewChat &&
+    prevProps.onDeleteSuccess === nextProps.onDeleteSuccess &&
+    prevProps.ref === nextProps.ref
+  );
+});
