@@ -131,8 +131,14 @@ function ChatMessages({ messages, partialResponse }) {
               }`}
             >
               <div className={isUser ? 'text-white' : ''}>
-                {showPartialResponse 
-                  ? renderContent(message.content + partialResponse, true)
+                {showPartialResponse
+                  ? (() => {
+                      // 如果 partialResponse 比 message.content 长，说明是在流式输出中
+                      const content = partialResponse.length > message.content.length
+                        ? message.content + partialResponse.substring(message.content.length)
+                        : message.content;
+                      return renderContent(content, true);
+                    })()
                   : renderContent(message.content)
                 }
               </div>
