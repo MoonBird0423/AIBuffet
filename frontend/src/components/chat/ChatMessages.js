@@ -1,7 +1,26 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import MarkdownIt from 'markdown-it';
+import { ToastManager } from '../common/Toast';
+import {
+  AiOutlineLoading3Quarters,
+  AiOutlineWarning,
+  AiOutlineUser,
+  AiOutlineRobot,
+  AiOutlineApple,
+  AiOutlineBulb,
+  AiOutlineExperiment,
+  AiOutlineStar
+} from 'react-icons/ai';
 
-function ChatMessages({ messages, partialResponse }) {
+// 消息状态枚举
+const MessageStatus = {
+  WAITING: 'waiting',
+  STREAMING: 'streaming',
+  COMPLETED: 'completed',
+  ERROR: 'error'
+};
+
+function ChatMessages({ messages, partialResponse, error, messageStatus }) {
   const messagesEndRef = useRef(null);
   
   // 初始化markdown-it实例，配置安全选项
@@ -20,58 +39,96 @@ function ChatMessages({ messages, partialResponse }) {
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, partialResponse]);
+      scrollToBottom();
+    }, [messages, partialResponse]);
+  
+    // 监听错误状态，显示Toast提示
+    useEffect(() => {
+      if (error) {
+        ToastManager.error(error);
+      }
+    }, [error]);
 
-  const getMessageIcon = (role, model) => {
+  const getMessageIcon = (role, model, status) => {
     if (role === 'user') {
       return (
         <div className="bg-blue-200 p-2 rounded-full">
-          <i className="fas fa-user text-blue-600"></i>
+          <AiOutlineUser className="text-xl text-blue-600" />
         </div>
       );
     }
-    
-    // 根据不同的模型返回不同的图标
-    const modelIcons = {
-      'GPT-4': { icon: 'apple-alt', bg: 'bg-red-100', color: 'text-red-600' },
-      'Claude': { icon: 'lemon', bg: 'bg-yellow-100', color: 'text-yellow-600' },
-      'Gemini': { icon: 'carrot', bg: 'bg-green-100', color: 'text-green-600' },
-      'Llama 2': { icon: 'cookie', bg: 'bg-yellow-100', color: 'text-yellow-600' }
+
+    // 状态图标配置
+    const statusIcons = {
+      [MessageStatus.WAITING]: {
+        icon: AiOutlineLoading3Quarters,
+        bg: 'bg-gray-100',
+        color: 'text-gray-600',
+        className: 'animate-spin'
+      },
+      [MessageStatus.ERROR]: {
+        icon: AiOutlineWarning,
+        bg: 'bg-red-100',
+        color: 'text-red-600'
+      }
     };
 
-    const iconConfig = modelIcons[model] || { icon: 'robot', bg: 'bg-purple-100', color: 'text-purple-600' };
+    // 如果有特殊状态，优先显示状态图标
+    if (status && statusIcons[status]) {
+      const { icon: Icon, bg, color, className = '' } = statusIcons[status];
+      return (
+        <div className={`${bg} p-2 rounded-full`}>
+          <Icon className={`text-xl ${color} ${className}`} />
+        </div>
+      );
+    }
+
+    // 模型图标配置
+    const modelIcons = {
+      'GPT-4': { icon: AiOutlineApple, bg: 'bg-red-100', color: 'text-red-600' },
+      'Claude': { icon: AiOutlineBulb, bg: 'bg-yellow-100', color: 'text-yellow-600' },
+      'Gemini': { icon: AiOutlineExperiment, bg: 'bg-green-100', color: 'text-green-600' },
+      'Llama 2': { icon: AiOutlineStar, bg: 'bg-yellow-100', color: 'text-yellow-600' }
+    };
+
+    const iconConfig = modelIcons[model] || {
+      icon: AiOutlineRobot,
+      bg: 'bg-purple-100',
+      color: 'text-purple-600'
+    };
     
     return (
       <div className={`${iconConfig.bg} p-2 rounded-full`}>
-        <i className={`fas fa-${iconConfig.icon} ${iconConfig.color}`}></i>
+        <iconConfig.icon className={`text-xl ${iconConfig.color}`} />
       </div>
     );
   };
 
   // 渲染消息内容
-  const renderContent = (content, isPartial = false) => {
+  const renderContent = (content, isPartial = false, status = MessageStatus.COMPLETED) => {
+    // 如果内容为空且状态为STREAMING，显示Loading图标
+    if (!content && status === MessageStatus.STREAMING) {
+      return (
+        <div className="markdown-content flex justify-center py-4">
+          <AiOutlineLoading3Quarters className="text-2xl text-gray-600 animate-spin" />
+        </div>
+      );
+    }
+
     // 如果是纯文本字符串
     if (typeof content === 'string') {
-      const renderedHTML = md.render(content);
-      const result = (
-        <div
-          className="markdown-content"
-          dangerouslySetInnerHTML={{ __html: renderedHTML }}
-        />
-      );
-      
-      // 如果是部分响应，添加光标
-      if (isPartial) {
-        return (
-          <>
-            {result}
-            <span className="inline-block w-2 h-4 ml-1 bg-gray-600 animate-pulse"></span>
-          </>
-        );
+      // 如果是部分响应且正在流式输出，添加光标到HTML内容中
+      let html = md.render(content || '');
+      if (isPartial && status === MessageStatus.STREAMING) {
+        html += '<span class="inline-block w-2 h-4 ml-0.5 bg-gray-600 animate-pulse"></span>';
       }
       
-      return result;
+      return (
+        <div
+          className="markdown-content"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      );
     }
     
     // 如果是包含多媒体的数组
@@ -87,22 +144,23 @@ function ChatMessages({ messages, partialResponse }) {
                 dangerouslySetInnerHTML={{ __html: renderedHTML }}
               />
             );
-            
-            // 如果是部分响应，添加光标
-            if (isPartial && i === content.length - 1) {
-              return (
-                <React.Fragment key={i}>
-                  {result}
-                  <span className="inline-block w-2 h-4 ml-1 bg-gray-600 animate-pulse"></span>
-                </React.Fragment>
-              );
+            // 如果是部分响应且是最后一个文本块，添加光标
+            if (isPartial && i === content.length - 1 && status === MessageStatus.STREAMING) {
+              renderedHTML += '<span class="inline-block w-2 h-4 ml-0.5 bg-gray-600 animate-pulse"></span>';
             }
             
+            return (
+              <div
+                key={i}
+                className="markdown-content"
+                dangerouslySetInnerHTML={{ __html: renderedHTML }}
+              />
+            );
             return result;
           case 'input_audio':
             return (
               <div key={i} className="flex items-center space-x-2">
-                <i className="fas fa-music text-gray-500"></i>
+                <AiOutlineStar className="text-xl text-gray-500" />
                 <span>语音输入</span>
                 <audio src={item.input_audio.data} controls className="max-w-full" />
               </div>
@@ -221,49 +279,71 @@ function ChatMessages({ messages, partialResponse }) {
         `}
       </style>
       {messages.map((message, index) => {
+        // 确定消息状态
         const isLastMessage = index === messages.length - 1;
-        const showPartialResponse = isLastMessage && message.role === 'assistant' && partialResponse;
+        const isLastUserMessage = isLastMessage && message.role === 'user';
+        // 只有最后一条助手消息才显示流式输出
+        const isLastAssistantMessage = message.role === 'assistant' &&
+          index === messages.reduce((lastIndex, msg, i) =>
+            msg.role === 'assistant' ? i : lastIndex, -1);
+        const showPartialResponse = isLastAssistantMessage && partialResponse;
+        const currentStatus = error ? MessageStatus.ERROR :
+                             showPartialResponse ? MessageStatus.STREAMING :
+                             MessageStatus.COMPLETED;
 
         if (message.role === 'system') {
           return (
             <div key={index} className="bg-blue-50 rounded-lg p-4 text-sm text-center text-blue-700">
-              {renderContent(message.content)}
+              {renderContent(message.content, false, MessageStatus.COMPLETED)}
             </div>
           );
         }
 
         const isUser = message.role === 'user';
         return (
-          <div key={index} className={`flex items-start ${isUser ? 'justify-end' : ''}`}>
-            {!isUser && (
-              <div className="flex-shrink-0 mr-3">
-                {getMessageIcon('assistant', message.model)}
+          <React.Fragment key={index}>
+            <div className={`flex items-start ${isUser ? 'justify-end' : ''}`}>
+              {!isUser && (
+                <div className="flex-shrink-0 mr-3">
+                  {getMessageIcon('assistant', message.model, currentStatus)}
+                </div>
+              )}
+              <div
+                className={`rounded-lg p-4 max-w-3xl ${
+                  isUser ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'
+                }`}
+              >
+                <div className={isUser ? 'text-white' : ''}>
+                  {showPartialResponse
+                    ? renderContent(partialResponse, true, currentStatus)
+                    : renderContent(message.content, false, currentStatus)}
+                </div>
               </div>
-            )}
-            <div 
-              className={`rounded-lg p-4 max-w-3xl ${
-                isUser ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'
-              }`}
-            >
-              <div className={isUser ? 'text-white' : ''}>
-                {showPartialResponse
-                  ? (() => {
-                      // 如果 partialResponse 比 message.content 长，说明是在流式输出中
-                      const content = partialResponse.length > message.content.length
-                        ? message.content + partialResponse.substring(message.content.length)
-                        : message.content;
-                      return renderContent(content, true);
-                    })()
-                  : renderContent(message.content)
-                }
-              </div>
+              {isUser && (
+                <div className="flex-shrink-0 ml-3">
+                  {getMessageIcon('user')}
+                </div>
+              )}
             </div>
-            {isUser && (
-              <div className="flex-shrink-0 ml-3">
-                {getMessageIcon('user')}
+            {currentStatus === MessageStatus.ERROR && (
+              <div className="flex items-start mt-2">
+                <div className="ml-11 text-sm text-red-600">
+                  输出中断 - {error}
+                </div>
               </div>
             )}
-          </div>
+            {/* 只在最后一个用户消息后才显示等待状态 */}
+            {isLastUserMessage && !partialResponse && !error && (
+              <div className="flex items-start mt-4">
+                <div className="flex-shrink-0 mr-3">
+                  {getMessageIcon('assistant', null, MessageStatus.WAITING)}
+                </div>
+                <div className="rounded-lg p-4 max-w-3xl bg-gray-50">
+                  <div className="text-gray-500">正在思考中...</div>
+                </div>
+              </div>
+            )}
+          </React.Fragment>
         );
       })}
       <div ref={messagesEndRef} />

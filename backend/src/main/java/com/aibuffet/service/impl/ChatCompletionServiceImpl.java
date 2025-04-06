@@ -26,6 +26,9 @@ public class ChatCompletionServiceImpl implements ChatCompletionService {
 
     @Autowired
     private ModelRepository modelRepository;
+    
+    @Autowired
+    private WebClient.Builder webClientBuilder;
 
     @Override
     public void streamChatCompletion(List<Map<String, Object>> messages, String modelName, SseEmitter emitter) {
@@ -37,16 +40,19 @@ public class ChatCompletionServiceImpl implements ChatCompletionService {
             // 构建请求体
             Map<String, Object> requestBody = buildRequestBody(messages, model);
 
-            // 创建WebClient
-            WebClient client = WebClient.create();
+            // 使用配置的WebClient.Builder创建实例
+            WebClient client = webClientBuilder
+                .baseUrl(model.getBaseUrl())
+                .build();
 
             logger.info("Sending request to model [{}] at URL: {}", modelName, model.getBaseUrl());
             logger.debug("Request body: {}", objectMapper.writeValueAsString(requestBody));
 
             // 发送请求并处理流式响应
             client.post()
-                .uri(model.getBaseUrl())
+                .uri("/")
                 .header("Authorization", "Bearer " + model.getApiKey())
+                .header("X-Request-ID", java.util.UUID.randomUUID().toString())
                 .header("Content-Type", "application/json; charset=UTF-8")
                 .header("Accept", "text/event-stream")
                 .bodyValue(requestBody)
@@ -73,8 +79,25 @@ public class ChatCompletionServiceImpl implements ChatCompletionService {
                         }
                     },
                     error -> {
-                        logger.error("Error in stream for model [{}]: {}", modelName, error.getMessage());
-                        handleError(emitter, "调用模型服务失败: " + error.getMessage());
+                        logger.error("与模型 [{}] 通信时发生错误: {}", modelName, error.getMessage());
+                        logger.error("错误详情: ", error);
+                        
+                        // 区分不同类型的错误
+                        String errorMessage;
+                        if (error instanceof java.net.SocketException) {
+                            errorMessage = "网络连接异常，请检查网络状态";
+                            logger.error("网络连接异常: {}", error.getMessage());
+                        } else if (error instanceof java.net.ConnectException) {
+                            errorMessage = "无法连接到模型服务器";
+                            logger.error("连接失败: {}", error.getMessage());
+                        } else if (error instanceof java.net.SocketTimeoutException) {
+                            errorMessage = "请求超时，请稍后重试";
+                            logger.error("请求超时: {}", error.getMessage());
+                        } else {
+                            errorMessage = "调用模型服务失败: " + error.getMessage();
+                        }
+                        
+                        handleError(emitter, errorMessage);
                     },
                     () -> {
                         try {
