@@ -1,7 +1,19 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
+import MarkdownIt from 'markdown-it';
 
 function ChatMessages({ messages, partialResponse }) {
   const messagesEndRef = useRef(null);
+  
+  // 初始化markdown-it实例，配置安全选项
+  const md = useMemo(() => {
+    const instance = new MarkdownIt({
+      html: false, // 禁用HTML标签
+      breaks: true, // 转换换行符为<br>
+      linkify: true, // 自动转换URL为链接
+      typographer: true, // 启用一些语言中性的替换和引号
+    });
+    return instance;
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -41,14 +53,25 @@ function ChatMessages({ messages, partialResponse }) {
   const renderContent = (content, isPartial = false) => {
     // 如果是纯文本字符串
     if (typeof content === 'string') {
-      return content.split('\n').map((line, i) => (
-        <p key={i} className="mb-1 last:mb-0">
-          {line}
-          {isPartial && i === content.split('\n').length - 1 && (
+      const renderedHTML = md.render(content);
+      const result = (
+        <div
+          className="markdown-content"
+          dangerouslySetInnerHTML={{ __html: renderedHTML }}
+        />
+      );
+      
+      // 如果是部分响应，添加光标
+      if (isPartial) {
+        return (
+          <>
+            {result}
             <span className="inline-block w-2 h-4 ml-1 bg-gray-600 animate-pulse"></span>
-          )}
-        </p>
-      ));
+          </>
+        );
+      }
+      
+      return result;
     }
     
     // 如果是包含多媒体的数组
@@ -56,14 +79,26 @@ function ChatMessages({ messages, partialResponse }) {
       return content.map((item, i) => {
         switch (item.type) {
           case 'text':
-            return item.text.split('\n').map((line, j) => (
-              <p key={`${i}-${j}`} className="mb-1 last:mb-0">
-                {line}
-                {isPartial && i === content.length - 1 && j === item.text.split('\n').length - 1 && (
+            const renderedHTML = md.render(item.text);
+            const result = (
+              <div
+                key={i}
+                className="markdown-content"
+                dangerouslySetInnerHTML={{ __html: renderedHTML }}
+              />
+            );
+            
+            // 如果是部分响应，添加光标
+            if (isPartial && i === content.length - 1) {
+              return (
+                <React.Fragment key={i}>
+                  {result}
                   <span className="inline-block w-2 h-4 ml-1 bg-gray-600 animate-pulse"></span>
-                )}
-              </p>
-            ));
+                </React.Fragment>
+              );
+            }
+            
+            return result;
           case 'input_audio':
             return (
               <div key={i} className="flex items-center space-x-2">
@@ -105,6 +140,86 @@ function ChatMessages({ messages, partialResponse }) {
 
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar">
+      <style>
+        {`
+          .markdown-content {
+            line-height: 1.6;
+          }
+          .markdown-content h1 {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 1em 0;
+          }
+          .markdown-content h2 {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin: 0.8em 0;
+          }
+          .markdown-content h3, h4, h5, h6 {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin: 0.6em 0;
+          }
+          .markdown-content p {
+            margin: 0.5em 0;
+          }
+          .markdown-content ul, .markdown-content ol {
+            margin: 0.5em 0;
+            padding-left: 2em;
+          }
+          .markdown-content ul {
+            list-style-type: disc;
+          }
+          .markdown-content ol {
+            list-style-type: decimal;
+          }
+          .markdown-content blockquote {
+            border-left: 4px solid #e5e7eb;
+            padding-left: 1em;
+            margin: 1em 0;
+            color: #6b7280;
+          }
+          .markdown-content code {
+            background-color: #f3f4f6;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: monospace;
+          }
+          .markdown-content pre {
+            background-color: #f3f4f6;
+            padding: 1em;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 1em 0;
+          }
+          .markdown-content pre code {
+            background-color: transparent;
+            padding: 0;
+          }
+          .markdown-content a {
+            color: #3b82f6;
+            text-decoration: underline;
+          }
+          .markdown-content img {
+            max-width: 100%;
+            height: auto;
+            margin: 1em 0;
+          }
+          .markdown-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+          }
+          .markdown-content th, .markdown-content td {
+            border: 1px solid #e5e7eb;
+            padding: 0.5em;
+            text-align: left;
+          }
+          .markdown-content th {
+            background-color: #f3f4f6;
+          }
+        `}
+      </style>
       {messages.map((message, index) => {
         const isLastMessage = index === messages.length - 1;
         const showPartialResponse = isLastMessage && message.role === 'assistant' && partialResponse;
