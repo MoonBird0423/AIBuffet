@@ -41,13 +41,9 @@ public class WebClientConfig {
                 connection.addHandlerLast(new ReadTimeoutHandler(30, TimeUnit.SECONDS))
                          .addHandlerLast(new WriteTimeoutHandler(30, TimeUnit.SECONDS));
             })
-            .retryWhen((retrySpec) -> retrySpec
-                .maxRetries(3)
-                .filter(throwable -> throwable instanceof java.net.SocketException ||
-                                   throwable instanceof java.net.ConnectException)
-                .doBeforeRetry(retrySignal -> 
-                    logger.info("重试第 {} 次", retrySignal.totalRetries() + 1))
-            );
+            .doOnConnected(conn -> logger.info("连接建立成功"))
+            .doOnDisconnected(conn -> logger.info("连接断开"))
+            .responseTimeout(Duration.ofSeconds(30));
 
         // 创建WebClient.Builder
         return WebClient.builder()
