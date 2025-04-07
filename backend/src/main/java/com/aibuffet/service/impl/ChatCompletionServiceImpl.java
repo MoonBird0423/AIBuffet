@@ -50,7 +50,7 @@ public class ChatCompletionServiceImpl implements ChatCompletionService {
 
             // 发送请求并处理流式响应
             client.post()
-                .uri("/")
+                .uri("")
                 .header("Authorization", "Bearer " + model.getApiKey())
                 .header("X-Request-ID", java.util.UUID.randomUUID().toString())
                 .header("Content-Type", "application/json; charset=UTF-8")
