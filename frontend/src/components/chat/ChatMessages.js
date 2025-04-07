@@ -333,16 +333,6 @@ function ChatMessages({ messages, partialResponse, error, messageStatus }) {
               </div>
             )}
             {/* 只在最后一个用户消息后才显示等待状态 */}
-            {isLastUserMessage && !partialResponse && !error && (
-              <div className="flex items-start mt-4">
-                <div className="flex-shrink-0 mr-3">
-                  {getMessageIcon('assistant', null, MessageStatus.WAITING)}
-                </div>
-                <div className="rounded-lg p-4 max-w-3xl bg-gray-50">
-                  <div className="text-gray-500">正在思考中...</div>
-                </div>
-              </div>
-            )}
           </React.Fragment>
         );
       })}

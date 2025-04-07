@@ -173,74 +173,79 @@ function Chat() {
     // 取消之前的请求（如果有）
     cancelCurrentRequest();
 
+    let activeSessionId = sessionId;
     try {
-      // 设置处理状态
-      setProcessingMap(prev => {
-        const newMap = new Map(prev);
-        // 使用当前会话ID或新建会话的占位符
-        const activeSessionId = sessionId || 'new';
-        newMap.set(activeSessionId, true);
-        return newMap;
-      });
-      
       setError(null);
-      
-      // 清除部分响应
-      setPartialResponseMap(prev => {
-        const newMap = new Map(prev);
-        // 使用当前会话ID或新建会话的占位符
-        const activeSessionId = sessionId || 'new';
-        newMap.set(activeSessionId, '');
-        return newMap;
-      });
 
-      // 添加用户消息
-      const userMessage = {
-        role: 'user',
-        content: content.trim()  // 修改：直接使用纯文本内容
-      };
-
-      const existingMessages = messagesMap.get(sessionId || 'new') || [];
-      const newMessages = [...existingMessages, userMessage];
-      
-      // 更新消息映射
-      setMessagesMap(prev => {
-        const newMap = new Map(prev);
-        newMap.set(sessionId || 'new', newMessages);
-        return newMap;
-      });
-
-      // 创建新会话或更新现有会话
-      let currentSessionId = sessionId;
-      if (!sessionId) {
+      // 先创建新会话（如果需要）
+      if (!activeSessionId) {
         try {
           const newSession = await createChatSession(content);
-          setCurrentSessionId(newSession.sessionId);
+          activeSessionId = newSession.sessionId;
+          setCurrentSessionId(activeSessionId);
           setCurrentSession(newSession);
           
-          // 更新消息映射使用新的sessionId
+          // 将消息从'new'迁移到新会话
           setMessagesMap(prev => {
             const newMap = new Map(prev);
-            // 移动消息从'new'到新的sessionId
             const messages = newMap.get('new') || [];
+            newMap.set(activeSessionId, messages);
             newMap.delete('new');
-            newMap.set(newSession.sessionId, messages);
             return newMap;
           });
-          
+
           // 通知侧边栏
           if (sidebarRef.current) {
             sidebarRef.current.handleChatCreated(newSession);
           }
           
-          navigate(`/chat?session=${newSession.sessionId}`);
+          // 更新URL并触发路由更新
+          navigate(`/chat?session=${activeSessionId}`);
         } catch (error) {
           console.error('Create session error:', error);
-          setError('创建对话失败，但可以继续聊天');
+          setError('创建对话失败');
+          return; // 如果创建会话失败，直接返回
         }
-      } else if (sessionId) {
+      }
+
+      // 设置处理状态
+      setProcessingMap(prev => {
+        const newMap = new Map(prev);
+        newMap.set(activeSessionId, true);
+        return newMap;
+      });
+      
+      // 清除部分响应
+      setPartialResponseMap(prev => {
+        const newMap = new Map(prev);
+        newMap.set(activeSessionId, '');
+        return newMap;
+      });
+
+      // 获取当前消息（从'new'或现有会话）
+      const currentId = activeSessionId || 'new';
+      const existingMessages = messagesMap.get(currentId) || [];
+      
+      // 添加用户消息
+      const userMessage = {
+        role: 'user',
+        content: content.trim()
+      };
+
+      // 构建新的消息列表
+      const newMessages = [...existingMessages, userMessage];
+      
+      // 更新消息映射
+      setMessagesMap(prev => {
+        const newMap = new Map(prev);
+        newMap.set(currentId, newMessages);
+        return newMap;
+      });
+
+      // 如果已有会话ID，更新会话
+      if (activeSessionId) {
         try {
-          const updatedChat = await updateChatSession(sessionId, JSON.stringify(newMessages));
+          const updatedChat = await updateChatSession(activeSessionId, JSON.stringify(newMessages));
           if (sidebarRef.current) {
             sidebarRef.current.handleChatUpdated(updatedChat);
           }
@@ -259,10 +264,9 @@ function Chat() {
         content: ''
       };
       // 更新特定会话的消息
+      // 使用确定的activeSessionId更新消息
       setMessagesMap(prev => {
         const newMap = new Map(prev);
-        // 使用当前会话ID或新建会话的占位符
-        const activeSessionId = sessionId || 'new';
         const sessionMessages = newMap.get(activeSessionId) || [];
         newMap.set(activeSessionId, [...sessionMessages, aiMessage]);
         return newMap;
@@ -281,19 +285,15 @@ function Chat() {
             // 更新部分响应状态
             setPartialResponseMap(prev => {
               const newMap = new Map(prev);
-              // 使用当前会话ID
-              const activeSessionId = sessionId || 'new';
               const currentPartial = (newMap.get(activeSessionId) || '') + content;
               newMap.set(activeSessionId, currentPartial);
               return newMap;
             });
             
             aiMessage.content = aiMessage.content + content;
-            // 更新特定会话的消息
+            // 使用确定的activeSessionId更新消息
             setMessagesMap(prev => {
               const newMap = new Map(prev);
-              // 使用当前会话ID
-              const activeSessionId = sessionId || 'new';
               const sessionMessages = [...(newMap.get(activeSessionId) || [])];
               sessionMessages[sessionMessages.length - 1] = { ...aiMessage };
               newMap.set(activeSessionId, sessionMessages);
@@ -316,32 +316,25 @@ function Chat() {
           // 清理状态
           setPartialResponseMap(prev => {
             const newMap = new Map(prev);
-            // 使用当前会话ID或新建会话的占位符
-            const activeSessionId = sessionId || 'new';
             newMap.delete(activeSessionId);
             return newMap;
           });
           
           setProcessingMap(prev => {
             const newMap = new Map(prev);
-            // 使用当前会话ID或新建会话的占位符
-            const activeSessionId = sessionId || 'new';
             newMap.delete(activeSessionId);
             return newMap;
           });
           
-          // 仅在有有效的sessionId时更新会话
-          if (sessionId) {
-            const finalMessages = [...newMessages, aiMessage];
-            try {
-              const updatedChat = await updateChatSession(sessionId, JSON.stringify(finalMessages));
-              if (sidebarRef.current) {
-                sidebarRef.current.handleChatUpdated(updatedChat);
-              }
-            } catch (error) {
-              console.error('Update session error after completion:', error);
-              setError('更新对话失败，但对话已完成');
+          const finalMessages = [...newMessages, aiMessage];
+          try {
+            const updatedChat = await updateChatSession(activeSessionId, JSON.stringify(finalMessages));
+            if (sidebarRef.current) {
+              sidebarRef.current.handleChatUpdated(updatedChat);
             }
+          } catch (error) {
+            console.error('Update session error after completion:', error);
+            setError('更新对话失败，但对话已完成');
           }
         },
         signal: abortControllerRef.current.signal
@@ -358,8 +351,6 @@ function Chat() {
       }
       setProcessingMap(prev => {
         const newMap = new Map(prev);
-        // 使用当前会话ID或新建会话的占位符
-        const activeSessionId = sessionId || 'new';
         newMap.delete(activeSessionId);
         return newMap;
       });
@@ -433,9 +424,9 @@ function Chat() {
           </div>
         )}
         <ChatMessages
-          messages={messagesMap.get(sessionId) || []}
-          partialResponse={partialResponseMap.get(sessionId) || ''}
-          messageStatus={processingMap.get(sessionId) ? 'streaming' : 'completed'}
+          messages={messagesMap.get(currentSessionId || 'new') || []}
+          partialResponse={partialResponseMap.get(currentSessionId || 'new') || ''}
+          messageStatus={processingMap.get(currentSessionId || 'new') ? 'streaming' : 'completed'}
         />
         <ChatInput
           key={inputFocusKey}
