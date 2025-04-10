@@ -278,14 +278,21 @@ function ChatMessages({ messages, partialResponse, error, messageStatus }) {
           }
         `}
       </style>
+      {console.log('完整消息列表:', messages)}
       {messages.map((message, index) => {
+        console.log('渲染消息:', {
+          index,
+          role: message.role,
+          content: message.content,
+          isUser: message.role === 'user',
+          messagesLength: messages.length,
+          allMessages: [...messages]
+        });
+        
         // 确定消息状态
         const isLastMessage = index === messages.length - 1;
-        const isLastUserMessage = isLastMessage && message.role === 'user';
-        // 只有最后一条助手消息才显示流式输出
         const isLastAssistantMessage = message.role === 'assistant' &&
-          index === messages.reduce((lastIndex, msg, i) =>
-            msg.role === 'assistant' ? i : lastIndex, -1);
+          index === messages.findLastIndex(msg => msg.role === 'assistant');
         const showPartialResponse = isLastAssistantMessage && partialResponse;
         const currentStatus = error ? MessageStatus.ERROR :
                              showPartialResponse ? MessageStatus.STREAMING :
@@ -302,15 +309,15 @@ function ChatMessages({ messages, partialResponse, error, messageStatus }) {
         const isUser = message.role === 'user';
         return (
           <React.Fragment key={index}>
-            <div className={`flex items-start ${isUser ? 'justify-end' : ''}`}>
-              {!isUser && (
-                <div className="flex-shrink-0 mr-3">
-                  {getMessageIcon('assistant', message.model, currentStatus)}
-                </div>
-              )}
+            <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+              <div className="flex-shrink-0">
+                {isUser ? getMessageIcon('user') : getMessageIcon('assistant', message.model, currentStatus)}
+              </div>
               <div
                 className={`rounded-lg p-4 max-w-3xl ${
-                  isUser ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'
+                  isUser 
+                    ? 'bg-blue-500 text-white ml-auto'
+                    : 'bg-gray-100 text-gray-800 mr-auto'
                 }`}
               >
                 <div className={isUser ? 'text-white' : ''}>
@@ -319,11 +326,6 @@ function ChatMessages({ messages, partialResponse, error, messageStatus }) {
                     : renderContent(message.content, false, currentStatus)}
                 </div>
               </div>
-              {isUser && (
-                <div className="flex-shrink-0 ml-3">
-                  {getMessageIcon('user')}
-                </div>
-              )}
             </div>
             {currentStatus === MessageStatus.ERROR && (
               <div className="flex items-start mt-2">
@@ -332,7 +334,6 @@ function ChatMessages({ messages, partialResponse, error, messageStatus }) {
                 </div>
               </div>
             )}
-            {/* 只在最后一个用户消息后才显示等待状态 */}
           </React.Fragment>
         );
       })}
