@@ -12,6 +12,7 @@ function Chat() {
   const [selectedModel, setSelectedModel] = useState(null);
   const [currentModel, setCurrentModel] = useState(null);
   const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [currentUserMessage, setCurrentUserMessage] = useState(null);
   const [modelEmoji, setModelEmoji] = useState('');
   const [modelPurpose, setModelPurpose] = useState('');
   const [messagesMap, setMessagesMap] = useState(new Map());
@@ -84,16 +85,29 @@ function Chat() {
       setError(null);
       if (sessionId) {
         try {
+          console.log('开始加载会话:', sessionId);
           const session = await getChatSession(sessionId);
-          if (session) {
-            setCurrentSessionId(sessionId);
-            setCurrentSession(session);
-            // 更新消息Map
-            setMessagesMap(prev => {
-              const newMap = new Map(prev);
-              newMap.set(sessionId, JSON.parse(session.messages));
-              return newMap;
-            });
+          console.log('获取到会话数据:', session);
+      if (session) {
+        setCurrentSessionId(sessionId);
+        setCurrentSession(session);
+        const messages = JSON.parse(session.messages);
+        console.log('解析到的消息列表:', messages);
+        
+        // 只在非流式输出状态时更新消息
+        const isStreaming = processingMap.get(sessionId);
+        if (!isStreaming) {
+          // 如果当前有用户消息且正在等待响应，将其添加到消息列表
+          if (currentUserMessage) {
+            messages.push(currentUserMessage);
+          }
+          
+          setMessagesMap(prev => {
+            const newMap = new Map(prev);
+            newMap.set(sessionId, messages);
+            return newMap;
+          });
+        }
             setInputFocusKey(prev => prev + 1);
             setLoadingRetryCount(0); // 重置重试计数
           } else if (loadingRetryCount < 3) { // 最多重试3次
@@ -117,18 +131,11 @@ function Chat() {
           }
         }
       } else {
-        // 如果没有sessionId，直接初始化新对话
+        // 如果没有sessionId，重置状态
+        console.log('重置状态，准备新对话');
         setCurrentSession(null);
-        setMessagesMap(prev => {
-          const newMap = new Map(prev);
-          newMap.set('new', [
-            {
-              role: 'system',
-              content: '这是一个新对话。AI助手随时为您服务。'
-            }
-          ]);
-          return newMap;
-        });
+        setCurrentSessionId(null);
+        setMessagesMap(new Map());
         setInputFocusKey(prev => prev + 1);
       }
     };
@@ -173,6 +180,12 @@ function Chat() {
     // 取消之前的请求（如果有）
     cancelCurrentRequest();
 
+    // 保存当前用户消息
+    setCurrentUserMessage({
+      role: 'user',
+      content: content.trim()
+    });
+
     let activeSessionId = sessionId;
     try {
       setError(null);
@@ -180,17 +193,24 @@ function Chat() {
       // 先创建新会话（如果需要）
       if (!activeSessionId) {
         try {
+          console.log('创建新会话，用户输入:', content);
           const newSession = await createChatSession(content);
+          console.log('从后端获取的新会话数据:', newSession);
+          console.log('从后端获取的初始消息列表:', JSON.parse(newSession.messages));
+          console.log('-----创建会话状态更新开始-----');
           activeSessionId = newSession.sessionId;
           setCurrentSessionId(activeSessionId);
           setCurrentSession(newSession);
           
-          // 将消息从'new'迁移到新会话
+          // 使用后端返回的消息列表
+          const serverMessages = JSON.parse(newSession.messages);
+          console.log('更新 messagesMap 前的服务器消息:', serverMessages);
           setMessagesMap(prev => {
-            const newMap = new Map(prev);
-            const messages = newMap.get('new') || [];
-            newMap.set(activeSessionId, messages);
-            newMap.delete('new');
+            // 直接使用后端返回的消息列表，不做额外处理
+            console.log('使用后端返回的消息列表更新状态:', serverMessages);
+            console.log('清空旧消息，使用服务器返回的消息列表:', serverMessages);
+            const newMap = new Map([[activeSessionId, serverMessages]]);
+            console.log('新的消息Map状态:', Object.fromEntries(newMap));
             return newMap;
           });
 
@@ -201,6 +221,7 @@ function Chat() {
           
           // 更新URL并触发路由更新
           navigate(`/chat?session=${activeSessionId}`);
+          console.log('-----创建会话状态更新完成-----');
         } catch (error) {
           console.error('Create session error:', error);
           setError('创建对话失败');
@@ -222,30 +243,39 @@ function Chat() {
         return newMap;
       });
 
-      // 获取当前消息（从'new'或现有会话）
-      const currentId = activeSessionId || 'new';
-      const existingMessages = messagesMap.get(currentId) || [];
+      // 获取当前会话的消息
+      const currentMessages = messagesMap.get(activeSessionId) || [];
+      console.log('获取当前会话消息:', {
+        activeSessionId,
+        currentMessages,
+        messagesMapState: Object.fromEntries(messagesMap)
+      });
       
       // 添加用户消息
       const userMessage = {
         role: 'user',
         content: content.trim()
       };
+      console.log('新的用户消息:', userMessage);
 
       // 构建新的消息列表
-      const newMessages = [...existingMessages, userMessage];
+      const newMessages = [...currentMessages, userMessage];
+      console.log('添加用户消息后的完整消息列表:', newMessages);
       
       // 更新消息映射
+      console.log('更新消息映射前的状态:', Object.fromEntries(messagesMap));
       setMessagesMap(prev => {
         const newMap = new Map(prev);
-        newMap.set(currentId, newMessages);
+        newMap.set(activeSessionId, newMessages);
         return newMap;
       });
 
       // 如果已有会话ID，更新会话
       if (activeSessionId) {
         try {
+          console.log('准备更新会话，消息列表:', newMessages);
           const updatedChat = await updateChatSession(activeSessionId, JSON.stringify(newMessages));
+          console.log('会话更新成功:', updatedChat);
           if (sidebarRef.current) {
             sidebarRef.current.handleChatUpdated(updatedChat);
           }
@@ -258,17 +288,21 @@ function Chat() {
       // 创建新的AbortController
       abortControllerRef.current = new AbortController();
 
+      console.log('调用模型前的当前消息列表:', newMessages);
+      
       // 调用模型
       let aiMessage = {
         role: 'assistant',
         content: ''
       };
+      console.log('初始化AI消息:', aiMessage);
+      
       // 更新特定会话的消息
-      // 使用确定的activeSessionId更新消息
       setMessagesMap(prev => {
         const newMap = new Map(prev);
-        const sessionMessages = newMap.get(activeSessionId) || [];
-        newMap.set(activeSessionId, [...sessionMessages, aiMessage]);
+        const sessionMessages = [...(newMap.get(activeSessionId) || [])];
+        sessionMessages.push({ ...aiMessage });  // 使用push添加新消息
+        newMap.set(activeSessionId, sessionMessages);
         return newMap;
       });
 
@@ -280,9 +314,10 @@ function Chat() {
           // 从SSE响应中提取content
           const content = data.choices?.[0]?.delta?.content || '';
           if (content) {
-            console.debug('Received content:', content);
+            console.log('收到模型响应块:', content);
             
             // 更新部分响应状态
+            console.log('当前AI消息内容:', aiMessage.content);
             setPartialResponseMap(prev => {
               const newMap = new Map(prev);
               const currentPartial = (newMap.get(activeSessionId) || '') + content;
@@ -306,15 +341,20 @@ function Chat() {
           setError('模型调用失败，请重试');
           setProcessingMap(prev => {
             const newMap = new Map(prev);
-            // 使用当前会话ID或新建会话的占位符
-            const activeSessionId = sessionId || 'new';
-            newMap.delete(activeSessionId);
+            // 只在有会话ID时删除状态
+            if (activeSessionId) {
+              newMap.delete(activeSessionId);
+            }
             return newMap;
           });
         },
-        onFinish: async () => {
-          // 清理状态
-          setPartialResponseMap(prev => {
+          onFinish: async () => {
+            console.log('对话完成，最终消息列表:', [...newMessages, aiMessage]);
+            // 清理当前用户消息
+            setCurrentUserMessage(null);
+            
+            // 清理状态
+            setPartialResponseMap(prev => {
             const newMap = new Map(prev);
             newMap.delete(activeSessionId);
             return newMap;
@@ -328,7 +368,21 @@ function Chat() {
           
           const finalMessages = [...newMessages, aiMessage];
           try {
+            console.log('更新会话最终状态:', {
+              sessionId: activeSessionId,
+              currentMessages: newMessages,
+              aiMessage,
+              finalMessages
+            });
             const updatedChat = await updateChatSession(activeSessionId, JSON.stringify(finalMessages));
+            
+            // 使用完整的消息列表更新状态
+            setMessagesMap(prev => {
+              const newMap = new Map(prev);
+              newMap.set(activeSessionId, finalMessages);
+              return newMap;
+            });
+            
             if (sidebarRef.current) {
               sidebarRef.current.handleChatUpdated(updatedChat);
             }
@@ -358,22 +412,15 @@ function Chat() {
   };
 
   const handleNewChat = () => {
+    console.log('创建新的对话');
     if (sessionId) {
+      console.log('取消现有会话的请求:', sessionId);
       cancelCurrentRequest(sessionId);
     }
     setError(null);
     setCurrentSession(null);
     setCurrentSessionId(null);
-    setMessagesMap(prev => {
-      const newMap = new Map(prev);
-      newMap.set('new', [
-        {
-          role: 'system',
-          content: '这是一个新对话。AI助手随时为您服务。'
-        }
-      ]);
-      return newMap;
-    });
+    setMessagesMap(new Map());
     setInputFocusKey(prev => prev + 1);
   };
 
@@ -424,9 +471,9 @@ function Chat() {
           </div>
         )}
         <ChatMessages
-          messages={messagesMap.get(currentSessionId || 'new') || []}
-          partialResponse={partialResponseMap.get(currentSessionId || 'new') || ''}
-          messageStatus={processingMap.get(currentSessionId || 'new') ? 'streaming' : 'completed'}
+          messages={messagesMap.get(currentSessionId) || []}
+          partialResponse={currentSessionId ? partialResponseMap.get(currentSessionId) || '' : ''}
+          messageStatus={currentSessionId ? (processingMap.get(currentSessionId) ? 'streaming' : 'completed') : 'completed'}
         />
         <ChatInput
           key={inputFocusKey}
