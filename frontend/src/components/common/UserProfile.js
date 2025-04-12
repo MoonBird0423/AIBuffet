@@ -9,9 +9,16 @@ function UserProfile({ className = '' }) {
     return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
   };
 
-  // 处理图片加载错误
+  // 处理图片加载错误，添加重试机制
   const handleImageError = (e) => {
-    e.target.src = "/head.png";
+    const src = e.target.src;
+    if (!src.includes("/head.png") && !src.includes("?t=")) {
+      // 如果不是默认头像且没有时间戳参数，添加时间戳刷新缓存
+      e.target.src = src + '?t=' + new Date().getTime();
+    } else {
+      // 如果已经尝试过刷新或是默认头像，则使用默认头像
+      e.target.src = "/head.png";
+    }
   };
 
   const { user, loading, error, updateAvatar, updateUsername, logout, clearError } = useAuth();

@@ -51,9 +51,9 @@ public class OSSService {
         );
         PutObjectResult result = ossClient.putObject(putObjectRequest);
 
-        // 生成签名URL，有效期24小时
+        // 生成签名URL，有效期10年
         Date expiration = Date.from(
-                LocalDateTime.now().plusHours(24)
+                LocalDateTime.now().plusYears(10)
                         .atZone(ZoneId.systemDefault())
                         .toInstant()
         );
