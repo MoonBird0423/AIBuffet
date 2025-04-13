@@ -20,7 +20,7 @@ const MessageStatus = {
   ERROR: 'error'
 };
 
-function ChatMessages({ messages, partialResponse, error, messageStatus }) {
+function ChatMessages({ messages, partialResponse, error, messageStatus, uploadStates }) {
   const messagesEndRef = useRef(null);
   
   // 初始化markdown-it实例，配置安全选项
@@ -115,7 +115,40 @@ function ChatMessages({ messages, partialResponse, error, messageStatus }) {
       );
     }
 
-    // 如果是纯文本字符串
+    // 处理数组格式的内容
+    if (Array.isArray(content)) {
+      return content.map((item, i) => {
+        switch (item.type) {
+          case 'text':
+            let html = md.render(item.text || '');
+            if (isPartial && i === content.length - 1 && status === MessageStatus.STREAMING) {
+              html += '<span class="inline-block w-2 h-4 ml-0.5 bg-gray-600 animate-pulse"></span>';
+            }
+            return (
+              <div 
+                key={i}
+                className="markdown-content"
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
+            );
+          case 'image_url':
+            return (
+              <div key={i} className="mt-2">
+                <img 
+                  src={item.image_url.url} 
+                  alt="消息图片"
+                  className="max-w-full rounded-lg shadow-sm" 
+                  loading="lazy"
+                />
+              </div>
+            );
+          default:
+            return null;
+        }
+      });
+    }
+
+    // 处理字符串格式的内容
     if (typeof content === 'string') {
       // 如果是部分响应且正在流式输出，添加光标到HTML内容中
       let html = md.render(content || '');
