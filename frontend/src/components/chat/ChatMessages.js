@@ -311,16 +311,7 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, uploadS
           }
         `}
       </style>
-      {console.log('完整消息列表:', messages)}
       {messages.map((message, index) => {
-        console.log('渲染消息:', {
-          index,
-          role: message.role,
-          content: message.content,
-          isUser: message.role === 'user',
-          messagesLength: messages.length,
-          allMessages: [...messages]
-        });
         
         // 确定消息状态
         const isLastMessage = index === messages.length - 1;
