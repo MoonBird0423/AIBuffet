@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Arrays;
+
 import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
@@ -18,6 +20,11 @@ import java.util.UUID;
 
 @Service
 public class OSSService {
+    // 聊天图片相关常量
+    private static final long CHAT_IMAGE_MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    private static final String[] ALLOWED_IMAGE_TYPES = {
+        "image/jpeg", "image/png", "image/gif", "image/webp"
+    };
 
     @Autowired
     private OSS ossClient;
@@ -63,20 +70,66 @@ public class OSSService {
     }
 
     /**
-     * 检查文件是否合法
-     * @param file 文件
+     * 上传聊天图片到OSS并返回访问URL
+     * @param file 图片文件
+     * @param userId 用户ID
+     * @return 图片访问URL
+     */
+    public String uploadChatImage(MultipartFile file, Long userId) throws IOException {
+        // 验证聊天图片
+        if (!isValidChatImage(file)) {
+            throw new IllegalArgumentException("Invalid chat image file");
+        }
+
+        // 生成唯一的文件名
+        String originalFilename = file.getOriginalFilename();
+        String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        String fileName = String.format("chat-images/%d/%s%s", userId, UUID.randomUUID().toString(), extension);
+
+        // 设置文件元数据
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentType(file.getContentType());
+        metadata.setContentLength(file.getSize());
+
+        // 上传文件
+        PutObjectRequest putObjectRequest = new PutObjectRequest(
+            ossConfig.getBucketName(),
+            fileName,
+            file.getInputStream(),
+            metadata
+        );
+        ossClient.putObject(putObjectRequest);
+
+        // 生成签名URL，有效期10年
+        Date expiration = Date.from(
+            LocalDateTime.now().plusYears(10)
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+        );
+        URL url = ossClient.generatePresignedUrl(
+            ossConfig.getBucketName(), 
+            fileName, 
+            expiration
+        );
+
+        return url.toString();
+    }
+
+    /**
+     * 验证聊天图片是否合法
+     * @param file 图片文件
      * @return 是否合法
      */
-    public boolean isValidFile(MultipartFile file) {
-        String contentType = file.getContentType();
-        long size = file.getSize();
-        
-        // 检查文件类型
-        if (contentType == null || !contentType.startsWith("image/")) {
+    public boolean isValidChatImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
             return false;
         }
 
-        // 检查文件大小（最大2MB）
-        return size <= 2 * 1024 * 1024;
+        String contentType = file.getContentType();
+        long size = file.getSize();
+
+        return contentType != null 
+            && Arrays.asList(ALLOWED_IMAGE_TYPES).contains(contentType)
+            && size <= CHAT_IMAGE_MAX_SIZE;
     }
 }
