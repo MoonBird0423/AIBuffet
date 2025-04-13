@@ -88,14 +88,11 @@ function Chat() {
       setError(null);
       if (sessionId) {
         try {
-          console.log('开始加载会话:', sessionId);
           const session = await getChatSession(sessionId);
-          console.log('获取到会话数据:', session);
       if (session) {
         setCurrentSessionId(sessionId);
         setCurrentSession(session);
         const messages = JSON.parse(session.messages);
-        console.log('解析到的消息列表:', messages);
         
         // 只在非流式输出状态时更新消息
         const isStreaming = processingMap.get(sessionId);
@@ -135,7 +132,6 @@ function Chat() {
         }
       } else {
         // 如果没有sessionId，重置状态
-        console.log('重置状态，准备新对话');
         setCurrentSession(null);
         setCurrentSessionId(null);
         setMessagesMap(new Map());
@@ -273,24 +269,15 @@ function Chat() {
       // 先创建新会话（如果需要）
       if (!activeSessionId) {
         try {
-          console.log('创建新会话，用户输入:', content);
           const newSession = await createChatSession(content);
-          console.log('从后端获取的新会话数据:', newSession);
-          console.log('从后端获取的初始消息列表:', JSON.parse(newSession.messages));
-          console.log('-----创建会话状态更新开始-----');
           activeSessionId = newSession.sessionId;
           setCurrentSessionId(activeSessionId);
           setCurrentSession(newSession);
           
           // 使用后端返回的消息列表
           const serverMessages = JSON.parse(newSession.messages);
-          console.log('更新 messagesMap 前的服务器消息:', serverMessages);
           setMessagesMap(prev => {
-            // 直接使用后端返回的消息列表，不做额外处理
-            console.log('使用后端返回的消息列表更新状态:', serverMessages);
-            console.log('清空旧消息，使用服务器返回的消息列表:', serverMessages);
             const newMap = new Map([[activeSessionId, serverMessages]]);
-            console.log('新的消息Map状态:', Object.fromEntries(newMap));
             return newMap;
           });
 
@@ -301,7 +288,6 @@ function Chat() {
           
           // 更新URL并触发路由更新
           navigate(`/chat?session=${activeSessionId}`);
-          console.log('-----创建会话状态更新完成-----');
         } catch (error) {
           console.error('Create session error:', error);
           setError('创建对话失败');
@@ -325,19 +311,10 @@ function Chat() {
 
       // 获取当前会话的消息
       const currentMessages = messagesMap.get(activeSessionId) || [];
-      console.log('获取当前会话消息:', {
-        activeSessionId,
-        currentMessages,
-        messagesMapState: Object.fromEntries(messagesMap)
-      });
-      console.log('新的用户消息:', userMessage);
-
       // 构建新的消息列表
       const newMessages = [...currentMessages, userMessage];
-      console.log('添加用户消息后的完整消息列表:', newMessages);
       
       // 更新消息映射
-      console.log('更新消息映射前的状态:', Object.fromEntries(messagesMap));
       setMessagesMap(prev => {
         const newMap = new Map(prev);
         newMap.set(activeSessionId, newMessages);
@@ -347,9 +324,7 @@ function Chat() {
       // 如果已有会话ID，更新会话
       if (activeSessionId) {
         try {
-          console.log('准备更新会话，消息列表:', newMessages);
           const updatedChat = await updateChatSession(activeSessionId, JSON.stringify(newMessages));
-          console.log('会话更新成功:', updatedChat);
           if (sidebarRef.current) {
             sidebarRef.current.handleChatUpdated(updatedChat);
           }
@@ -362,14 +337,11 @@ function Chat() {
       // 创建新的AbortController
       abortControllerRef.current = new AbortController();
 
-      console.log('调用模型前的当前消息列表:', newMessages);
-      
       // 调用模型
       let aiMessage = {
         role: 'assistant',
         content: ''
       };
-      console.log('初始化AI消息:', aiMessage);
       
       // 更新特定会话的消息
       setMessagesMap(prev => {
@@ -388,10 +360,7 @@ function Chat() {
           // 从SSE响应中提取content
           const content = data.choices?.[0]?.delta?.content || '';
           if (content) {
-            console.log('收到模型响应块:', content);
-            
             // 更新部分响应状态
-            console.log('当前AI消息内容:', aiMessage.content);
             setPartialResponseMap(prev => {
               const newMap = new Map(prev);
               const currentPartial = (newMap.get(activeSessionId) || '') + content;
@@ -423,7 +392,6 @@ function Chat() {
           });
         },
           onFinish: async () => {
-            console.log('对话完成，最终消息列表:', [...newMessages, aiMessage]);
             // 清理当前用户消息
             setCurrentUserMessage(null);
             
@@ -442,12 +410,6 @@ function Chat() {
           
           const finalMessages = [...newMessages, aiMessage];
           try {
-            console.log('更新会话最终状态:', {
-              sessionId: activeSessionId,
-              currentMessages: newMessages,
-              aiMessage,
-              finalMessages
-            });
             const updatedChat = await updateChatSession(activeSessionId, JSON.stringify(finalMessages));
             
             // 使用完整的消息列表更新状态
@@ -486,9 +448,7 @@ function Chat() {
   };
 
   const handleNewChat = () => {
-    console.log('创建新的对话');
     if (sessionId) {
-      console.log('取消现有会话的请求:', sessionId);
       cancelCurrentRequest(sessionId);
     }
     setError(null);

@@ -10,7 +10,42 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
     'X-Requested-With': 'XMLHttpRequest'
   },
-  withCredentials: true
+  withCredentials: true,
+  timeout: 300000, // 5分钟超时
+  // 请求重试配置
+  retry: 3,
+  retryDelay: 1000,
+  retryCondition: (error) => {
+    return axios.isAxiosError(error) && (
+      error.code === 'ERR_NETWORK' ||
+      error.code === 'ECONNABORTED' ||
+      (!error.response && error.code !== 'ERR_CANCELED')
+    );
+  }
+});
+
+// 添加请求重试拦截器
+apiClient.interceptors.response.use(null, async (error) => {
+  const config = error.config;
+  
+  // 如果配置了重试，且满足重试条件
+  if (config.retry && config.retryCondition(error)) {
+    config.retryCount = config.retryCount || 0;
+    
+    // 如果重试次数小于最大重试次数
+    if (config.retryCount < config.retry) {
+      config.retryCount += 1;
+      
+      // 延迟重试
+      await new Promise(resolve => setTimeout(resolve, config.retryDelay));
+      console.log(`重试请求 (${config.retryCount}/${config.retry}):`, config.url);
+      
+      // 重试请求
+      return apiClient(config);
+    }
+  }
+  
+  return Promise.reject(error);
 });
 
 // 添加请求拦截器来处理认证
@@ -232,6 +267,12 @@ export const queryModels = async (params) => {
 // 上传聊天图片
 export const uploadChatImage = async (file) => {
   try {
+    console.log('开始上传图片:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type
+    });
+
     const formData = new FormData();
     formData.append('file', file);
 
@@ -239,10 +280,30 @@ export const uploadChatImage = async (file) => {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 300000, // 5分钟超时
+      // 分块上传配置
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      // 添加上传进度监控
+      onUploadProgress: (progressEvent) => {
+        console.log('上传进度:', {
+          loaded: progressEvent.loaded,
+          total: progressEvent.total,
+          progress: Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        });
+      }
     });
+    
+    console.log('图片上传成功:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Error uploading chat image:', error);
+    console.error('图片上传失败:', {
+      error,
+      errorMessage: error.message,
+      errorCode: error.code,
+      errorResponse: error.response?.data,
+      errorStack: error.stack
+    });
     throw error;
   }
 };
