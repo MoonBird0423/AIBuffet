@@ -39,9 +39,7 @@ public class ChatController {
     @GetMapping
     public ResponseEntity<List<ChatSession>> getChatSessions(Authentication authentication) {
         String userId = getUserId(authentication);
-        logger.info("Fetching chat sessions for user: {}", userId);
         List<ChatSession> sessions = chatService.getUserChatSessions(userId);
-        logger.info("Found {} chat sessions", sessions.size());
         return ResponseEntity.ok(sessions);
     }
 
@@ -50,7 +48,6 @@ public class ChatController {
             Authentication authentication,
             @PathVariable String sessionId) {
         String userId = getUserId(authentication);
-        logger.info("Fetching chat session {} for user: {}", sessionId, userId);
         ChatSession chatSession = chatService.getChatSession(userId, sessionId);
         if (chatSession == null) {
             logger.warn("Chat session {} not found for user {}", sessionId, userId);
@@ -68,9 +65,7 @@ public class ChatController {
         if (firstMessage == null || firstMessage.trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-        logger.info("Creating new chat session for user: {}", userId);
-        ChatSession session = chatService.createChatSession(userId, firstMessage);
-        logger.info("Created chat session: {}", session.getSessionId());
+            ChatSession session = chatService.createChatSession(userId, firstMessage);
         return ResponseEntity.ok(session);
     }
 
@@ -84,7 +79,6 @@ public class ChatController {
         if (messages == null) {
             return ResponseEntity.badRequest().build();
         }
-        logger.info("Updating chat session {} for user: {}", sessionId, userId);
         try {
             ChatSession updated = chatService.updateChatSession(userId, sessionId, messages);
             return ResponseEntity.ok(updated);
@@ -99,7 +93,6 @@ public class ChatController {
             Authentication authentication,
             @PathVariable String sessionId) {
         String userId = getUserId(authentication);
-        logger.info("Deleting chat session {} for user: {}", sessionId, userId);
         chatService.deleteChatSession(userId, sessionId);
         return ResponseEntity.ok().build();
     }
@@ -110,14 +103,19 @@ public class ChatController {
             @RequestParam("file") MultipartFile file) {
         try {
             String userId = getUserId(authentication);
+            logger.info("开始处理图片上传请求: 用户ID={}, 文件名={}, 文件大小={}, 文件类型={}", 
+                userId, file.getOriginalFilename(), file.getSize(), file.getContentType());
+
             String imageUrl = ossService.uploadChatImage(file, Long.parseLong(userId));
             
+            logger.info("图片上传成功: 用户ID={}, URL={}", userId, imageUrl);
             Map<String, String> response = new HashMap<>();
             response.put("url", imageUrl);
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            logger.error("Error uploading chat image: {}", e.getMessage());
+            logger.error("图片上传失败: 错误信息={}, 异常类型={}, 堆栈信息={}", 
+                e.getMessage(), e.getClass().getName(), e.getStackTrace());
             return ResponseEntity.badRequest().build();
         }
     }
