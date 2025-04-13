@@ -5,9 +5,9 @@ export const FILE_TYPES = {
     name: '图片',
     accept: '.jpg,.jpeg,.png,.gif,.webp',
     mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-    maxSize: 30 * 1024 * 1024, // 30MB
+    maxSize: 10 * 1024 * 1024, // 10MB
     icon: 'image',
-    tooltip: '最多10个，最大30MB'
+    tooltip: '支持jpg/jpeg/png/gif/webp格式，最大10MB'
   },
   VIDEO: {
     name: '视频',
