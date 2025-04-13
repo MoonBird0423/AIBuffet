@@ -3,15 +3,18 @@ package com.aibuffet.controller;
 import com.aibuffet.model.ChatSession;
 import com.aibuffet.model.User;
 import com.aibuffet.service.ChatService;
+import com.aibuffet.service.OSSService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/chats")
@@ -21,6 +24,9 @@ public class ChatController {
 
     @Autowired
     private ChatService chatService;
+
+    @Autowired
+    private OSSService ossService;
 
     private String getUserId(Authentication authentication) {
         if (authentication == null) {
@@ -96,5 +102,23 @@ public class ChatController {
         logger.info("Deleting chat session {} for user: {}", sessionId, userId);
         chatService.deleteChatSession(userId, sessionId);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/upload-image")
+    public ResponseEntity<Map<String, String>> uploadChatImage(
+            Authentication authentication,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            String userId = getUserId(authentication);
+            String imageUrl = ossService.uploadChatImage(file, Long.parseLong(userId));
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("url", imageUrl);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error uploading chat image: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
     }
 }
