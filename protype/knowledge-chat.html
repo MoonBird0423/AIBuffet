@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DouChat - 知识库对话</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .messages-container {
+            height: calc(100vh - 180px);
+        }
+        .message-ai {
+            background-color: #f7f9fc;
+            border-radius: 0.5rem;
+        }
+        .message-user {
+            background-color: #e7f0ff;
+            border-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="knowledge-grid.html" class="text-2xl font-bold text-blue-600">DouChat</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-bell"></i>
+                    </button>
+                    <div class="relative">
+                        <img class="h-8 w-8 rounded-full" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80" alt="User">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Chat Interface -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col h-[calc(100vh-100px)]">
+            <!-- Chat Header -->
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <div class="flex items-center">
+                    <a href="knowledge-detail.html" class="text-blue-600 hover:text-blue-800 mr-2">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <h1 class="text-lg font-semibold text-gray-800">产品使用手册</h1>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-share-alt"></i>
+                    </button>
+                    <button class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Messages Area -->
+            <div class="flex-grow overflow-y-auto messages-container p-4">
+                <!-- Welcome Message -->
+                <div class="mb-6">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 mr-3">
+                            <div class="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                        </div>
+                        <div class="message-ai p-4 max-w-3xl">
+                            <p class="text-gray-800">欢迎使用产品使用手册知识库！我可以回答您关于产品功能、安装、配置和使用的问题。请问有什么可以帮到您的？</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- User Message -->
+                <div class="mb-6">
+                    <div class="flex items-start justify-end">
+                        <div class="message-user p-4 max-w-3xl">
+                            <p class="text-gray-800">我想了解产品的高级功能如何开启和使用</p>
+                        </div>
+                        <div class="flex-shrink-0 ml-3">
+                            <div class="h-8 w-8 rounded-full bg-gray-200 overflow-hidden">
+                                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80" alt="User">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- AI Response -->
+                <div class="mb-6">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 mr-3">
+                            <div class="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                        </div>
+                        <div class="message-ai p-4 max-w-3xl">
+                            <p class="text-gray-800">要开启和使用高级功能，请按照以下步骤操作：</p>
+                            <ol class="list-decimal ml-5 mt-2 space-y-2">
+                                <li>登录您的管理员账号</li>
+                                <li>进入"系统设置"菜单</li>
+                                <li>选择"功能管理"选项卡</li>
+                                <li>在功能列表中找到您需要的高级功能</li>
+                                <li>点击对应功能旁边的"启用"按钮</li>
+                            </ol>
+                            <p class="mt-2 text-gray-800">高级功能包括：数据分析模块、自动报表生成、批量处理工具、API集成等。每个功能可能需要不同级别的权限。</p>
+                            <div class="mt-3 text-sm text-gray-500">
+                                <p>来源: <a href="#" class="text-blue-600 hover:underline">产品功能说明书.pdf</a>, 页码: 15-17</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- User Follow-up Question -->
+                <div class="mb-6">
+                    <div class="flex items-start justify-end">
+                        <div class="message-user p-4 max-w-3xl">
+                            <p class="text-gray-800">数据分析模块具体有哪些功能？能举例说明吗？</p>
+                        </div>
+                        <div class="flex-shrink-0 ml-3">
+                            <div class="h-8 w-8 rounded-full bg-gray-200 overflow-hidden">
+                                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80" alt="User">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- AI Response with References -->
+                <div class="mb-6">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 mr-3">
+                            <div class="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                        </div>
+                        <div class="message-ai p-4 max-w-3xl">
+                            <p class="text-gray-800">数据分析模块提供了全面的数据可视化和深度分析功能，包括：</p>
+                            <ul class="list-disc ml-5 mt-2 space-y-2">
+                                <li><strong>交互式仪表盘</strong> - 自定义可视化视图，支持拖拽操作</li>
+                                <li><strong>预测分析</strong> - 基于历史数据进行趋势预测</li>
+                                <li><strong>异常检测</strong> - 自动识别数据异常点并发出警报</li>
+                                <li><strong>报告导出</strong> - 支持多种格式（PDF、Excel、CSV）的报告导出</li>
+                                <li><strong>实时监控</strong> - 关键指标的实时监控和通知</li>
+                            </ul>
+                            <p class="mt-2 text-gray-800">例如，营销团队可以使用交互式仪表盘来分析不同营销渠道的转化率，财务部门可以利用预测分析来预测未来的收入趋势，运营团队可以通过异常检测及时发现系统性能问题。</p>
+                            <div class="mt-3 text-sm text-gray-500">
+                                <p>来源: <a href="#" class="text-blue-600 hover:underline">产品功能说明书.pdf</a>, 页码: 22-25</p>
+                            </div>
+                            <div class="mt-4 border-t border-gray-200 pt-3">
+                                <p class="text-sm text-gray-600">您还想了解其他高级功能吗？例如：</p>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    <button class="bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1 text-sm text-gray-800 transition-colors">自动报表生成</button>
+                                    <button class="bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1 text-sm text-gray-800 transition-colors">批量处理工具</button>
+                                    <button class="bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1 text-sm text-gray-800 transition-colors">API集成方法</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Input Area -->
+            <div class="p-4 border-t border-gray-200">
+                <div class="flex items-end">
+                    <div class="flex-grow relative">
+                        <textarea class="w-full border border-gray-300 rounded-lg pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none" 
+                            placeholder="输入您的问题..." rows="2"></textarea>
+                        <button class="absolute right-2 bottom-2 text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                    </div>
+                    <button class="ml-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-12 h-12 flex items-center justify-center flex-shrink-0 transition-colors">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div class="flex justify-between items-center mt-2 text-xs text-gray-500">
+                    <div>
+                        <span>Shift + Enter 换行</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="mr-4">使用文档: 产品使用手册 (5个)</span>
+                        <button class="text-blue-600 hover:text-blue-800">
+                            <i class="fas fa-cog mr-1"></i> 设置
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

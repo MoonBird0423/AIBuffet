@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DouChat - 知识库详情</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="knowledge-grid.html" class="text-2xl font-bold text-blue-600">DouChat</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-bell"></i>
+                    </button>
+                    <div class="relative">
+                        <img class="h-8 w-8 rounded-full" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80" alt="User">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Back Button -->
+        <div class="mb-6">
+            <a href="knowledge-grid.html" class="text-blue-600 hover:text-blue-800 inline-flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i> 返回知识库列表
+            </a>
+        </div>
+
+        <!-- Knowledge Base Header -->
+        <div class="bg-white rounded-xl shadow-sm mb-6 overflow-hidden">
+            <div class="p-6">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="flex items-center">
+                            <h1 class="text-2xl font-bold text-gray-800">产品使用手册</h1>
+                            <!-- Color Block -->
+                            <div id="colorDisplay" class="h-6 w-8 bg-blue-500 rounded-md cursor-pointer border border-gray-300 ml-3"></div>
+                            <!-- Color Popup -->
+                            <div id="colorPopup" class="hidden absolute z-10 mt-16 ml-32 p-4 bg-white rounded-lg shadow-lg border border-gray-200 w-72">
+                                <div class="grid grid-cols-10 gap-2 mb-3">
+                                    <!-- Color Blocks - Row 1 -->
+                                    <div class="h-6 w-6 bg-red-500 rounded-md cursor-pointer color-block" data-color="#ef4444"></div>
+                                    <div class="h-6 w-6 bg-orange-500 rounded-md cursor-pointer color-block" data-color="#f97316"></div>
+                                    <div class="h-6 w-6 bg-amber-500 rounded-md cursor-pointer color-block" data-color="#f59e0b"></div>
+                                    <div class="h-6 w-6 bg-yellow-500 rounded-md cursor-pointer color-block" data-color="#eab308"></div>
+                                    <div class="h-6 w-6 bg-lime-500 rounded-md cursor-pointer color-block" data-color="#84cc16"></div>
+                                    <div class="h-6 w-6 bg-green-500 rounded-md cursor-pointer color-block" data-color="#22c55e"></div>
+                                    <div class="h-6 w-6 bg-emerald-500 rounded-md cursor-pointer color-block" data-color="#10b981"></div>
+                                    <div class="h-6 w-6 bg-teal-500 rounded-md cursor-pointer color-block" data-color="#14b8a6"></div>
+                                    <div class="h-6 w-6 bg-cyan-500 rounded-md cursor-pointer color-block" data-color="#06b6d4"></div>
+                                    <div class="h-6 w-6 bg-sky-500 rounded-md cursor-pointer color-block" data-color="#0ea5e9"></div>
+                                    
+                                    <!-- Color Blocks - Row 2 -->
+                                    <div class="h-6 w-6 bg-blue-500 rounded-md cursor-pointer color-block" data-color="#3b82f6"></div>
+                                    <div class="h-6 w-6 bg-indigo-500 rounded-md cursor-pointer color-block" data-color="#6366f1"></div>
+                                    <div class="h-6 w-6 bg-violet-500 rounded-md cursor-pointer color-block" data-color="#8b5cf6"></div>
+                                    <div class="h-6 w-6 bg-purple-500 rounded-md cursor-pointer color-block" data-color="#a855f7"></div>
+                                    <div class="h-6 w-6 bg-fuchsia-500 rounded-md cursor-pointer color-block" data-color="#d946ef"></div>
+                                    <div class="h-6 w-6 bg-pink-500 rounded-md cursor-pointer color-block" data-color="#ec4899"></div>
+                                    <div class="h-6 w-6 bg-rose-500 rounded-md cursor-pointer color-block" data-color="#f43f5e"></div>
+                                    <div class="h-6 w-6 bg-gray-500 rounded-md cursor-pointer color-block" data-color="#6b7280"></div>
+                                    <div class="h-6 w-6 bg-gray-700 rounded-md cursor-pointer color-block" data-color="#374151"></div>
+                                    <div class="h-6 w-6 bg-slate-500 rounded-md cursor-pointer color-block" data-color="#64748b"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-500 mt-2">
+                            <img class="h-5 w-5 rounded-full mr-2" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80" alt="User">
+                            <span>张小明</span>
+                            <span class="mx-2">•</span>
+                            <span>2023-06-15</span>
+                        </div>
+                        <div class="flex items-center mt-2 text-sm">
+                            <div class="flex items-center mr-4">
+                                <span class="mr-2 text-gray-700">公开：</span>
+                                <div class="inline-flex items-center">
+                                    <div class="relative inline-block w-10 mr-2 align-middle select-none">
+                                        <input type="checkbox" id="toggleVisibility" class="absolute opacity-0 w-0 h-0 peer" />
+                                        <label for="toggleVisibility" class="block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer peer-checked:bg-blue-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 peer-focus:ring-offset-1"></label>
+                                        <span class="absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out peer-checked:translate-x-5"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="text-gray-700">分类：</span>
+                                <span class="ml-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs">技术文档</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <a href="knowledge-chat.html" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors flex items-center">
+                            <i class="fas fa-comments mr-2"></i> 开始对话
+                        </a>
+                    </div>
+                </div>
+                <p class="text-gray-600 mt-4">这个知识库包含了产品的使用指南、常见问题及解决方案，帮助用户快速上手和解决使用过程中遇到的问题。</p>
+            </div>
+        </div>
+
+        <!-- Documents Section -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800">文档管理</h2>
+                <label for="file-upload" class="cursor-pointer bg-blue-50 text-blue-700 hover:bg-blue-100 py-2 px-4 rounded-md transition-colors flex items-center">
+                    <i class="fas fa-upload mr-2"></i> 上传文档
+                    <input id="file-upload" type="file" class="hidden" multiple>
+                </label>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="relative mb-6">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                    <i class="fas fa-search text-gray-400"></i>
+                </span>
+                <input type="text" placeholder="搜索文档" class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            </div>
+
+            <!-- Documents List -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">文档名称</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">大小</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">上传时间</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">解析状态</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <!-- Document 1 -->
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <i class="far fa-file-pdf text-red-500 mr-3 text-xl"></i>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">产品功能说明书.pdf</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">2.5 MB</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">2023-06-15</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    已完成
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <button class="text-blue-600 hover:text-blue-800 mr-3">
+                                    <i class="far fa-eye"></i>
+                                </button>
+                                <button class="text-red-600 hover:text-red-800">
+                                    <i class="far fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- Document 2 -->
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <i class="far fa-file-word text-blue-500 mr-3 text-xl"></i>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">安装指南.docx</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">1.2 MB</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">2023-06-14</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    已完成
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <button class="text-blue-600 hover:text-blue-800 mr-3">
+                                    <i class="far fa-eye"></i>
+                                </button>
+                                <button class="text-red-600 hover:text-red-800">
+                                    <i class="far fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- Document 3 -->
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <i class="far fa-file-excel text-green-500 mr-3 text-xl"></i>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">产品参数表.xlsx</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">0.8 MB</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">2023-06-12</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    已完成
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <button class="text-blue-600 hover:text-blue-800 mr-3">
+                                    <i class="far fa-eye"></i>
+                                </button>
+                                <button class="text-red-600 hover:text-red-800">
+                                    <i class="far fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- Document 4 -->
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <i class="far fa-file-powerpoint text-orange-500 mr-3 text-xl"></i>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">产品介绍.pptx</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">5.1 MB</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">2023-06-10</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                    处理中
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <button class="text-blue-600 hover:text-blue-800 mr-3">
+                                    <i class="far fa-eye"></i>
+                                </button>
+                                <button class="text-red-600 hover:text-red-800">
+                                    <i class="far fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- Document 5 -->
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <i class="far fa-file-alt text-gray-500 mr-3 text-xl"></i>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">常见问题解答.txt</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">0.3 MB</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">2023-06-08</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                    失败
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <button class="text-blue-600 hover:text-blue-800 mr-3">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                                <button class="text-red-600 hover:text-red-800">
+                                    <i class="far fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="flex items-center justify-between border-t border-gray-200 px-4 py-3 sm:px-6 mt-4">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    <a href="#" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        上一页
+                    </a>
+                    <a href="#" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        下一页
+                    </a>
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            显示 <span class="font-medium">1</span> 到 <span class="font-medium">5</span> 条，共 <span class="font-medium">5</span> 条结果
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                            <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <span class="sr-only">上一页</span>
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                            <a href="#" aria-current="page" class="z-10 bg-blue-50 border-blue-500 text-blue-600 relative inline-flex items-center px-4 py-2 border text-sm font-medium">
+                                1
+                            </a>
+                            <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <span class="sr-only">下一页</span>
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        // Set up color selection
+        document.addEventListener('DOMContentLoaded', function() {
+            const colorBlocks = document.querySelectorAll('.color-block');
+            const colorDisplay = document.getElementById('colorDisplay');
+            const colorPopup = document.getElementById('colorPopup');
+            
+            // Toggle color popup
+            colorDisplay.addEventListener('click', function() {
+                colorPopup.classList.toggle('hidden');
+            });
+            
+            // Close popup when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!colorPopup.contains(event.target) && event.target !== colorDisplay) {
+                    colorPopup.classList.add('hidden');
+                }
+            });
+            
+            // Handle color block selection
+            colorBlocks.forEach(block => {
+                block.addEventListener('click', function() {
+                    // Remove highlight from all blocks
+                    colorBlocks.forEach(b => b.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-400'));
+                    // Add highlight to selected block
+                    this.classList.add('ring-2', 'ring-offset-2', 'ring-gray-400');
+                    
+                    const color = this.getAttribute('data-color');
+                    colorDisplay.style.backgroundColor = color;
+                    colorPopup.classList.add('hidden');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
