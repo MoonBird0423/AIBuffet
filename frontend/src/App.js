@@ -1,8 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
+import KnowledgeGrid from './pages/KnowledgeGrid';
+import MyKnowledge from './pages/MyKnowledge';
 import Chat from './pages/Chat';
 import Login from './pages/Login';
+import Home from './pages/Home';
 import ToastContainer from './components/common/Toast';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -14,7 +16,9 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<KnowledgeGrid />} />
+          <Route path="/my-knowledge" element={<MyKnowledge />} />
+          <Route path="/old-home" element={<Home />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/login" element={<Login />} />
           <Route path="/comparison" element={<div>比较页面</div>} />
