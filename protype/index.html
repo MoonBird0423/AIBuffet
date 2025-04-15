@@ -3,297 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI自助餐 - 拿起您的餐盘，开启AI之旅！</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>DouChat - 让文档开口说话</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .login-container {
+            background-image: url('https://images.unsplash.com/photo-1499750310107-5fef28a66643?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80');
+            background-size: cover;
+            background-position: center;
+        }
+    </style>
 </head>
-<body class="bg-gray-50 font-sans">
-    <!-- 导航栏 -->
-    <nav class="bg-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="flex justify-between">
-                <div class="flex space-x-7">
-                    <div>
-                        <a href="index.html" class="flex items-center py-4">
-                            <img src="logo.png" alt="AI自助餐" class="h-8 w-8 mr-2">
-                            <span class="font-semibold text-gray-800 text-lg">AI自助餐</span>
-                        </a>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-3">
-                    <a href="index.html" class="py-4 px-2 text-blue-500 border-b-4 border-blue-500 font-semibold">首页</a>
-                    <a href="comparison.html" class="py-4 px-2 text-gray-500 font-semibold hover:text-blue-500 transition duration-300">对比</a>
-                    <a href="learning.html" class="py-4 px-2 text-gray-500 font-semibold hover:text-blue-500 transition duration-300">学习</a>
-                    <a href="community.html" class="py-4 px-2 text-gray-500 font-semibold hover:text-blue-500 transition duration-300">社区</a>
-                    <a href="feedback.html" class="py-4 px-2 text-gray-500 font-semibold hover:text-blue-500 transition duration-300">反馈</a>
-                    <div class="border-l pl-3 ml-3 flex items-center space-x-3">
-                        <img src="https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp" alt="用户头像" class="w-8 h-8 rounded-full">
-                        <span class="text-gray-700 font-medium">游客</span>
-                    </div>
+<body>
+    <div class="flex min-h-screen">
+        <!-- Left side - Image (was previously Right side) -->
+        <div class="hidden md:block md:w-1/2 login-container">
+            <div class="h-full flex items-center justify-center bg-black bg-opacity-50">
+                <div class="text-center text-white p-8">
+                    <h2 class="text-4xl font-bold mb-4">知识的力量</h2>
+                    <p class="text-xl">让AI赋能您的文档，智能问答尽在指尖</p>
                 </div>
             </div>
-        </div>
-    </nav>
-
-    <!-- 主页横幅 -->
-    <div class="bg-gradient-to-r from-blue-400 to-blue-600 text-white py-16 relative overflow-hidden">
-        <!-- 食物emoji背景 -->
-        <div class="absolute inset-0 z-0 opacity-15">
-            <span class="absolute text-5xl" style="top: 15%; left: 10%;">🍎</span>
-            <span class="absolute text-5xl" style="top: 65%; left: 20%;">🍌</span>
-            <span class="absolute text-5xl" style="top: 25%; left: 85%;">🍞</span>
-            <span class="absolute text-5xl" style="top: 70%; left: 80%;">🍕</span>
-            <span class="absolute text-5xl" style="top: 40%; left: 30%;">🥗</span>
-            <span class="absolute text-5xl" style="top: 20%; left: 25%;">🍔</span>
-            <span class="absolute text-5xl" style="top: 75%; left: 55%;">🍣</span>
-            <span class="absolute text-5xl" style="top: 30%; left: 70%;">🥑</span>
-            <span class="absolute text-5xl" style="top: 50%; left: 15%;">🍇</span>
-            <span class="absolute text-5xl" style="top: 60%; left: 40%;">🥪</span>
         </div>
         
-        <div class="container mx-auto px-4 text-center relative z-10">
-            <h1 class="text-5xl font-bold mb-4">拿起您的餐盘，开启AI之旅！</h1>
-            <p class="text-xl mb-8">在一处探索、比较和了解前沿AI模型。</p>
-            <div class="flex justify-center">
-                <a href="#models" class="bg-white text-blue-500 hover:bg-blue-50 font-bold py-3 px-6 rounded-full shadow-lg transition duration-300">
-                    探索AI模型 <i class="fas fa-chevron-right ml-2"></i>
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- 模型部分 -->
-    <div id="models" class="container mx-auto px-4 py-16">
-        <h2 class="text-3xl font-bold text-center mb-8">精选AI模型</h2>
-        <p class="text-center text-gray-600 mb-6">选择最多3个模型进行比较，查看它们如何回应您的问题。</p>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <!-- GPT-4卡片 -->
-            <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300">
-                <div class="p-6">
-                    <div class="flex items-center mb-3">
-                        <div class="text-2xl mr-3 bg-red-100 p-3 rounded-full">
-                            <i class="fas fa-apple-alt text-red-600"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold">GPT-4</h3>
-                            <div class="flex items-center">
-                                <div class="flex">
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                    <i class="fas fa-star-half-alt text-yellow-400"></i>
-                                </div>
-                                <span class="text-gray-600 text-sm ml-2">(4.5/5)</span>
-                            </div>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="gpt4" class="rounded text-blue-500 focus:ring-blue-500 h-6 w-6">
-                        </div>
-                    </div>
-                    <p class="text-gray-600 mb-4">OpenAI的最先进模型，擅长创意内容、编程和详细回答。最适合复杂任务和细微理解。</p>
-                    <div class="flex flex-wrap gap-2 mb-4">
-                        <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">创意写作</span>
-                        <span class="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded">代码生成</span>
-                        <span class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">问题解决</span>
-                    </div>
-                    <button class="text-blue-500 hover:text-blue-700 font-medium flex items-center">
-                        单独品尝 <i class="fas fa-arrow-right ml-1"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Claude卡片 -->
-            <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300">
-                <div class="p-6">
-                    <div class="flex items-center mb-3">
-                        <div class="text-2xl mr-3 bg-yellow-100 p-3 rounded-full">
-                            <i class="fas fa-lemon text-yellow-600"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold">Claude</h3>
-                            <div class="flex items-center">
-                                <div class="flex">
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                    <i class="far fa-star text-yellow-400"></i>
-                                </div>
-                                <span class="text-gray-600 text-sm ml-2">(4.0/5)</span>
-                            </div>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="claude" class="rounded text-blue-500 focus:ring-blue-500 h-6 w-6">
-                        </div>
-                    </div>
-                    <p class="text-gray-600 mb-4">Anthropic的对话AI助手，注重有帮助、无害和诚实的回应。在细微对话和详细解释方面表现强劲。</p>
-                    <div class="flex flex-wrap gap-2 mb-4">
-                        <span class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded">对话</span>
-                        <span class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">解释</span>
-                        <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded">安全性</span>
-                    </div>
-                    <button class="text-blue-500 hover:text-blue-700 font-medium flex items-center">
-                        单独品尝 <i class="fas fa-arrow-right ml-1"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Gemini卡片 -->
-            <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300">
-                <div class="p-6">
-                    <div class="flex items-center mb-3">
-                        <div class="text-2xl mr-3 bg-green-100 p-3 rounded-full">
-                            <i class="fas fa-carrot text-green-600"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold">Gemini</h3>
-                            <div class="flex items-center">
-                                <div class="flex">
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                </div>
-                                <span class="text-gray-600 text-sm ml-2">(4.8/5)</span>
-                            </div>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="gemini" class="rounded text-blue-500 focus:ring-blue-500 h-6 w-6">
-                        </div>
-                    </div>
-                    <p class="text-gray-600 mb-4">谷歌的多模态AI系统，设计用于处理文本、图像、音频等。在推理任务和实际问题解决方面表现出色。</p>
-                    <div class="flex flex-wrap gap-2 mb-4">
-                        <span class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">多模态</span>
-                        <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">推理</span>
-                        <span class="bg-pink-100 text-pink-800 text-xs font-semibold px-2.5 py-0.5 rounded">知识</span>
-                    </div>
-                    <button class="text-blue-500 hover:text-blue-700 font-medium flex items-center">
-                        单独品尝 <i class="fas fa-arrow-right ml-1"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Llama卡片 -->
-            <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300">
-                <div class="p-6">
-                    <div class="flex items-center mb-3">
-                        <div class="text-2xl mr-3 bg-yellow-100 p-3 rounded-full">
-                            <i class="fas fa-banana text-yellow-600"></i> <!-- Note: 'fa-banana' may not exist, using as placeholder -->
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold">Llama 2</h3>
-                            <div class="flex items-center">
-                                <div class="flex">
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                    <i class="fas fa-star text-yellow-400"></i>
-                                    <i class="fas fa-star-half-alt text-yellow-400"></i>
-                                    <i class="far fa-star text-yellow-400"></i>
-                                </div>
-                                <span class="text-gray-600 text-sm ml-2">(3.5/5)</span>
-                            </div>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="llama" class="rounded text-blue-500 focus:ring-blue-500 h-6 w-6">
-                        </div>
-                    </div>
-                    <p class="text-gray-600 mb-4">Meta的开源大型语言模型，专为对话用例设计。可以针对特定应用进行微调和部署。</p>
-                    <div class="flex flex-wrap gap-2 mb-4">
-                        <span class="bg-orange-100 text-orange-800 text-xs font-semibold px-2.5 py-0.5 rounded">开源</span>
-                        <span class="bg-teal-100 text-teal-800 text-xs font-semibold px-2.5 py-0.5 rounded">可定制</span>
-                        <span class="bg-gray-100 text-gray-800 text-xs font-semibold px-2.5 py-0.5 rounded">多用途</span>
-                    </div>
-                    <button class="text-blue-500 hover:text-blue-700 font-medium flex items-center">
-                        单独品尝 <i class="fas fa-arrow-right ml-1"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 这里可以添加两个额外的模型卡片 -->
-        </div>
-
-        <!-- 比较按钮 -->
-        <div class="mt-12 text-center">
-            <a href="comparison.html" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 inline-flex items-center">
-                <i class="fas fa-exchange-alt mr-2"></i> 比较选定模型
-            </a>
-            <p class="text-gray-500 mt-3 text-sm">最多选择3个模型进行并排比较</p>
-        </div>
-    </div>
-
-    <!-- 特点部分 -->
-    <div class="bg-gray-100 py-16">
-        <div class="container mx-auto px-4">
-            <h2 class="text-3xl font-bold text-center mb-12">为什么选择AI自助餐？</h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="bg-white rounded-lg p-6 shadow-md">
-                    <div class="text-blue-500 text-4xl mb-4">
-                        <i class="fas fa-exchange-alt"></i>
-                    </div>
-                    <h3 class="text-xl font-bold mb-3">并排比较</h3>
-                    <p class="text-gray-600">查看不同AI模型对同一提示的回应，并高亮显示差异以便于比较。</p>
+        <!-- Right side - Login Form (was previously Left side) -->
+        <div class="w-full md:w-1/2 flex flex-col justify-center items-center p-8">
+            <div class="w-full max-w-md">
+                <div class="text-center mb-10">
+                    <h1 class="text-4xl font-bold text-blue-600 mb-2">DocuChat</h1>
+                    <p class="text-gray-600 text-xl">让文档开口说话，从此知识不再沉默</p>
                 </div>
                 
-                <div class="bg-white rounded-lg p-6 shadow-md">
-                    <div class="text-blue-500 text-4xl mb-4">
-                        <i class="fas fa-graduation-cap"></i>
-                    </div>
-                    <h3 class="text-xl font-bold mb-3">边用边学</h3>
-                    <p class="text-gray-600">获取资源，了解AI模型的工作原理、优势和理想使用场景。</p>
-                </div>
-                
-                <div class="bg-white rounded-lg p-6 shadow-md">
-                    <div class="text-blue-500 text-4xl mb-4">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <h3 class="text-xl font-bold mb-3">社区见解</h3>
-                    <p class="text-gray-600">加入与其他用户的讨论，分享经验，发现利用AI技术的新方法。</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 页脚 -->
-    <footer class="bg-gray-800 text-white py-8">
-        <div class="container mx-auto px-4">
-            <div class="flex flex-col md:flex-row justify-between">
-                <div class="mb-6 md:mb-0">
-                    <div class="flex items-center">
-                        <i class="fas fa-robot text-3xl text-blue-400 mr-2"></i>
-                        <span class="text-xl font-bold">AI自助餐</span>
-                    </div>
-                    <p class="mt-2 text-gray-400">拿起您的餐盘，开启AI之旅！</p>
-                </div>
-                
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-8">
-                    <div>
-                        <h3 class="text-lg font-semibold mb-3">探索</h3>
-                        <ul class="space-y-2">
-                            <li><a href="index.html" class="text-gray-400 hover:text-white">首页</a></li>
-                            <li><a href="comparison.html" class="text-gray-400 hover:text-white">比较模型</a></li>
-                            <li><a href="learning.html" class="text-gray-400 hover:text-white">学习资源</a></li>
-                        </ul>
+                <form class="bg-white p-8 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">欢迎登录</h2>
+                    
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="phone">
+                            手机号码
+                        </label>
+                        <div class="flex">
+                            <span class="inline-flex items-center px-3 text-gray-500 bg-gray-100 rounded-l-md border border-r-0 border-gray-300">
+                                <i class="fas fa-mobile-alt"></i>
+                            </span>
+                            <input class="appearance-none border border-gray-300 rounded-r-md w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" 
+                                id="phone" type="tel" placeholder="请输入手机号码">
+                        </div>
                     </div>
                     
-                    <div>
-                        <h3 class="text-lg font-semibold mb-3">关注我们</h3>
-                        <div class="flex space-x-4">
-                            <a href="#" class="text-gray-400 hover:text-white text-lg"><i class="fab fa-twitter"></i></a>
-                            <a href="#" class="text-gray-400 hover:text-white text-lg"><i class="fab fa-linkedin"></i></a>
-                            <a href="#" class="text-gray-400 hover:text-white text-lg"><i class="fab fa-github"></i></a>
-                            <a href="#" class="text-gray-400 hover:text-white text-lg"><i class="fab fa-discord"></i></a>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="verificationCode">
+                            验证码
+                        </label>
+                        <div class="flex">
+                            <span class="inline-flex items-center px-3 text-gray-500 bg-gray-100 rounded-l-md border border-r-0 border-gray-300">
+                                <i class="fas fa-key"></i>
+                            </span>
+                            <input class="appearance-none border border-gray-300 border-r-0 w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" 
+                                id="verificationCode" type="text" placeholder="请输入验证码">
+                            <button type="button" class="bg-blue-100 text-blue-700 font-medium px-6 whitespace-nowrap rounded-r-md border border-l-0 border-gray-300 hover:bg-blue-200 transition-colors">
+                                获取验证码
+                            </button>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400 text-sm">
-                <p>&copy; 2023 AI自助餐. 版权所有.</p>
+                    
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center">
+                            <input id="remember" type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <label for="remember" class="ml-2 block text-sm text-gray-700">记住我</label>
+                        </div>
+                        <a href="#" class="text-sm text-blue-600 hover:text-blue-800">登录遇到问题?</a>
+                    </div>
+                    
+                    <a href="knowledge-grid.html" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors flex items-center justify-center">
+                        登录
+                    </a>
+                </form>
             </div>
         </div>
-    </footer>
+    </div>
 </body>
 </html>
