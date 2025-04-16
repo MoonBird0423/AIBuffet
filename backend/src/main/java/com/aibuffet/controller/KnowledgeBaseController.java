@@ -2,59 +2,81 @@ package com.aibuffet.controller;
 
 import com.aibuffet.common.ApiResponse;
 import com.aibuffet.model.User;
-import com.aibuffet.dto.CreateKnowledgeBaseRequest;
 import com.aibuffet.model.KnowledgeBase;
+import com.aibuffet.dto.CreateKnowledgeBaseRequest;
+import com.aibuffet.dto.KnowledgeBaseQuery;
+import com.aibuffet.dto.KnowledgeBaseResponse;
 import com.aibuffet.service.KnowledgeBaseService;
-import jakarta.validation.Valid;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.data.domain.Page;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/knowledge-bases")
 public class KnowledgeBaseController {
-    
-    private static final Logger log = LoggerFactory.getLogger(KnowledgeBaseController.class);
 
     @Autowired
     private KnowledgeBaseService knowledgeBaseService;
-
+    
+    /**
+     * 创建知识库
+     * @param request 创建请求
+     * @param authentication 认证信息
+     * @return 创建的知识库
+     */
     @PostMapping
     public ApiResponse<KnowledgeBase> createKnowledgeBase(
-            @Valid @RequestBody CreateKnowledgeBaseRequest request,
-            @AuthenticationPrincipal User user) {
-        log.info("Creating knowledge base: request={}, userId={}", request, user.getId());
-        try {
-            KnowledgeBase knowledgeBase = knowledgeBaseService.createKnowledgeBase(request, user.getId());
-            log.info("Knowledge base created successfully: id={}", knowledgeBase.getId());
-            return ApiResponse.success(knowledgeBase);
-        } catch (Exception e) {
-            log.error("Failed to create knowledge base", e);
-            return ApiResponse.error(500, "创建知识库失败: " + e.getMessage());
-        }
+            @RequestBody CreateKnowledgeBaseRequest request,
+            Authentication authentication) {
+        
+        Long userId = ((User) authentication.getPrincipal()).getId();
+        KnowledgeBase knowledgeBase = knowledgeBaseService.createKnowledgeBase(request, userId);
+        return ApiResponse.success(knowledgeBase);
     }
 
-    @GetMapping("/my")
-    public ApiResponse<List<KnowledgeBase>> getMyKnowledgeBases(
-            @AuthenticationPrincipal User user) {
-        List<KnowledgeBase> knowledgeBases = knowledgeBaseService.getMyKnowledgeBases(user.getId());
-        return ApiResponse.success(knowledgeBases);
-    }
-
+    /**
+     * 查询公开知识库
+     * @param category 分类（可选）
+     * @param keyword 搜索关键词（可选）
+     * @param orderBy 排序方式（latest/usage/docs）
+     * @param page 页码，从0开始
+     * @return 分页结果
+     */
     @GetMapping("/public")
-    public ApiResponse<List<KnowledgeBase>> getPublicKnowledgeBases() {
-        List<KnowledgeBase> knowledgeBases = knowledgeBaseService.getPublicKnowledgeBases();
-        return ApiResponse.success(knowledgeBases);
+    public ApiResponse<Page<KnowledgeBaseResponse>> getPublicKnowledgeBases(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "latest") String orderBy,
+            @RequestParam(defaultValue = "0") Integer page) {
+        
+        KnowledgeBaseQuery query = new KnowledgeBaseQuery();
+        query.setCategory(category);
+        query.setKeyword(keyword);
+        query.setOrderBy(orderBy);
+        query.setPage(page);
+        
+        return ApiResponse.success(knowledgeBaseService.findPublicKnowledgeBases(query));
     }
 
-    @GetMapping("/category/{category}")
-    public ApiResponse<List<KnowledgeBase>> getKnowledgeBasesByCategory(
-            @PathVariable String category) {
-        List<KnowledgeBase> knowledgeBases = knowledgeBaseService.getKnowledgeBasesByCategory(category);
-        return ApiResponse.success(knowledgeBases);
+    /**
+     * 查询我的知识库
+     * @param keyword 搜索关键词（可选）
+     * @param page 页码，从0开始
+     * @param authentication 认证信息
+     * @return 分页结果
+     */
+    @GetMapping("/my")
+    public ApiResponse<Page<KnowledgeBaseResponse>> getMyKnowledgeBases(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") Integer page,
+            Authentication authentication) {
+        
+        KnowledgeBaseQuery query = new KnowledgeBaseQuery();
+        query.setKeyword(keyword);
+        query.setPage(page);
+        query.setOrderBy("latest"); // 固定按创建时间倒序
+        
+        return ApiResponse.success(knowledgeBaseService.findMyKnowledgeBases(query, authentication));
     }
 }
