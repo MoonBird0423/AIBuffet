@@ -337,10 +337,17 @@ export const createKnowledgeBase = async (data) => {
 
 export const getPublicKnowledgeBases = async (params) => {
   try {
+    console.log('Fetching public knowledge bases with params:', params);
     const response = await apiClient.get('/knowledge-bases/public', { params });
+    console.log('Public knowledge bases response:', response.data);
     return response.data.data;
   } catch (error) {
-    console.error('Error fetching public knowledge bases:', error);
+    console.error('Error fetching public knowledge bases:', {
+      error,
+      params,
+      message: error.message,
+      response: error.response?.data
+    });
     throw error;
   }
 };

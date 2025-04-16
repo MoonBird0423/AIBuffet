@@ -12,6 +12,16 @@ const categories = [
   { id: 'business', name: '经管', value: 'BUSINESS' }
 ];
 
+// 与后端Category枚举保持一致
+export const CategoryEnum = {
+  TECH: 'TECH',
+  LITERATURE: 'LITERATURE',
+  POPULAR: 'POPULAR',
+  CULTURE: 'CULTURE',
+  LIFE: 'LIFE',
+  BUSINESS: 'BUSINESS'
+};
+
 // 排序选项与后端对应
 const sortOptions = [
   { value: 'latest', label: '最新' },

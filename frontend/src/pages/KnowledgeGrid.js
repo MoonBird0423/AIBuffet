@@ -19,8 +19,9 @@ const KnowledgeGrid = () => {
 
   // 加载知识库数据
   const loadKnowledgeBases = useCallback(async () => {
-    if (loading || !hasMore) return;
-
+    // 如果已经在加载中，就不再触发新的请求
+    if (loading) return;
+    
     try {
       setLoading(true);
       setError(null);
@@ -48,33 +49,26 @@ const KnowledgeGrid = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, activeCategory, searchQuery, sortValue, loading, hasMore]);
+  }, [page, activeCategory, searchQuery, sortValue]); // 移除loading依赖
 
-  // 监听搜索关键词变化
+  // 监听搜索、分类和排序变化
   useEffect(() => {
     const timer = setTimeout(() => {
       setKnowledgeBases([]);
       setPage(0);
       setHasMore(true);
       loadKnowledgeBases();
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    }, 500); // 500ms的防抖时间
 
-  // 监听分类和排序变化
-  useEffect(() => {
-    setKnowledgeBases([]);
-    setPage(0);
-    setHasMore(true);
-    loadKnowledgeBases();
-  }, [activeCategory, sortValue]);
+    return () => clearTimeout(timer);
+  }, [searchQuery, activeCategory, sortValue, loadKnowledgeBases]); // 添加loadKnowledgeBases依赖
 
   // 监听页码变化
   useEffect(() => {
     if (page > 0) {
       loadKnowledgeBases();
     }
-  }, [page]);
+  }, [page, loadKnowledgeBases]);
 
   // 设置无限滚动
   const observer = useRef();
@@ -87,7 +81,7 @@ const KnowledgeGrid = () => {
       }
     });
     if (node) observer.current.observe(node);
-  }, [loading, hasMore]);
+  }, [loading, hasMore, setPage]);
 
   const handleSearch = (query) => {
     setSearchQuery(query);
