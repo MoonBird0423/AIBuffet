@@ -308,4 +308,61 @@ export const uploadChatImage = async (file) => {
   }
 };
 
+// 知识库相关API
+export const createKnowledgeBase = async (data) => {
+  try {
+    console.log('Creating knowledge base with data:', data);
+    const response = await apiClient.post('/knowledge-bases', data);
+    console.log('Knowledge base creation response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating knowledge base:', {
+      error,
+      request: data,
+      errorMessage: error.message,
+      errorResponse: error.response?.data
+    });
+
+    if (error.response?.status === 401) {
+      throw new Error('请先登录');
+    } else if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else if (!error.response) {
+      throw new Error('网络连接错误，请检查网络后重试');
+    } else {
+      throw new Error('创建知识库失败，请重试');
+    }
+  }
+};
+
+export const getMyKnowledgeBases = async () => {
+  try {
+    const response = await apiClient.get('/knowledge-bases/my');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching my knowledge bases:', error);
+    throw error;
+  }
+};
+
+export const getPublicKnowledgeBases = async () => {
+  try {
+    const response = await apiClient.get('/knowledge-bases/public');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching public knowledge bases:', error);
+    throw error;
+  }
+};
+
+export const getKnowledgeBasesByCategory = async (category) => {
+  try {
+    const response = await apiClient.get(`/knowledge-bases/category/${category}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching knowledge bases by category:', error);
+    throw error;
+  }
+};
+
 export default apiClient;
