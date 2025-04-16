@@ -14,8 +14,7 @@ public class CreateKnowledgeBaseRequest {
     
     private KnowledgeBase.Visibility visibility = KnowledgeBase.Visibility.PRIVATE;
     
-    @Size(max = 50, message = "分类名称不能超过50个字符")
-    private String category;
+    private KnowledgeBase.Category category;
     
     @Size(max = 7, message = "颜色标记不能超过7个字符")
     private String colorMark;
@@ -45,11 +44,11 @@ public class CreateKnowledgeBaseRequest {
         this.visibility = visibility;
     }
 
-    public String getCategory() {
+    public KnowledgeBase.Category getCategory() {
         return category;
     }
 
-    public void setCategory(String category) {
+    public void setCategory(KnowledgeBase.Category category) {
         this.category = category;
     }
 

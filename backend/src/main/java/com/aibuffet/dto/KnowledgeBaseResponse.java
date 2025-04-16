@@ -1,5 +1,6 @@
 package com.aibuffet.dto;
 
+import com.aibuffet.model.KnowledgeBase;
 import java.time.LocalDateTime;
 
 public class KnowledgeBaseResponse {
@@ -12,7 +13,7 @@ public class KnowledgeBaseResponse {
     private Integer docsCount;
     private String colorMark;
     private LocalDateTime createdAt;
-    private String category;
+    private KnowledgeBase.Category category;
 
     // Getters and Setters
     public Long getId() {
@@ -87,11 +88,11 @@ public class KnowledgeBaseResponse {
         this.createdAt = createdAt;
     }
 
-    public String getCategory() {
+    public KnowledgeBase.Category getCategory() {
         return category;
     }
 
-    public void setCategory(String category) {
+    public void setCategory(KnowledgeBase.Category category) {
         this.category = category;
     }
 }
