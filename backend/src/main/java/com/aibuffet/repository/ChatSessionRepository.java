@@ -14,13 +14,13 @@ import java.util.List;
 public interface ChatSessionRepository extends JpaRepository<ChatSession, String> {
     
     @Query("SELECT c FROM ChatSession c WHERE c.userId = :userId AND c.isDeleted = false ORDER BY c.lastMessageAt DESC")
-    List<ChatSession> findByUserIdOrderByLastMessageAtDesc(@Param("userId") String userId);
+    List<ChatSession> findByUserIdOrderByLastMessageAtDesc(@Param("userId") Long userId);
     
     @Query("SELECT c FROM ChatSession c WHERE c.userId = :userId AND c.sessionId = :sessionId AND c.isDeleted = false")
-    ChatSession findByUserIdAndSessionId(@Param("userId") String userId, @Param("sessionId") String sessionId);
+    ChatSession findByUserIdAndSessionId(@Param("userId") Long userId, @Param("sessionId") String sessionId);
     
     @Modifying
     @Transactional
     @Query("UPDATE ChatSession c SET c.isDeleted = true WHERE c.userId = :userId AND c.sessionId = :sessionId")
-    void softDeleteByUserIdAndSessionId(@Param("userId") String userId, @Param("sessionId") String sessionId);
+    void softDeleteByUserIdAndSessionId(@Param("userId") Long userId, @Param("sessionId") String sessionId);
 }

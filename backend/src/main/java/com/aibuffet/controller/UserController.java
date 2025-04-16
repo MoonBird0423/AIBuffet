@@ -49,7 +49,7 @@ public class UserController {
         }
 
         // 验证文件
-        if (!ossService.isValidFile(file)) {
+        if (!ossService.isValidChatImage(file)) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(400, "无效的文件格式或大小超过限制"));
         }

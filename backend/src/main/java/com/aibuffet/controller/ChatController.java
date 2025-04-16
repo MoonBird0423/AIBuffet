@@ -28,17 +28,17 @@ public class ChatController {
     @Autowired
     private OSSService ossService;
 
-    private String getUserId(Authentication authentication) {
+    private Long getUserId(Authentication authentication) {
         if (authentication == null) {
             throw new IllegalStateException("No authentication found");
         }
         User user = (User) authentication.getPrincipal();
-        return user.getId().toString();
+        return user.getId();
     }
 
     @GetMapping
     public ResponseEntity<List<ChatSession>> getChatSessions(Authentication authentication) {
-        String userId = getUserId(authentication);
+        Long userId = getUserId(authentication);
         List<ChatSession> sessions = chatService.getUserChatSessions(userId);
         return ResponseEntity.ok(sessions);
     }
@@ -47,7 +47,7 @@ public class ChatController {
     public ResponseEntity<ChatSession> getChatSession(
             Authentication authentication,
             @PathVariable String sessionId) {
-        String userId = getUserId(authentication);
+        Long userId = getUserId(authentication);
         ChatSession chatSession = chatService.getChatSession(userId, sessionId);
         if (chatSession == null) {
             logger.warn("Chat session {} not found for user {}", sessionId, userId);
@@ -60,7 +60,7 @@ public class ChatController {
     public ResponseEntity<ChatSession> createChatSession(
             Authentication authentication,
             @RequestBody Map<String, String> request) {
-        String userId = getUserId(authentication);
+        Long userId = getUserId(authentication);
         String firstMessage = request.get("message");
         if (firstMessage == null || firstMessage.trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
@@ -74,7 +74,7 @@ public class ChatController {
             Authentication authentication,
             @PathVariable String sessionId,
             @RequestBody Map<String, String> request) {
-        String userId = getUserId(authentication);
+        Long userId = getUserId(authentication);
         String messages = request.get("messages");
         if (messages == null) {
             return ResponseEntity.badRequest().build();
@@ -92,7 +92,7 @@ public class ChatController {
     public ResponseEntity<Void> deleteChatSession(
             Authentication authentication,
             @PathVariable String sessionId) {
-        String userId = getUserId(authentication);
+        Long userId = getUserId(authentication);
         chatService.deleteChatSession(userId, sessionId);
         return ResponseEntity.ok().build();
     }
@@ -102,11 +102,11 @@ public class ChatController {
             Authentication authentication,
             @RequestParam("file") MultipartFile file) {
         try {
-            String userId = getUserId(authentication);
+            Long userId = getUserId(authentication);
             logger.info("开始处理图片上传请求: 用户ID={}, 文件名={}, 文件大小={}, 文件类型={}", 
                 userId, file.getOriginalFilename(), file.getSize(), file.getContentType());
 
-            String imageUrl = ossService.uploadChatImage(file, Long.parseLong(userId));
+            String imageUrl = ossService.uploadChatImage(file, userId);
             
             logger.info("图片上传成功: 用户ID={}, URL={}", userId, imageUrl);
             Map<String, String> response = new HashMap<>();

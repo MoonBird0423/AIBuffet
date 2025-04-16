@@ -12,7 +12,7 @@ public interface ChatService {
      * @param userId 用户ID
      * @return 对话列表
      */
-    List<ChatSession> getUserChatSessions(String userId);
+    List<ChatSession> getUserChatSessions(Long userId);
 
     /**
      * 获取特定对话
@@ -20,7 +20,7 @@ public interface ChatService {
      * @param sessionId 对话ID
      * @return 对话信息
      */
-    ChatSession getChatSession(String userId, String sessionId);
+    ChatSession getChatSession(Long userId, String sessionId);
 
     /**
      * 创建新对话
@@ -28,7 +28,7 @@ public interface ChatService {
      * @param firstMessage 第一条消息内容
      * @return 创建的对话信息
      */
-    ChatSession createChatSession(String userId, String firstMessage);
+    ChatSession createChatSession(Long userId, String firstMessage);
 
     /**
      * 更新对话内容
@@ -37,12 +37,12 @@ public interface ChatService {
      * @param messages 更新后的消息内容
      * @return 更新后的对话信息
      */
-    ChatSession updateChatSession(String userId, String sessionId, String messages);
+    ChatSession updateChatSession(Long userId, String sessionId, String messages);
 
     /**
      * 删除对话
      * @param userId 用户ID
      * @param sessionId 对话ID
      */
-    void deleteChatSession(String userId, String sessionId);
+    void deleteChatSession(Long userId, String sessionId);
 }

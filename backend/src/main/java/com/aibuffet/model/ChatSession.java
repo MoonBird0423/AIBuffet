@@ -12,7 +12,7 @@ public class ChatSession {
     private String sessionId;
 
     @Column(nullable = false)
-    private String userId;
+    private Long userId;
 
     @Column(columnDefinition = "TEXT")
     private String firstMessage;
