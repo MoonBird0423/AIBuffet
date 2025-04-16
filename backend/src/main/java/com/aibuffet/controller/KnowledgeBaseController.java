@@ -45,7 +45,7 @@ public class KnowledgeBaseController {
      */
     @GetMapping("/public")
     public ApiResponse<Page<KnowledgeBaseResponse>> getPublicKnowledgeBases(
-            @RequestParam(required = false) String category,
+            @RequestParam(required = false) KnowledgeBase.Category category,
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "latest") String orderBy,
             @RequestParam(defaultValue = "0") Integer page) {

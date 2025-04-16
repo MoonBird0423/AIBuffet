@@ -1,10 +1,11 @@
 package com.aibuffet.dto;
 
+import com.aibuffet.model.KnowledgeBase.Category;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
 public class KnowledgeBaseQuery {
-    private String category;
+    private Category category;
     private String keyword;
     private String orderBy;
     private Integer page = 0;
@@ -20,11 +21,11 @@ public class KnowledgeBaseQuery {
     }
 
     // Getters and Setters
-    public String getCategory() {
+    public Category getCategory() {
         return category;
     }
 
-    public void setCategory(String category) {
+    public void setCategory(Category category) {
         this.category = category;
     }
 

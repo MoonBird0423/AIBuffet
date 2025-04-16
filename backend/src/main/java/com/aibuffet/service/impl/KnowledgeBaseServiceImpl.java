@@ -8,6 +8,8 @@ import com.aibuffet.model.User;
 import com.aibuffet.repository.KnowledgeBaseRepository;
 import com.aibuffet.repository.UserRepository;
 import com.aibuffet.service.KnowledgeBaseService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -24,6 +26,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(KnowledgeBaseServiceImpl.class);
 
     @Autowired
     private KnowledgeBaseRepository knowledgeBaseRepository;
@@ -51,6 +55,8 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
 
     @Override
     public Page<KnowledgeBaseResponse> findPublicKnowledgeBases(KnowledgeBaseQuery query) {
+        logger.debug("Searching public knowledge bases with query: {}", query);
+        
         Specification<KnowledgeBase> spec = (root, criteriaQuery, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
             
@@ -59,12 +65,14 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
             predicates.add(criteriaBuilder.equal(root.get("status"), KnowledgeBase.Status.ACTIVE));
             
             // 分类过滤
-            if (query.getCategory() != null && !query.getCategory().isEmpty()) {
+            if (query.getCategory() != null) {
+                logger.debug("Adding category filter: {}", query.getCategory());
                 predicates.add(criteriaBuilder.equal(root.get("category"), query.getCategory()));
             }
             
             // 关键词搜索
             if (query.getKeyword() != null && !query.getKeyword().isEmpty()) {
+                logger.debug("Adding keyword filter: {}", query.getKeyword());
                 predicates.add(criteriaBuilder.like(root.get("name"), "%" + query.getKeyword() + "%"));
             }
             
@@ -72,6 +80,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
         };
         
         Page<KnowledgeBase> knowledgeBases = knowledgeBaseRepository.findAll(spec, query.toPageRequest());
+        logger.debug("Found {} knowledge bases matching the criteria", knowledgeBases.getTotalElements());
         
         List<KnowledgeBaseResponse> responses = knowledgeBases.getContent().stream()
             .map(this::convertToResponse)

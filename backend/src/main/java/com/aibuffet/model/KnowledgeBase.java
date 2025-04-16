@@ -34,8 +34,13 @@ public class KnowledgeBase {
     @Column(columnDefinition = "enum('ACTIVE','DELETED') default 'ACTIVE'")
     private Status status = Status.ACTIVE;
 
-    @Column(length = 50)
-    private String category;
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "enum('TECH','LITERATURE','POPULAR','CULTURE','LIFE','BUSINESS')")
+    private Category category;
+
+    public enum Category {
+        TECH, LITERATURE, POPULAR, CULTURE, LIFE, BUSINESS
+    }
 
     @Column(name = "usage_count")
     private Integer usageCount = 0;
@@ -121,11 +126,11 @@ public class KnowledgeBase {
         this.status = status;
     }
 
-    public String getCategory() {
+    public Category getCategory() {
         return category;
     }
 
-    public void setCategory(String category) {
+    public void setCategory(Category category) {
         this.category = category;
     }
 
