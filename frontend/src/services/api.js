@@ -335,32 +335,22 @@ export const createKnowledgeBase = async (data) => {
   }
 };
 
-export const getMyKnowledgeBases = async () => {
+export const getPublicKnowledgeBases = async (params) => {
   try {
-    const response = await apiClient.get('/knowledge-bases/my');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching my knowledge bases:', error);
-    throw error;
-  }
-};
-
-export const getPublicKnowledgeBases = async () => {
-  try {
-    const response = await apiClient.get('/knowledge-bases/public');
-    return response.data;
+    const response = await apiClient.get('/knowledge-bases/public', { params });
+    return response.data.data;
   } catch (error) {
     console.error('Error fetching public knowledge bases:', error);
     throw error;
   }
 };
 
-export const getKnowledgeBasesByCategory = async (category) => {
+export const getMyKnowledgeBases = async (params) => {
   try {
-    const response = await apiClient.get(`/knowledge-bases/category/${category}`);
-    return response.data;
+    const response = await apiClient.get('/knowledge-bases/my', { params });
+    return response.data.data;
   } catch (error) {
-    console.error('Error fetching knowledge bases by category:', error);
+    console.error('Error fetching my knowledge bases:', error);
     throw error;
   }
 };
