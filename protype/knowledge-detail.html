@@ -42,11 +42,14 @@
                 <div class="flex justify-between items-start">
                     <div>
                         <div class="flex items-center">
-                            <h1 class="text-2xl font-bold text-gray-800">产品使用手册</h1>
                             <!-- Color Block -->
-                            <div id="colorDisplay" class="h-6 w-8 bg-blue-500 rounded-md cursor-pointer border border-gray-300 ml-3"></div>
+                            <div id="colorDisplay" class="h-6 w-8 bg-blue-500 rounded-md cursor-pointer border border-gray-300 mr-3"></div>
+                            <h1 class="text-2xl font-bold text-gray-800">产品使用手册</h1>
+                            <button class="ml-3 text-gray-400 hover:text-gray-600 transition-colors">
+                                <i class="fas fa-edit text-lg"></i>
+                            </button>
                             <!-- Color Popup -->
-                            <div id="colorPopup" class="hidden absolute z-10 mt-16 ml-32 p-4 bg-white rounded-lg shadow-lg border border-gray-200 w-72">
+                            <div id="colorPopup" class="hidden absolute z-10 mt-8 ml-0 p-4 bg-white rounded-lg shadow-lg border border-gray-200 w-72">
                                 <div class="grid grid-cols-10 gap-2 mb-3">
                                     <!-- Color Blocks - Row 1 -->
                                     <div class="h-6 w-6 bg-red-500 rounded-md cursor-pointer color-block" data-color="#ef4444"></div>
@@ -79,25 +82,16 @@
                             <span>张小明</span>
                             <span class="mx-2">•</span>
                             <span>2023-06-15</span>
-                        </div>
-                        <div class="flex items-center mt-2 text-sm">
-                            <div class="flex items-center mr-4">
-                                <span class="mr-2 text-gray-700">公开：</span>
-                                <div class="inline-flex items-center">
-                                    <div class="relative inline-block w-10 mr-2 align-middle select-none">
-                                        <input type="checkbox" id="toggleVisibility" class="absolute opacity-0 w-0 h-0 peer" />
-                                        <label for="toggleVisibility" class="block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer peer-checked:bg-blue-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 peer-focus:ring-offset-1"></label>
-                                        <span class="absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out peer-checked:translate-x-5"></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center">
-                                <span class="text-gray-700">分类：</span>
-                                <span class="ml-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs">技术文档</span>
-                            </div>
+                            <span class="mx-2">•</span>
+                            <span>公开</span>
+                            <span class="mx-2">•</span>
+                            <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs">技术文档</span>
                         </div>
                     </div>
-                    <div>
+                    <div class="flex space-x-3">
+                        <button class="text-gray-600 hover:text-gray-800 font-medium py-2 px-4 rounded-md transition-colors flex items-center border border-gray-200 hover:border-gray-300">
+                            <i class="fas fa-share mr-2"></i> 分享
+                        </button>
                         <a href="knowledge-chat.html" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors flex items-center">
                             <i class="fas fa-comments mr-2"></i> 开始对话
                         </a>

@@ -1,20 +1,22 @@
 import React from 'react';
 import { FiChevronDown } from 'react-icons/fi';
 
+// 与后端保持一致的分类枚举
 const categories = [
-  { id: 'all', name: '全部', active: true },
-  { id: 'tech', name: '科技', active: false },
-  { id: 'literature', name: '文学', active: false },
-  { id: 'popular', name: '流行', active: false },
-  { id: 'culture', name: '文化', active: false },
-  { id: 'life', name: '生活', active: false },
-  { id: 'business', name: '经管', active: false }
+  { id: 'all', name: '全部', value: null },
+  { id: 'tech', name: '科技', value: 'TECH' },
+  { id: 'literature', name: '文学', value: 'LITERATURE' },
+  { id: 'popular', name: '流行', value: 'POPULAR' },
+  { id: 'culture', name: '文化', value: 'CULTURE' },
+  { id: 'life', name: '生活', value: 'LIFE' },
+  { id: 'business', name: '经管', value: 'BUSINESS' }
 ];
 
+// 排序选项与后端对应
 const sortOptions = [
   { value: 'latest', label: '最新' },
-  { value: 'mostUsed', label: '最多人用' },
-  { value: 'mostDocs', label: '最多文档' }
+  { value: 'usage', label: '最多人用' },
+  { value: 'docs', label: '最多文档' }
 ];
 
 const CategoryTags = ({ activeCategory, onCategoryChange }) => {
@@ -26,13 +28,14 @@ const CategoryTags = ({ activeCategory, onCategoryChange }) => {
             href="#"
             onClick={(e) => {
               e.preventDefault();
-              onCategoryChange(category.id);
+              onCategoryChange(category.value);
             }}
             className={`inline-block py-3 px-2 ${
-              activeCategory === category.id
-                ? 'text-blue-600'
+              (category.value === null && activeCategory === null) || 
+              category.value === activeCategory
+                ? 'text-blue-600 border-b-2 border-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
-            } font-medium`}
+            } font-medium transition-colors duration-200`}
           >
             {category.name}
           </a>
@@ -42,13 +45,16 @@ const CategoryTags = ({ activeCategory, onCategoryChange }) => {
   );
 };
 
-const SortSelect = ({ value, onChange }) => {
+const SortSelect = ({ value, onChange, disabled }) => {
   return (
     <div className="relative">
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="appearance-none bg-white border border-gray-300 rounded-md py-2 pl-3 pr-8 text-gray-700 text-sm leading-4 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+        disabled={disabled}
+        className={`appearance-none bg-white border border-gray-300 rounded-md py-2 pl-3 pr-8 text-sm leading-4 
+          ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500'}
+          transition-colors duration-200`}
       >
         {sortOptions.map(option => (
           <option key={option.value} value={option.value}>
@@ -63,11 +69,11 @@ const SortSelect = ({ value, onChange }) => {
   );
 };
 
-const CategoryFilter = ({ activeCategory, onCategoryChange, sortValue, onSortChange }) => {
+const CategoryFilter = ({ activeCategory, onCategoryChange, sortValue, onSortChange, loading }) => {
   return (
     <div className="mb-6 flex flex-wrap items-center justify-between">
       <CategoryTags activeCategory={activeCategory} onCategoryChange={onCategoryChange} />
-      <SortSelect value={sortValue} onChange={onSortChange} />
+      <SortSelect value={sortValue} onChange={onSortChange} disabled={loading} />
     </div>
   );
 };

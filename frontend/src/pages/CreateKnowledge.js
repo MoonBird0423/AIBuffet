@@ -6,7 +6,14 @@ import { createKnowledgeBase } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { ToastManager } from '../components/common/Toast';
 
-const CATEGORIES = ['科技', '文学', '流行', '文化', '生活', '经管'];
+const CATEGORIES = [
+  { label: '科技', value: 'TECH' },
+  { label: '文学', value: 'LITERATURE' },
+  { label: '流行', value: 'POPULAR' },
+  { label: '文化', value: 'CULTURE' },
+  { label: '生活', value: 'LIFE' },
+  { label: '经管', value: 'BUSINESS' }
+];
 const DEFAULT_COLOR = '#3b82f6';
 
 function CreateKnowledge() {
@@ -165,7 +172,9 @@ function CreateKnowledge() {
                   >
                     <option value="" disabled>选择分类</option>
                     {CATEGORIES.map(category => (
-                      <option key={category} value={category}>{category}</option>
+                      <option key={category.value} value={category.value}>
+                        {category.label}
+                      </option>
                     ))}
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
