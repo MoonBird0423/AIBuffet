@@ -21,7 +21,7 @@ public class ChatServiceImpl implements ChatService {
     private ChatSessionRepository chatSessionRepository;
 
     @Override
-    public List<ChatSession> getUserChatSessions(String userId) {
+    public List<ChatSession> getUserChatSessions(Long userId) {
         logger.info("Getting chat sessions for user: {}", userId);
         List<ChatSession> sessions = chatSessionRepository.findByUserIdOrderByLastMessageAtDesc(userId);
         logger.info("Found {} chat sessions for user: {}", sessions.size(), userId);
@@ -29,14 +29,14 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
-    public ChatSession getChatSession(String userId, String sessionId) {
+    public ChatSession getChatSession(Long userId, String sessionId) {
         logger.info("Getting chat session {} for user: {}", sessionId, userId);
         return chatSessionRepository.findByUserIdAndSessionId(userId, sessionId);
     }
 
     @Override
     @Transactional
-    public ChatSession createChatSession(String userId, String firstMessage) {
+    public ChatSession createChatSession(Long userId, String firstMessage) {
         logger.info("Creating new chat session for user: {} with first message: {}", userId, firstMessage);
         
         ChatSession chatSession = new ChatSession();
@@ -61,7 +61,7 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
-    public ChatSession updateChatSession(String userId, String sessionId, String messages) {
+    public ChatSession updateChatSession(Long userId, String sessionId, String messages) {
         logger.info("Updating chat session {} for user: {}", sessionId, userId);
         
         ChatSession chatSession = chatSessionRepository.findByUserIdAndSessionId(userId, sessionId);
@@ -78,7 +78,7 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
-    public void deleteChatSession(String userId, String sessionId) {
+    public void deleteChatSession(Long userId, String sessionId) {
         logger.info("Deleting chat session {} for user: {}", sessionId, userId);
         chatSessionRepository.softDeleteByUserIdAndSessionId(userId, sessionId);
         logger.info("Deleted chat session {} for user: {}", sessionId, userId);
