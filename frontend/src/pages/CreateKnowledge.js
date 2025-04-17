@@ -29,29 +29,41 @@ function CreateKnowledge() {
     name: '',
     description: '',
     visibility: 'PRIVATE',
-    category: '',
+    category: null,
     colorMark: DEFAULT_COLOR
   });
   const [showColorPicker, setShowColorPicker] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // 当visibility改变时，重置category
+    if (name === 'visibility') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        category: value === 'PRIVATE' ? null : prev.category
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     try {
-      console.log('创建知识库，提交数据:', formData);
+      // 构建请求数据，私有知识库不发送category
       const requestData = {
         ...formData,
-        visibility: formData.visibility.toUpperCase()
+        visibility: formData.visibility.toUpperCase(),
+        ...(formData.visibility === 'PRIVATE' ? {} : { category: formData.category })
       };
       
+      console.log('创建知识库，提交数据:', requestData);
       const response = await createKnowledgeBase(requestData);
       if (response.code === 200) {
         ToastManager.success('知识库创建成功');

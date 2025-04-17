@@ -362,4 +362,20 @@ export const getMyKnowledgeBases = async (params) => {
   }
 };
 
+export const deleteKnowledgeBase = async (id) => {
+  try {
+    await apiClient.delete(`/knowledge-bases/${id}`);
+  } catch (error) {
+    if (error.response?.status === 401) {
+      throw new Error('请先登录');
+    } else if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else if (!error.response) {
+      throw new Error('网络连接错误，请检查网络后重试');
+    } else {
+      throw new Error('删除知识库失败，请重试');
+    }
+  }
+};
+
 export default apiClient;

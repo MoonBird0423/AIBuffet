@@ -1,9 +1,9 @@
 import React from 'react';
 import { FiSearch } from 'react-icons/fi';
 
-const SearchInput = ({ onSearch }) => {
+const SearchInput = ({ onChange }) => {
   const handleSearch = (e) => {
-    onSearch(e.target.value);
+    onChange(e.target.value);
   };
 
   return (

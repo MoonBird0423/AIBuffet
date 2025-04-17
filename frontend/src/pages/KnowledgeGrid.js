@@ -117,7 +117,7 @@ const KnowledgeGrid = () => {
           {/* 搜索栏和按钮 */}
           <div className="flex flex-col items-center mb-8">
             <div className="w-full max-w-2xl flex flex-col md:flex-row gap-4">
-              <SearchInput onSearch={handleSearch} />
+              <SearchInput onChange={handleSearch} />
               <CreateChatButton />
             </div>
           </div>
