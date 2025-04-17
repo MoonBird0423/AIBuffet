@@ -69,6 +69,7 @@ public class KnowledgeBaseController {
     @GetMapping("/my")
     public ApiResponse<Page<KnowledgeBaseResponse>> getMyKnowledgeBases(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") Integer page,
             Authentication authentication) {
         
@@ -76,7 +77,21 @@ public class KnowledgeBaseController {
         query.setKeyword(keyword);
         query.setPage(page);
         query.setOrderBy("latest"); // 固定按创建时间倒序
+        query.setVisibility(status);
         
         return ApiResponse.success(knowledgeBaseService.findMyKnowledgeBases(query, authentication));
+    }
+    
+    /**
+     * 删除知识库
+     * @param id 知识库ID
+     * @param authentication 认证信息
+     * @return 删除结果
+     */
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteKnowledgeBase(@PathVariable Long id, Authentication authentication) {
+        Long userId = ((User) authentication.getPrincipal()).getId();
+        knowledgeBaseService.deleteKnowledgeBase(id, userId);
+        return ApiResponse.success();
     }
 }

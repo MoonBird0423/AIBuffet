@@ -10,6 +10,7 @@ public class KnowledgeBaseQuery {
     private String orderBy;
     private Integer page = 0;
     private Integer size = 30;
+    private String visibility;
 
     public PageRequest toPageRequest() {
         Sort sort = switch (orderBy) {
@@ -59,5 +60,13 @@ public class KnowledgeBaseQuery {
 
     public void setSize(Integer size) {
         this.size = size == null ? 30 : size;
+    }
+
+    public String getVisibility() {
+        return visibility;
+    }
+
+    public void setVisibility(String visibility) {
+        this.visibility = visibility;
     }
 }
