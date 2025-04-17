@@ -1,9 +1,11 @@
 package com.aibuffet.dto;
 
 import com.aibuffet.model.KnowledgeBase;
+import com.aibuffet.model.KnowledgeBase.Visibility;
 import java.time.LocalDateTime;
 
 public class KnowledgeBaseResponse {
+    private Visibility visibility;
     private Long id;
     private String name;
     private Long createdBy;
@@ -14,8 +16,18 @@ public class KnowledgeBaseResponse {
     private String colorMark;
     private LocalDateTime createdAt;
     private KnowledgeBase.Category category;
+    
+    private String description;
 
     // Getters and Setters
+    
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
     public Long getId() {
         return id;
     }
@@ -94,5 +106,13 @@ public class KnowledgeBaseResponse {
 
     public void setCategory(KnowledgeBase.Category category) {
         this.category = category;
+    }
+
+    public Visibility getVisibility() {
+        return visibility;
+    }
+
+    public void setVisibility(Visibility visibility) {
+        this.visibility = visibility;
     }
 }
