@@ -2,6 +2,20 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FiDatabase, FiUsers } from 'react-icons/fi';
 
+const adjustColor = (color, amount) => {
+  const hex = color.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  const newR = Math.min(255, r + amount);
+  const newG = Math.min(255, g + amount);
+  const newB = Math.min(255, b + amount);
+  
+  const newHex = `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+  return newHex;
+};
+
 const KnowledgeCard = ({ data }) => {
   const { 
     name, 
@@ -19,8 +33,9 @@ const KnowledgeCard = ({ data }) => {
         <div 
           className="h-32 relative flex items-center justify-center"
           style={{ 
-            backgroundColor: colorMark || '#4F46E5',
-            backgroundImage: !colorMark ? 'linear-gradient(to right, #4F46E5, #3B82F6)' : 'none'
+            background: colorMark 
+              ? `linear-gradient(to right, ${colorMark}, ${adjustColor(colorMark, 20)})`
+              : 'linear-gradient(to right, #4F46E5, #3B82F6)'
           }}
         >
           <div className="flex flex-col items-center justify-center text-white">

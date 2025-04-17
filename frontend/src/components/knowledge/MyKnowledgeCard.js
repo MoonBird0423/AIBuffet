@@ -1,15 +1,47 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaRobot, FaTrash, FaCalendarAlt, FaUsers } from 'react-icons/fa';
+import { FiDatabase, FiUsers, FiCalendar, FiTrash2 } from 'react-icons/fi';
 
-function MyKnowledgeCard({ id, title, documentCount, createdAt, visitors, gradient, onDelete }) {
+const adjustColor = (color, amount) => {
+  const hex = color.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  const newR = Math.min(255, r + amount);
+  const newG = Math.min(255, g + amount);
+  const newB = Math.min(255, b + amount);
+  
+  const newHex = `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+  return newHex;
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).replace(/\//g, '-');
+};
+
+function MyKnowledgeCard({ id, title, documentCount, createdAt, visitors, colorMark, onDelete }) {
+  const formattedDate = formatDate(createdAt);
+  
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow overflow-hidden group">
-      {/* Knowledge Base Cover */}
       <Link to={`/knowledge/${id}`} className="block">
-        <div className={`h-32 bg-gradient-to-r ${gradient} relative flex items-center justify-center`}>
+        <div 
+          className="h-32 relative flex items-center justify-center"
+          style={{ 
+            background: colorMark 
+              ? `linear-gradient(to right, ${colorMark}, ${adjustColor(colorMark, 20)})`
+              : 'linear-gradient(to right, #4F46E5, #3B82F6)'
+          }}
+        >
           <div className="flex flex-col items-center justify-center text-white">
-            <FaRobot className="text-4xl opacity-70" />
+            <FiDatabase className="text-4xl opacity-70" />
             <span className="mt-1 text-sm font-medium">{documentCount}个文档</span>
           </div>
           {/* Delete button - only shows on hover */}
@@ -22,22 +54,22 @@ function MyKnowledgeCard({ id, title, documentCount, createdAt, visitors, gradie
               }
             }}
           >
-            <FaTrash />
+            <FiTrash2 className="w-4 h-4" />
           </button>
         </div>
       </Link>
-      {/* Knowledge Base Info */}
+
       <div className="p-4">
         <Link to={`/knowledge/${id}`} className="block">
           <h3 className="font-semibold text-lg text-gray-800 mb-4 truncate">{title}</h3>
         </Link>
         <div className="flex items-center justify-between text-sm text-gray-500">
           <div className="flex items-center">
-            <FaCalendarAlt className="mr-1" />
-            <span>创建于 {createdAt}</span>
+            <FiCalendar className="mr-1" />
+            <span>创建于 {formattedDate}</span>
           </div>
           <div className="flex items-center">
-            <FaUsers className="mr-1" />
+            <FiUsers className="mr-1" />
             <span>{visitors}</span>
           </div>
         </div>
