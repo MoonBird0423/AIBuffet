@@ -96,11 +96,17 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
         Specification<KnowledgeBase> spec = (root, criteriaQuery, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
             
-            // 基础条件：用户创建的且有效的
-            predicates.add(criteriaBuilder.equal(root.get("createdBy"), user.getId()));
-            predicates.add(criteriaBuilder.equal(root.get("status"), KnowledgeBase.Status.ACTIVE));
-            
-            // 关键词搜索
+        // 基础条件：用户创建的且有效的
+        predicates.add(criteriaBuilder.equal(root.get("createdBy"), user.getId()));
+        predicates.add(criteriaBuilder.equal(root.get("status"), KnowledgeBase.Status.ACTIVE));
+        
+        // 可见性筛选
+        if (query.getVisibility() != null) {
+            predicates.add(criteriaBuilder.equal(root.get("visibility"), 
+                KnowledgeBase.Visibility.valueOf(query.getVisibility().toUpperCase())));
+        }
+        
+        // 关键词搜索
             if (query.getKeyword() != null && !query.getKeyword().isEmpty()) {
                 predicates.add(criteriaBuilder.like(root.get("name"), "%" + query.getKeyword() + "%"));
             }
@@ -117,6 +123,22 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
         return new PageImpl<>(responses, query.toPageRequest(), knowledgeBases.getTotalElements());
     }
 
+    @Override
+    @Transactional
+    public void deleteKnowledgeBase(Long id, Long userId) {
+        KnowledgeBase knowledgeBase = knowledgeBaseRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("知识库不存在"));
+            
+        // 验证是否为知识库创建者
+        if (!knowledgeBase.getCreatedBy().equals(userId)) {
+            throw new IllegalArgumentException("无权删除此知识库");
+        }
+        
+        // 软删除：将状态设置为DELETED
+        knowledgeBase.setStatus(KnowledgeBase.Status.DELETED);
+        knowledgeBaseRepository.save(knowledgeBase);
+    }
+
     private KnowledgeBaseResponse convertToResponse(KnowledgeBase knowledgeBase) {
         KnowledgeBaseResponse response = new KnowledgeBaseResponse();
         response.setId(knowledgeBase.getId());
@@ -129,7 +151,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
         
         // 查询创建者信息
         userRepository.findById(knowledgeBase.getCreatedBy()).ifPresent(user -> {
-            response.setCreatorName(user.getUsername());
+            response.setCreatorName(user.getUserDisplayName());
             response.setCreatorAvatar(user.getAvatar());
         });
         
