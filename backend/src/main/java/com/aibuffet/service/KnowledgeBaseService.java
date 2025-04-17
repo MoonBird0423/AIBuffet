@@ -17,4 +17,6 @@ public interface KnowledgeBaseService {
     Page<KnowledgeBaseResponse> findMyKnowledgeBases(KnowledgeBaseQuery query, Authentication authentication);
     
     void deleteKnowledgeBase(Long id, Long userId);
+    
+    KnowledgeBase updateKnowledgeBaseColor(Long id, String colorMark, Long userId);
 }

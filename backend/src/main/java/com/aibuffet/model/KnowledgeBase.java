@@ -1,5 +1,6 @@
 package com.aibuffet.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -48,6 +49,7 @@ public class KnowledgeBase {
     @Column(name = "color_mark", length = 7)
     private String colorMark;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", insertable = false, updatable = false)
     private User creator;

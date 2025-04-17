@@ -13,12 +13,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.util.StringUtils;
 import jakarta.persistence.criteria.Predicate;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +30,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
+    
+    private static final int PAGE_SIZE = 10;
     
     private static final Logger logger = LoggerFactory.getLogger(KnowledgeBaseServiceImpl.class);
 
@@ -90,37 +96,48 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     }
 
     @Override
-    public Page<KnowledgeBaseResponse> findMyKnowledgeBases(KnowledgeBaseQuery query, Authentication authentication) {
-        User user = (User) authentication.getPrincipal();
+    public KnowledgeBaseResponse getKnowledgeBase(Long id) {
+        KnowledgeBase knowledgeBase = knowledgeBaseRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("知识库不存在"));
+            
+        if (knowledgeBase.getStatus() == KnowledgeBase.Status.DELETED) {
+            throw new IllegalArgumentException("知识库已删除");
+        }
         
+        return convertToResponse(knowledgeBase);
+    }
+
+    public Page<KnowledgeBaseResponse> findMyKnowledgeBases(KnowledgeBaseQuery query, Authentication authentication) {
+        Long userId = ((User) authentication.getPrincipal()).getId();
+        
+        // 构建查询条件
         Specification<KnowledgeBase> spec = (root, criteriaQuery, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
             
-        // 基础条件：用户创建的且有效的
-        predicates.add(criteriaBuilder.equal(root.get("createdBy"), user.getId()));
-        predicates.add(criteriaBuilder.equal(root.get("status"), KnowledgeBase.Status.ACTIVE));
-        
-        // 可见性筛选
-        if (query.getVisibility() != null) {
-            predicates.add(criteriaBuilder.equal(root.get("visibility"), 
-                KnowledgeBase.Visibility.valueOf(query.getVisibility().toUpperCase())));
-        }
-        
-        // 关键词搜索
-            if (query.getKeyword() != null && !query.getKeyword().isEmpty()) {
+            // 创建者条件
+            predicates.add(criteriaBuilder.equal(root.get("createdBy"), userId));
+            
+            // 状态条件
+            predicates.add(criteriaBuilder.equal(root.get("status"), KnowledgeBase.Status.ACTIVE));
+            
+            // 关键词搜索
+            if (StringUtils.hasText(query.getKeyword())) {
                 predicates.add(criteriaBuilder.like(root.get("name"), "%" + query.getKeyword() + "%"));
+            }
+            
+            // 可见性过滤
+            if (StringUtils.hasText(query.getVisibility())) {
+                predicates.add(criteriaBuilder.equal(root.get("visibility"), KnowledgeBase.Visibility.valueOf(query.getVisibility().toUpperCase())));
             }
             
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
         
-        Page<KnowledgeBase> knowledgeBases = knowledgeBaseRepository.findAll(spec, query.toPageRequest());
+        // 分页和排序
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+        PageRequest pageRequest = PageRequest.of(query.getPage(), PAGE_SIZE, sort);
         
-        List<KnowledgeBaseResponse> responses = knowledgeBases.getContent().stream()
-            .map(this::convertToResponse)
-            .collect(Collectors.toList());
-            
-        return new PageImpl<>(responses, query.toPageRequest(), knowledgeBases.getTotalElements());
+        return knowledgeBaseRepository.findAll(spec, pageRequest).map(this::convertToResponse);
     }
 
     @Override
@@ -139,15 +156,35 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
         knowledgeBaseRepository.save(knowledgeBase);
     }
 
+    @Override
+    @Transactional
+    public KnowledgeBase updateKnowledgeBaseColor(Long id, String colorMark, Long userId) {
+        if (colorMark == null || !colorMark.matches("^#[0-9A-Fa-f]{6}$")) {
+            throw new IllegalArgumentException("颜色格式不正确");
+        }
+
+        KnowledgeBase knowledgeBase = knowledgeBaseRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("知识库不存在"));
+            
+        if (!knowledgeBase.getCreatedBy().equals(userId)) {
+            throw new IllegalArgumentException("无权修改此知识库");
+        }
+        
+        knowledgeBase.setColorMark(colorMark);
+        return knowledgeBaseRepository.save(knowledgeBase);
+    }
+
     private KnowledgeBaseResponse convertToResponse(KnowledgeBase knowledgeBase) {
         KnowledgeBaseResponse response = new KnowledgeBaseResponse();
         response.setId(knowledgeBase.getId());
         response.setName(knowledgeBase.getName());
+        response.setDescription(knowledgeBase.getDescription());
         response.setCreatedBy(knowledgeBase.getCreatedBy());
         response.setCreatedAt(knowledgeBase.getCreatedAt());
         response.setCategory(knowledgeBase.getCategory());
         response.setUsageCount(knowledgeBase.getUsageCount());
         response.setColorMark(knowledgeBase.getColorMark());
+        response.setVisibility(knowledgeBase.getVisibility());
         
         // 查询创建者信息
         userRepository.findById(knowledgeBase.getCreatedBy()).ifPresent(user -> {

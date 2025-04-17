@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/knowledge-bases")
@@ -93,5 +94,32 @@ public class KnowledgeBaseController {
         Long userId = ((User) authentication.getPrincipal()).getId();
         knowledgeBaseService.deleteKnowledgeBase(id, userId);
         return ApiResponse.success();
+    }
+    
+    /**
+     * 获取知识库详情
+     * @param id 知识库ID
+     * @return 知识库详情
+     */
+    @GetMapping("/{id}")
+    public ApiResponse<KnowledgeBaseResponse> getKnowledgeBase(@PathVariable Long id) {
+        return ApiResponse.success(knowledgeBaseService.getKnowledgeBase(id));
+    }
+    
+    /**
+     * 更新知识库标记颜色
+     * @param id 知识库ID
+     * @param request 包含colorMark的请求体
+     * @param authentication 认证信息
+     * @return 更新结果
+     */
+    @PatchMapping("/{id}/color")
+    public ApiResponse<KnowledgeBase> updateKnowledgeBaseColor(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request,
+            Authentication authentication) {
+        Long userId = ((User) authentication.getPrincipal()).getId();
+        String colorMark = request.get("colorMark");
+        return ApiResponse.success(knowledgeBaseService.updateKnowledgeBaseColor(id, colorMark, userId));
     }
 }
