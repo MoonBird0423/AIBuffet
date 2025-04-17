@@ -362,6 +362,26 @@ export const getMyKnowledgeBases = async (params) => {
   }
 };
 
+export const getKnowledgeBase = async (id) => {
+  try {
+    const response = await apiClient.get(`/knowledge-bases/${id}`);
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching knowledge base:', error);
+    throw error;
+  }
+};
+
+export const updateKnowledgeBaseColor = async (id, colorMark) => {
+  try {
+    const response = await apiClient.patch(`/knowledge-bases/${id}/color`, { colorMark });
+    return response.data.data;
+  } catch (error) {
+    console.error('Error updating knowledge base color:', error);
+    throw error;
+  }
+};
+
 export const deleteKnowledgeBase = async (id) => {
   try {
     await apiClient.delete(`/knowledge-bases/${id}`);
