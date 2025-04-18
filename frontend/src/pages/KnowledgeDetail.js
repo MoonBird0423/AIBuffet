@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaShare, FaEdit, FaComments } from 'react-icons/fa';
+import { FaArrowLeft, FaShare, FaEdit, FaComments, FaUpload } from 'react-icons/fa';
 import { BsSearch } from 'react-icons/bs';
 import ColorPicker from '../components/common/ColorPicker';
 import Navbar from '../components/layout/Navbar';
-import { getKnowledgeBase, updateKnowledgeBaseColor } from '../services/api';
+import FileUploadModal from '../components/knowledge/FileUploadModal';
+import FileList from '../components/knowledge/FileList';
+import { getKnowledgeBase, updateKnowledgeBaseColor, getDocuments } from '../services/api';
 import { ToastManager } from '../components/common/Toast';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -24,6 +26,12 @@ function KnowledgeDetail() {
   const [knowledgeBase, setKnowledgeBase] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [documents, setDocuments] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -33,6 +41,26 @@ function KnowledgeDetail() {
     
     loadKnowledgeBase();
   }, [id, isAuthenticated, navigate]);
+
+  const loadDocuments = useCallback(async (page = 0) => {
+    try {
+      setDocumentsLoading(true);
+      const response = await getDocuments(id, page, 20);
+      setDocuments(response.content);
+      setTotalPages(response.totalPages);
+      setTotalElements(response.totalElements);
+      setCurrentPage(page);
+    } catch (error) {
+      console.error('Error loading documents:', error);
+      ToastManager.error(error.message || '加载文档列表失败');
+    } finally {
+      setDocumentsLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    loadDocuments(currentPage);
+  }, [currentPage, loadDocuments]);
 
   const loadKnowledgeBase = async () => {
     try {
@@ -66,6 +94,11 @@ function KnowledgeDetail() {
 
   const handleStartChat = () => {
     window.open(`/chat?knowledgeId=${id}`, '_blank');
+  };
+
+  const handleDocumentDelete = (docId) => {
+    setDocuments(prev => prev.filter(doc => doc.id !== docId));
+    setTotalElements(prev => prev - 1);
   };
 
   if (loading) {
@@ -150,10 +183,12 @@ function KnowledgeDetail() {
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-800">文档管理</h2>
-            <label className="cursor-pointer bg-blue-50 text-blue-700 hover:bg-blue-100 py-2 px-4 rounded-md transition-colors flex items-center">
-              <FaShare className="mr-2" /> 上传文档
-              <input type="file" className="hidden" multiple accept=".pdf,.doc,.docx,.txt,.md" />
-            </label>
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="bg-blue-50 text-blue-700 hover:bg-blue-100 py-2 px-4 rounded-md transition-colors flex items-center"
+            >
+              <FaUpload className="mr-2" /> 上传文档
+            </button>
           </div>
 
           {/* 搜索栏 */}
@@ -171,39 +206,55 @@ function KnowledgeDetail() {
           </div>
 
           {/* 文档列表 */}
-          <div className="overflow-x-auto">
-            {/* 这里暂时只做静态展示，待后续实现文件管理功能时再完善 */}
-            <table className="min-w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    文档名称
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    大小
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    上传时间
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    解析状态
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    操作
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
-                    暂无文档
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <FileList 
+            files={documents}
+            isLoading={documentsLoading}
+            onDelete={handleDocumentDelete}
+          />
+
+          {totalPages > 1 && (
+            <div className="mt-6 flex justify-between items-center">
+              <div className="text-sm text-gray-500">
+                共 {totalElements} 个文档
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setCurrentPage(prev => prev - 1)}
+                  disabled={currentPage === 0}
+                  className={`px-3 py-1 rounded ${
+                    currentPage === 0
+                      ? 'bg-gray-100 text-gray-400'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  上一页
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  disabled={currentPage === totalPages - 1}
+                  className={`px-3 py-1 rounded ${
+                    currentPage === totalPages - 1
+                      ? 'bg-gray-100 text-gray-400'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  下一页
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </main>
+
+      <FileUploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        knowledgeBaseId={id}
+        onUploadComplete={() => {
+          loadDocuments(0);
+          setCurrentPage(0);
+        }}
+      />
     </div>
   );
 }
