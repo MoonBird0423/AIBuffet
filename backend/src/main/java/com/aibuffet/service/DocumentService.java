@@ -18,6 +18,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 @Service
@@ -37,31 +38,43 @@ public class DocumentService {
      * 上传文档并保存到知识库
      */
     @Transactional
-    public List<DocFile> uploadDocuments(MultipartFile[] files, Long knowledgeBaseId, Long userId, Consumer<Long> progressCallback) throws IOException {
+    public List<DocFile> uploadDocuments(MultipartFile[] files, Long knowledgeBaseId, Long userId, BiConsumer<String, Integer> progressCallback) throws IOException {
         List<DocFile> savedFiles = new ArrayList<>();
+        logger.info("开始处理文件上传: 文件数={}, 知识库ID={}, 用户ID={}", files.length, knowledgeBaseId, userId);
 
         for (MultipartFile file : files) {
+            logger.info("处理文件: name={}, size={}, type={}", 
+                file.getOriginalFilename(), file.getSize(), file.getContentType());
+
+            logger.debug("验证文件格式");
             if (!ossService.isValidKnowledgeDoc(file)) {
+                logger.error("文件验证失败: {}", file.getOriginalFilename());
                 throw new IllegalArgumentException("Invalid document: " + file.getOriginalFilename());
             }
 
+            logger.debug("计算文件MD5");
             String md5Hash = calculateMD5(file);
+            logger.debug("文件MD5: {}", md5Hash);
+
             DocFile existingFile = docFileRepository.findByMd5Hash(md5Hash);
             if (existingFile != null) {
-                // 文件已存在，直接关联到知识库
+                logger.info("文件已存在，直接关联到知识库: fileId={}", existingFile.getId());
                 knowledgeBaseFileRepository.save(new KnowledgeBaseFile(knowledgeBaseId, existingFile.getId(), userId));
                 savedFiles.add(existingFile);
                 continue;
             }
 
-            // 上传文件到OSS
+            logger.info("开始上传文件到OSS: {}", file.getOriginalFilename());
             String fileUrl = ossService.uploadKnowledgeDoc(file, userId, progress -> {
                 if (progressCallback != null) {
-                    progressCallback.accept(file.getSize() * progress / 100);
+                    logger.debug("上传进度: file={}, progress={}%", 
+                        file.getOriginalFilename(), progress);
+                    progressCallback.accept(file.getOriginalFilename(), progress);
                 }
             });
+            logger.info("OSS上传完成，文件URL: {}", fileUrl);
 
-            // 保存文件信息
+            logger.debug("保存文件信息到数据库");
             DocFile docFile = new DocFile();
             docFile.setFileName(file.getOriginalFilename());
             docFile.setFileType(getFileExtension(file.getOriginalFilename()));
@@ -70,12 +83,15 @@ public class DocumentService {
             docFile.setUploadedBy(userId);
             docFile.setMd5Hash(md5Hash);
             docFile = docFileRepository.save(docFile);
+            logger.info("文件信息已保存: fileId={}", docFile.getId());
 
-            // 关联到知识库
+            logger.debug("关联文件到知识库");
             knowledgeBaseFileRepository.save(new KnowledgeBaseFile(knowledgeBaseId, docFile.getId(), userId));
+            logger.info("文件已关联到知识库: fileId={}, knowledgeBaseId={}", docFile.getId(), knowledgeBaseId);
             savedFiles.add(docFile);
         }
 
+        logger.info("文件上传处理完成，共处理{}个文件", savedFiles.size());
         return savedFiles;
     }
 

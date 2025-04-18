@@ -62,6 +62,7 @@ public class OSSService {
         "application/vnd.ms-outlook", // .msg
         // 电子书
         "application/epub+zip",      // .epub
+        "application/epub",          // .epub
         "application/x-mobipocket-ebook" // .mobi
     };
 
