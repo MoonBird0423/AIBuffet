@@ -49,13 +49,13 @@ public class UserController {
         }
 
         // 验证文件
-        if (!ossService.isValidChatImage(file)) {
+        if (!ossService.isValidAvatarImage(file)) {
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(400, "无效的文件格式或大小超过限制"));
+                    .body(ApiResponse.error(400, "无效的头像格式或大小超过限制"));
         }
 
         try {
-            String avatarUrl = ossService.uploadFile(file, user.getId());
+            String avatarUrl = ossService.uploadAvatar(file, user.getId());
             userService.updateAvatar(user.getId(), avatarUrl);
             return ResponseEntity.ok(ApiResponse.success(avatarUrl));
         } catch (IOException e) {

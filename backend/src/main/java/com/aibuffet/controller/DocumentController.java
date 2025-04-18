@@ -9,7 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import com.aibuffet.model.User;
 
 import java.util.HashMap;
 import java.util.List;
@@ -30,7 +30,7 @@ public class DocumentController {
     public ApiResponse<Map<String, Object>> uploadDocuments(
             @RequestParam("files") MultipartFile[] files,
             @RequestParam("knowledgeBaseId") Long knowledgeBaseId,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @AuthenticationPrincipal User user) {
         try {
             String uploadId = String.format("%d_%d", knowledgeBaseId, System.currentTimeMillis());
             uploadProgress.put(uploadId, 0);
@@ -38,7 +38,7 @@ public class DocumentController {
             List<DocFile> savedFiles = documentService.uploadDocuments(
                 files,
                 knowledgeBaseId,
-                Long.parseLong(userDetails.getUsername()),
+                user.getId(),
                 progress -> uploadProgress.put(uploadId, Math.toIntExact(progress))
             );
 
@@ -77,9 +77,9 @@ public class DocumentController {
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteDocument(
             @PathVariable Long id,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @AuthenticationPrincipal User user) {
         try {
-            documentService.deleteDocument(id, Long.parseLong(userDetails.getUsername()));
+            documentService.deleteDocument(id, user.getId());
             return ApiResponse.success(null);
         } catch (Exception e) {
             return ApiResponse.error(ErrorCode.SYSTEM_ERROR, e.getMessage());

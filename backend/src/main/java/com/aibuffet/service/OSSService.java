@@ -11,23 +11,67 @@ import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
+import java.util.*;
 import java.util.function.Consumer;
 import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Date;
-import java.util.UUID;
 
 @Service
 public class OSSService {
     private static final Logger logger = LoggerFactory.getLogger(OSSService.class);
+    
+    // OSS存储目录结构常量
+    private static final String AVATAR_DIR = "avatars";
+    private static final String CHAT_IMAGE_DIR = "chat-images";
+    private static final String KNOWLEDGE_DOC_DIR = "knowledgebase-doc";
+
+    // 头像相关常量
+    private static final long AVATAR_MAX_SIZE = 5 * 1024 * 1024; // 5MB
+    private static final String[] ALLOWED_AVATAR_TYPES = {
+        "image/jpeg", "image/png", "image/webp"
+    };
+
     // 聊天图片相关常量
     private static final long CHAT_IMAGE_MAX_SIZE = 10 * 1024 * 1024; // 10MB
-    private static final String[] ALLOWED_IMAGE_TYPES = {
+    private static final String[] ALLOWED_CHAT_IMAGE_TYPES = {
         "image/jpeg", "image/png", "image/gif", "image/webp"
     };
+
+    // 知识库文档相关常量
+    private static final long KNOWLEDGE_DOC_MAX_SIZE = 300 * 1024 * 1024; // 300MB
+    private static final String[] ALLOWED_DOC_TYPES = {
+        // Office 文档
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",      // .xlsx
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
+        "application/msword",         // .doc
+        "application/vnd.ms-excel",   // .xls
+        "application/vnd.ms-powerpoint", // .ppt
+        // PDF 文档
+        "application/pdf",            // .pdf
+        // 纯文本
+        "text/plain",                 // .txt
+        "text/csv",                   // .csv
+        "application/json",           // .json
+        "text/xml",                   // .xml
+        "text/html",                  // .html
+        // 电子邮件
+        "message/rfc822",            // .eml
+        "application/vnd.ms-outlook", // .msg
+        // 电子书
+        "application/epub+zip",      // .epub
+        "application/x-mobipocket-ebook" // .mobi
+    };
+
+    private static final Set<String> ALLOWED_DOC_EXTENSIONS = Set.of(
+        ".docx", ".xlsx", ".pptx", ".doc", ".xls", ".ppt",
+        ".pdf",
+        ".txt", ".csv", ".json", ".xml", ".html",
+        ".eml", ".msg",
+        ".epub", ".mobi"
+    );
 
     @Autowired
     private OSS ossClient;
@@ -36,35 +80,35 @@ public class OSSService {
     private OSSConfig ossConfig;
 
     /**
-     * 上传文件到OSS并返回访问URL
-     * @param file 文件
-     * @param userId 用户ID
-     * @return 文件访问URL
+     * 获取文件扩展名
      */
-    public String uploadFile(MultipartFile file, Long userId) throws IOException {
-        return uploadFile(file, userId, null);
+    private String getFileExtension(String filename) {
+        return filename.substring(filename.lastIndexOf(".")).toLowerCase();
     }
 
-    public String uploadFile(MultipartFile file, Long userId, Consumer<Integer> progressCallback) throws IOException {
-        // 生成唯一的文件名
-        String originalFilename = file.getOriginalFilename();
-        String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-        String fileName = String.format("avatars/%d/%s%s", userId, UUID.randomUUID().toString(), extension);
+    /**
+     * 生成OSS对象键
+     */
+    private String generateObjectKey(String baseDir, Long userId, String filename) {
+        String extension = getFileExtension(filename);
+        return String.format("%s/%d/%s%s", baseDir, userId, UUID.randomUUID(), extension);
+    }
 
-        // 设置文件元数据
+    /**
+     * 上传文件到OSS并返回访问URL
+     */
+    private String uploadToOSS(MultipartFile file, String objectKey, Consumer<Integer> progressCallback) throws IOException {
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentType(file.getContentType());
         metadata.setContentLength(file.getSize());
 
-        // 上传文件
         PutObjectRequest putObjectRequest = new PutObjectRequest(
-                ossConfig.getBucketName(),
-                fileName,
-                file.getInputStream(),
-                metadata
+            ossConfig.getBucketName(),
+            objectKey,
+            file.getInputStream(),
+            metadata
         );
 
-        // 如果提供了进度回调，添加进度监听器
         if (progressCallback != null) {
             putObjectRequest.withProgressListener(progressEvent -> {
                 long bytes = progressEvent.getBytes();
@@ -74,22 +118,120 @@ public class OSSService {
             });
         }
 
-        PutObjectResult result = ossClient.putObject(putObjectRequest);
+        ossClient.putObject(putObjectRequest);
 
-        // 生成签名URL，有效期10年
         Date expiration = Date.from(
-                LocalDateTime.now().plusYears(10)
-                        .atZone(ZoneId.systemDefault())
-                        .toInstant()
+            LocalDateTime.now().plusYears(10)
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
         );
-        URL url = ossClient.generatePresignedUrl(ossConfig.getBucketName(), fileName, expiration);
+        URL url = ossClient.generatePresignedUrl(
+            ossConfig.getBucketName(),
+            objectKey,
+            expiration
+        );
 
         return url.toString();
     }
 
     /**
+     * 验证文件的基本属性
+     */
+    private boolean validateFile(MultipartFile file, String[] allowedTypes, long maxSize) {
+        if (file == null || file.isEmpty()) {
+            logger.error("文件为空或无效");
+            return false;
+        }
+
+        String contentType = file.getContentType();
+        long size = file.getSize();
+
+        boolean isValidType = contentType != null && Arrays.asList(allowedTypes).contains(contentType);
+        boolean isValidSize = size <= maxSize;
+
+        if (!isValidType) {
+            logger.error("不支持的文件类型: {}", contentType);
+        }
+        if (!isValidSize) {
+            logger.error("文件大小超出限制: {} > {}", size, maxSize);
+        }
+
+        return isValidType && isValidSize;
+    }
+
+    /**
+     * 上传头像
+     */
+    public String uploadAvatar(MultipartFile file, Long userId) throws IOException {
+        logger.info("开始处理头像上传: 用户ID={}, 文件名={}, 文件大小={}, 文件类型={}", 
+            userId, file.getOriginalFilename(), file.getSize(), file.getContentType());
+
+        if (!validateFile(file, ALLOWED_AVATAR_TYPES, AVATAR_MAX_SIZE)) {
+            throw new IllegalArgumentException("Invalid avatar file");
+        }
+
+        String objectKey = generateObjectKey(AVATAR_DIR, userId, file.getOriginalFilename());
+
+        try {
+            String url = uploadToOSS(file, objectKey, null);
+            logger.info("头像上传成功: {}", url);
+            return url;
+        } catch (Exception e) {
+            logger.error("头像上传失败: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * 上传聊天图片
+     */
+    public String uploadChatImage(MultipartFile file, Long userId) throws IOException {
+        logger.info("开始处理聊天图片上传: 用户ID={}, 文件名={}, 文件大小={}, 文件类型={}", 
+            userId, file.getOriginalFilename(), file.getSize(), file.getContentType());
+
+        if (!validateFile(file, ALLOWED_CHAT_IMAGE_TYPES, CHAT_IMAGE_MAX_SIZE)) {
+            throw new IllegalArgumentException("Invalid chat image file");
+        }
+
+        String objectKey = generateObjectKey(CHAT_IMAGE_DIR, userId, file.getOriginalFilename());
+
+        try {
+            String url = uploadToOSS(file, objectKey, null);
+            logger.info("聊天图片上传成功: {}", url);
+            return url;
+        } catch (Exception e) {
+            logger.error("聊天图片上传失败: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * 上传知识库文档
+     */
+    public String uploadKnowledgeDoc(MultipartFile file, Long userId, Consumer<Integer> progressCallback) throws IOException {
+        logger.info("开始处理知识库文档上传: 用户ID={}, 文件名={}, 文件大小={}, 文件类型={}", 
+            userId, file.getOriginalFilename(), file.getSize(), file.getContentType());
+
+        String extension = getFileExtension(file.getOriginalFilename());
+        if (!validateFile(file, ALLOWED_DOC_TYPES, KNOWLEDGE_DOC_MAX_SIZE) || 
+            !ALLOWED_DOC_EXTENSIONS.contains(extension)) {
+            throw new IllegalArgumentException("Invalid document file");
+        }
+
+        String objectKey = generateObjectKey(KNOWLEDGE_DOC_DIR, userId, file.getOriginalFilename());
+
+        try {
+            String url = uploadToOSS(file, objectKey, progressCallback);
+            logger.info("知识库文档上传成功: {}", url);
+            return url;
+        } catch (Exception e) {
+            logger.error("知识库文档上传失败: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
      * 删除OSS中的文件
-     * @param objectName 对象名称
      */
     public void deleteFile(String objectName) {
         try {
@@ -101,94 +243,18 @@ public class OSSService {
         }
     }
 
-    /**
-     * 上传聊天图片到OSS并返回访问URL
-     * @param file 图片文件
-     * @param userId 用户ID
-     * @return 图片访问URL
-     */
-    public String uploadChatImage(MultipartFile file, Long userId) throws IOException {
-        logger.info("开始处理图片上传: 用户ID={}, 文件名={}, 文件大小={}, 文件类型={}", 
-            userId, file.getOriginalFilename(), file.getSize(), file.getContentType());
-
-        // 验证聊天图片
-        if (!isValidChatImage(file)) {
-            logger.error("图片验证失败: 用户ID={}, 文件大小={}, 文件类型={}", 
-                userId, file.getSize(), file.getContentType());
-            throw new IllegalArgumentException("Invalid chat image file");
-        }
-
-        try {
-            // 生成唯一的文件名
-            String originalFilename = file.getOriginalFilename();
-            String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            String fileName = String.format("chat-images/%d/%s%s", userId, UUID.randomUUID().toString(), extension);
-            logger.info("生成OSS文件名: {}", fileName);
-
-            // 设置文件元数据
-            ObjectMetadata metadata = new ObjectMetadata();
-            metadata.setContentType(file.getContentType());
-            metadata.setContentLength(file.getSize());
-
-            // 上传文件
-            logger.info("开始上传文件到OSS: bucket={}, fileName={}", ossConfig.getBucketName(), fileName);
-            PutObjectRequest putObjectRequest = new PutObjectRequest(
-                ossConfig.getBucketName(),
-                fileName,
-                file.getInputStream(),
-                metadata
-            );
-            ossClient.putObject(putObjectRequest);
-            logger.info("文件上传到OSS完成");
-
-            // 生成签名URL，有效期10年
-            Date expiration = Date.from(
-                LocalDateTime.now().plusYears(10)
-                    .atZone(ZoneId.systemDefault())
-                    .toInstant()
-            );
-            URL url = ossClient.generatePresignedUrl(
-                ossConfig.getBucketName(), 
-                fileName, 
-                expiration
-            );
-
-            logger.info("生成访问URL成功: {}", url);
-            return url.toString();
-        } catch (Exception e) {
-            logger.error("上传图片到OSS失败: 错误信息={}, 异常类型={}, 堆栈信息={}", 
-                e.getMessage(), e.getClass().getName(), e.getStackTrace());
-            throw e;
-        }
+    // 验证方法供外部使用
+    public boolean isValidChatImage(MultipartFile file) {
+        return validateFile(file, ALLOWED_CHAT_IMAGE_TYPES, CHAT_IMAGE_MAX_SIZE);
     }
 
-    /**
-     * 验证聊天图片是否合法
-     * @param file 图片文件
-     * @return 是否合法
-     */
-    public boolean isValidChatImage(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            logger.error("文件为空或无效");
-            return false;
-        }
+    public boolean isValidAvatarImage(MultipartFile file) {
+        return validateFile(file, ALLOWED_AVATAR_TYPES, AVATAR_MAX_SIZE);
+    }
 
-        String contentType = file.getContentType();
-        long size = file.getSize();
-        
-        logger.info("验证图片文件: 大小={}, 类型={}, 最大允许大小={}, 允许的类型={}", 
-            size, contentType, CHAT_IMAGE_MAX_SIZE, String.join(", ", ALLOWED_IMAGE_TYPES));
-
-        boolean isValidType = contentType != null && Arrays.asList(ALLOWED_IMAGE_TYPES).contains(contentType);
-        boolean isValidSize = size <= CHAT_IMAGE_MAX_SIZE;
-
-        if (!isValidType) {
-            logger.error("不支持的文件类型: {}", contentType);
-        }
-        if (!isValidSize) {
-            logger.error("文件大小超出限制: {} > {}", size, CHAT_IMAGE_MAX_SIZE);
-        }
-
-        return isValidType && isValidSize;
+    public boolean isValidKnowledgeDoc(MultipartFile file) {
+        String extension = getFileExtension(file.getOriginalFilename());
+        return validateFile(file, ALLOWED_DOC_TYPES, KNOWLEDGE_DOC_MAX_SIZE) && 
+               ALLOWED_DOC_EXTENSIONS.contains(extension);
     }
 }
