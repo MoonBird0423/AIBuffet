@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
-
+import java.util.function.Consumer;
 import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
@@ -42,6 +42,10 @@ public class OSSService {
      * @return 文件访问URL
      */
     public String uploadFile(MultipartFile file, Long userId) throws IOException {
+        return uploadFile(file, userId, null);
+    }
+
+    public String uploadFile(MultipartFile file, Long userId, Consumer<Integer> progressCallback) throws IOException {
         // 生成唯一的文件名
         String originalFilename = file.getOriginalFilename();
         String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
@@ -59,6 +63,17 @@ public class OSSService {
                 file.getInputStream(),
                 metadata
         );
+
+        // 如果提供了进度回调，添加进度监听器
+        if (progressCallback != null) {
+            putObjectRequest.withProgressListener(progressEvent -> {
+                long bytes = progressEvent.getBytes();
+                long totalBytes = file.getSize();
+                int progress = (int) (bytes * 100 / totalBytes);
+                progressCallback.accept(progress);
+            });
+        }
+
         PutObjectResult result = ossClient.putObject(putObjectRequest);
 
         // 生成签名URL，有效期10年
@@ -70,6 +85,20 @@ public class OSSService {
         URL url = ossClient.generatePresignedUrl(ossConfig.getBucketName(), fileName, expiration);
 
         return url.toString();
+    }
+
+    /**
+     * 删除OSS中的文件
+     * @param objectName 对象名称
+     */
+    public void deleteFile(String objectName) {
+        try {
+            ossClient.deleteObject(ossConfig.getBucketName(), objectName);
+            logger.info("成功删除OSS文件: {}", objectName);
+        } catch (Exception e) {
+            logger.error("删除OSS文件失败: {}, 错误: {}", objectName, e.getMessage());
+            throw new RuntimeException("Failed to delete file from OSS", e);
+        }
     }
 
     /**
