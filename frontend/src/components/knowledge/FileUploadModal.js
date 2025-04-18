@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'react-toastify';
 import { XMarkIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
@@ -17,7 +17,7 @@ const MAX_FILE_SIZE = 300 * 1024 * 1024; // 300MB
 const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete }) => {
   const [files, setFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [fileProgress, setFileProgress] = useState({});
   const uploadIdRef = useRef(null);
   const progressTimerRef = useRef(null);
 
@@ -57,41 +57,95 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const checkProgress = async (uploadId) => {
-    try {
-      const progress = await getUploadProgress(uploadId);
-      setProgress(progress);
-
-      if (progress < 100) {
-        progressTimerRef.current = setTimeout(() => checkProgress(uploadId), 1000);
-      } else {
-        setIsUploading(false);
-        setProgress(0);
-        setFiles([]);
-        onClose();
-        onUploadComplete();
-      }
-    } catch (error) {
-      console.error('获取上传进度失败:', error);
-    }
-  };
-
   const handleUpload = async () => {
     if (files.length === 0) {
       toast.error('请选择要上传的文件');
       return;
     }
 
-    setIsUploading(true);
-    try {
-      const data = await uploadDocuments(files, knowledgeBaseId);
-      uploadIdRef.current = data.uploadId;
-      checkProgress(data.uploadId);
-    } catch (error) {
-      setIsUploading(false);
-      toast.error(error.response?.data?.message || '上传失败');
+    console.log('开始上传文件:', {
+      filesCount: files.length,
+      fileDetails: files.map(f => ({
+        name: f.name,
+        size: f.size,
+        type: f.type
+      }))
+    });
+
+        setIsUploading(true);
+        try {
+            // 初始化每个文件的进度为0
+            const initialProgress = {};
+            files.forEach(file => {
+                initialProgress[file.name] = 0;
+            });
+            setFileProgress(initialProgress);
+
+            console.log('调用uploadDocuments API');
+            const {data} = await uploadDocuments(files, knowledgeBaseId);
+            if (data?.uploadId) {
+                console.log('获取上传ID:', data.uploadId);
+                uploadIdRef.current = data.uploadId;
+
+                // 清理可能存在的旧计时器
+                if (progressTimerRef.current) {
+                    clearInterval(progressTimerRef.current);
+                }
+
+                // 更新进度条
+                progressTimerRef.current = setInterval(async () => {
+                    try {
+                        const {data: progressData} = await getUploadProgress(data.uploadId);
+                        if (progressData) {
+                            console.log('进度更新:', progressData);
+                            setFileProgress(progressData);
+
+                            // 检查是否所有文件都完成上传
+                            const allCompleted = Object.values(progressData).every(progress => progress >= 100);
+                            if (allCompleted) {
+                                if (progressTimerRef.current) {
+                                    clearInterval(progressTimerRef.current);
+                                    progressTimerRef.current = null;
+                                }
+                                console.log('所有文件上传完成');
+                                setIsUploading(false);
+                                setFileProgress({});
+                                setFiles([]);
+                                onClose();
+                                onUploadComplete();
+                            }
+                        }
+                    } catch (error) {
+                        console.error('获取上传进度失败:', error);
+                        if (progressTimerRef.current) {
+                            clearInterval(progressTimerRef.current);
+                            progressTimerRef.current = null;
+                        }
+                    }
+                }, 1000);
+            } else {
+                throw new Error('未获取到上传ID');
+            }
+        } catch (error) {
+            console.error('上传失败:', error);
+            setIsUploading(false);
+            if (progressTimerRef.current) {
+                clearInterval(progressTimerRef.current);
+                progressTimerRef.current = null;
+            }
+            toast.error(error.response?.data?.message || error.message || '上传失败');
     }
   };
+
+  // 清理计时器
+  useEffect(() => {
+    return () => {
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
+      }
+    };
+  }, []);
 
   if (!isOpen) return null;
 
@@ -142,6 +196,19 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
                       </div>
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">{formatFileSize(file.size)}</p>
+                    {isUploading && (
+                      <div className="mt-2">
+                        <div className="h-1 bg-gray-200 rounded">
+                          <div
+                            className="h-full bg-blue-500 rounded transition-all"
+                            style={{ width: `${fileProgress[file.name] || 0}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 text-right mt-1">
+                          {fileProgress[file.name] || 0}%
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={() => removeFile(index)}
@@ -152,18 +219,6 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
                   </button>
                 </div>
               ))}
-            </div>
-          )}
-
-          {isUploading && (
-            <div className="space-y-2">
-              <div className="h-2 bg-gray-200 rounded">
-                <div
-                  className="h-full bg-blue-500 rounded transition-all"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <p className="text-sm text-gray-500 text-right">{progress}%</p>
             </div>
           )}
 

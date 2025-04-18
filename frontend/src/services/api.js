@@ -413,6 +413,15 @@ export const getDocuments = async (knowledgeBaseId, page = 0, size = 20) => {
 
 export const uploadDocuments = async (files, knowledgeBaseId) => {
   try {
+    console.log('开始上传文档:', {
+      filesCount: files.length,
+      fileDetails: files.map(f => ({
+        name: f.name,
+        size: f.size,
+        type: f.type
+      }))
+    });
+
     const formData = new FormData();
     files.forEach(file => formData.append('files', file));
     formData.append('knowledgeBaseId', knowledgeBaseId);
@@ -420,11 +429,28 @@ export const uploadDocuments = async (files, knowledgeBaseId) => {
     const response = await apiClient.post('/documents/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
+      },
+      timeout: 300000, // 5分钟超时
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      onUploadProgress: (progressEvent) => {
+        console.log('文档上传进度:', {
+          loaded: progressEvent.loaded,
+          total: progressEvent.total,
+          progress: Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        });
       }
     });
-    return response.data.data;
+    console.log('文档上传成功:', response.data);
+    return {data: response.data.data}; // 保持与原有结构一致，但data中是真实数据
   } catch (error) {
-    console.error('Error uploading documents:', error);
+    console.error('文档上传失败:', {
+      error,
+      errorMessage: error.message,
+      errorCode: error.code,
+      errorResponse: error.response?.data,
+      errorStack: error.stack
+    });
     throw error;
   }
 };
@@ -432,7 +458,7 @@ export const uploadDocuments = async (files, knowledgeBaseId) => {
 export const getUploadProgress = async (uploadId) => {
   try {
     const response = await apiClient.get(`/documents/progress/${uploadId}`);
-    return response.data.data;
+    return {data: response.data.data}; // 保持与原有结构一致，但data中是真实数据
   } catch (error) {
     console.error('Error getting upload progress:', error);
     throw error;
