@@ -110,7 +110,7 @@ const KnowledgeGrid = () => {
           {/* Slogan */}
           <div className="text-center mb-10 mt-4">
             <p className="text-xl md:text-2xl font-light text-gray-600 tracking-wide select-none">
-              "📢在对话中学习知识📖"
+              "📖复杂文档，秒变简答📢"
             </p>
           </div>
 

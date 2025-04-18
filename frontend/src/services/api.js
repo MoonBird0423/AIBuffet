@@ -398,4 +398,54 @@ export const deleteKnowledgeBase = async (id) => {
   }
 };
 
+// 文档管理相关API
+export const getDocuments = async (knowledgeBaseId, page = 0, size = 20) => {
+  try {
+    const response = await apiClient.get('/documents', {
+      params: { knowledgeBaseId, page, size }
+    });
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    throw error;
+  }
+};
+
+export const uploadDocuments = async (files, knowledgeBaseId) => {
+  try {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    formData.append('knowledgeBaseId', knowledgeBaseId);
+
+    const response = await apiClient.post('/documents/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data.data;
+  } catch (error) {
+    console.error('Error uploading documents:', error);
+    throw error;
+  }
+};
+
+export const getUploadProgress = async (uploadId) => {
+  try {
+    const response = await apiClient.get(`/documents/progress/${uploadId}`);
+    return response.data.data;
+  } catch (error) {
+    console.error('Error getting upload progress:', error);
+    throw error;
+  }
+};
+
+export const deleteDocument = async (documentId) => {
+  try {
+    await apiClient.delete(`/documents/${documentId}`);
+  } catch (error) {
+    console.error('Error deleting document:', error);
+    throw error;
+  }
+};
+
 export default apiClient;
