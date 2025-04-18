@@ -23,19 +23,6 @@ import java.util.function.Consumer;
 @Service
 public class DocumentService {
     private static final Logger logger = LoggerFactory.getLogger(DocumentService.class);
-    private static final long DOC_MAX_SIZE = 300 * 1024 * 1024; // 300MB
-    private static final String[] ALLOWED_DOC_EXTENSIONS = {
-        // Microsoft Office
-        ".docx", ".xlsx", ".pptx", ".doc", ".xls", ".ppt",
-        // PDF
-        ".pdf",
-        // Text
-        ".txt", ".csv", ".json", ".xml", ".html",
-        // Email
-        ".eml", ".msg",
-        // eBook
-        ".epub", ".mobi"
-    };
 
     @Autowired
     private DocFileRepository docFileRepository;
@@ -54,7 +41,7 @@ public class DocumentService {
         List<DocFile> savedFiles = new ArrayList<>();
 
         for (MultipartFile file : files) {
-            if (!isValidDocument(file)) {
+            if (!ossService.isValidKnowledgeDoc(file)) {
                 throw new IllegalArgumentException("Invalid document: " + file.getOriginalFilename());
             }
 
@@ -68,7 +55,7 @@ public class DocumentService {
             }
 
             // 上传文件到OSS
-            String fileUrl = ossService.uploadFile(file, userId, progress -> {
+            String fileUrl = ossService.uploadKnowledgeDoc(file, userId, progress -> {
                 if (progressCallback != null) {
                     progressCallback.accept(file.getSize() * progress / 100);
                 }
@@ -118,20 +105,6 @@ public class DocumentService {
      */
     public Page<DocFile> getDocuments(Long knowledgeBaseId, int page, int size) {
         return docFileRepository.findByKnowledgeBaseId(knowledgeBaseId, PageRequest.of(page, size));
-    }
-
-    private boolean isValidDocument(MultipartFile file) {
-        if (file == null || file.isEmpty() || file.getSize() > DOC_MAX_SIZE) {
-            return false;
-        }
-
-        String extension = getFileExtension(file.getOriginalFilename());
-        for (String allowedExt : ALLOWED_DOC_EXTENSIONS) {
-            if (allowedExt.equalsIgnoreCase(extension)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private String getFileExtension(String filename) {
