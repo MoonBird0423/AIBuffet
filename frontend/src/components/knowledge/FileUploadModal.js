@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
-import axios from 'axios';
 import { toast } from 'react-toastify';
 import { XMarkIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
+import { uploadDocuments, getUploadProgress } from '../../services/api';
 
 const ALLOWED_FILE_TYPES = {
   'Office 文档': ['.docx', '.xlsx', '.pptx', '.doc', '.xls', '.ppt'],
@@ -59,8 +59,7 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
 
   const checkProgress = async (uploadId) => {
     try {
-      const response = await axios.get(`/api/documents/progress/${uploadId}`);
-      const progress = response.data.data;
+      const progress = await getUploadProgress(uploadId);
       setProgress(progress);
 
       if (progress < 100) {
@@ -84,14 +83,10 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
     }
 
     setIsUploading(true);
-    const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
-    formData.append('knowledgeBaseId', knowledgeBaseId);
-
     try {
-      const response = await axios.post('/api/documents/upload', formData);
-      uploadIdRef.current = response.data.data.uploadId;
-      checkProgress(response.data.data.uploadId);
+      const data = await uploadDocuments(files, knowledgeBaseId);
+      uploadIdRef.current = data.uploadId;
+      checkProgress(data.uploadId);
     } catch (error) {
       setIsUploading(false);
       toast.error(error.response?.data?.message || '上传失败');
@@ -130,9 +125,23 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
             <div className="border rounded-lg p-4 space-y-2">
               {files.map((file, index) => (
                 <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                  <div className="flex-1">
-                    <p className="font-medium truncate">{file.name}</p>
-                    <p className="text-sm text-gray-500">{formatFileSize(file.size)}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-1 min-w-0">
+                        {(() => {
+                          const lastDotIndex = file.name.lastIndexOf('.');
+                          const fileName = lastDotIndex !== -1 ? file.name.slice(0, lastDotIndex) : file.name;
+                          const extension = lastDotIndex !== -1 ? file.name.slice(lastDotIndex) : '';
+                          return (
+                            <p className="text-sm font-medium overflow-hidden overflow-ellipsis whitespace-nowrap">
+                              {fileName}
+                              <span className="text-gray-500">{extension}</span>
+                            </p>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">{formatFileSize(file.size)}</p>
                   </div>
                   <button
                     onClick={() => removeFile(index)}
