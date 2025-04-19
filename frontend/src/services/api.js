@@ -11,7 +11,7 @@ const apiClient = axios.create({
     'X-Requested-With': 'XMLHttpRequest'
   },
   withCredentials: true,
-  timeout: 300000, // 5分钟超时
+  timeout: 600000, // 10分钟超时
   // 请求重试配置
   retry: 3,
   retryDelay: 1000,
@@ -280,16 +280,15 @@ export const uploadChatImage = async (file) => {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      timeout: 300000, // 5分钟超时
-      // 分块上传配置
+      timeout: 600000, // 10分钟超时
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
-      // 添加上传进度监控
       onUploadProgress: (progressEvent) => {
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         console.log('上传进度:', {
           loaded: progressEvent.loaded,
           total: progressEvent.total,
-          progress: Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          progress
         });
       }
     });
@@ -300,7 +299,6 @@ export const uploadChatImage = async (file) => {
     console.error('图片上传失败:', {
       error,
       errorMessage: error.message,
-      errorCode: error.code,
       errorResponse: error.response?.data,
       errorStack: error.stack
     });
@@ -337,17 +335,10 @@ export const createKnowledgeBase = async (data) => {
 
 export const getPublicKnowledgeBases = async (params) => {
   try {
-    console.log('Fetching public knowledge bases with params:', params);
     const response = await apiClient.get('/knowledge-bases/public', { params });
-    console.log('Public knowledge bases response:', response.data);
     return response.data.data;
   } catch (error) {
-    console.error('Error fetching public knowledge bases:', {
-      error,
-      params,
-      message: error.message,
-      response: error.response?.data
-    });
+    console.error('Error fetching public knowledge bases:', error);
     throw error;
   }
 };
@@ -398,7 +389,7 @@ export const deleteKnowledgeBase = async (id) => {
   }
 };
 
-// 文档管理相关API
+// 文档相关API
 export const getDocuments = async (knowledgeBaseId, page = 0, size = 20) => {
   try {
     const response = await apiClient.get('/documents', {
@@ -411,57 +402,80 @@ export const getDocuments = async (knowledgeBaseId, page = 0, size = 20) => {
   }
 };
 
-export const uploadDocuments = async (files, knowledgeBaseId) => {
+// 修改上传文档的功能
+export const uploadDocuments = async (files, knowledgeBaseId, onProgress) => {
   try {
-    console.log('开始上传文档:', {
-      filesCount: files.length,
-      fileDetails: files.map(f => ({
-        name: f.name,
-        size: f.size,
-        type: f.type
-      }))
-    });
-
     const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
+    // 以数组形式添加所有文件
+    files.forEach(file => {
+      formData.append('files', file);
+    });
     formData.append('knowledgeBaseId', knowledgeBaseId);
 
     const response = await apiClient.post('/documents/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       },
-      timeout: 300000, // 5分钟超时
+      timeout: 300000,
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
       onUploadProgress: (progressEvent) => {
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        // 更新所有文件的进度
+        files.forEach(file => {
+          onProgress?.(file.name, progress);
+        });
         console.log('文档上传进度:', {
           loaded: progressEvent.loaded,
           total: progressEvent.total,
-          progress: Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          progress
         });
       }
     });
-    console.log('文档上传成功:', response.data);
-    return {data: response.data.data}; // 保持与原有结构一致，但data中是真实数据
+
+    console.log('文档上传响应:', response.data);
+
+    if (response.data?.data?.results) {
+      // 处理上传结果
+      const results = [];
+      const errors = [];
+
+      response.data.data.results.forEach(result => {
+        if (result.file) {
+          // 成功上传的文件
+          results.push({
+            fileName: result.fileName,
+            data: result.file
+          });
+        } else {
+          // 上传失败的文件
+          errors.push({
+            fileName: result.fileName,
+            error: result.error
+          });
+        }
+      });
+
+      return { results, errors };
+    }
+
+    throw new Error('Upload failed: No valid response data');
   } catch (error) {
     console.error('文档上传失败:', {
       error,
       errorMessage: error.message,
-      errorCode: error.code,
       errorResponse: error.response?.data,
       errorStack: error.stack
     });
-    throw error;
-  }
-};
-
-export const getUploadProgress = async (uploadId) => {
-  try {
-    const response = await apiClient.get(`/documents/progress/${uploadId}`);
-    return {data: response.data.data}; // 保持与原有结构一致，但data中是真实数据
-  } catch (error) {
-    console.error('Error getting upload progress:', error);
-    throw error;
+    
+    // 将错误转换为统一的返回格式
+    return {
+      results: [],
+      errors: files.map(file => ({
+        fileName: file.name,
+        error: error.response?.data?.message || error.message
+      }))
+    };
   }
 };
 

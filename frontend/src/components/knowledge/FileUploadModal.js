@@ -1,8 +1,8 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { toast } from 'react-toastify';
+import { ToastManager } from '../../components/common/Toast';
 import { XMarkIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
-import { uploadDocuments, getUploadProgress } from '../../services/api';
+import { uploadDocuments } from '../../services/api';
 
 const ALLOWED_FILE_TYPES = {
   'Office 文档': ['.docx', '.xlsx', '.pptx', '.doc', '.xls', '.ppt'],
@@ -12,14 +12,13 @@ const ALLOWED_FILE_TYPES = {
   '电子书': ['.epub', '.mobi']
 };
 
-const MAX_FILE_SIZE = 300 * 1024 * 1024; // 300MB
+const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1GB
 
 const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete }) => {
   const [files, setFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [fileProgress, setFileProgress] = useState({});
-  const uploadIdRef = useRef(null);
-  const progressTimerRef = useRef(null);
+  const [fileErrors, setFileErrors] = useState({});
 
   const onDrop = useCallback((acceptedFiles) => {
     const validFiles = acceptedFiles.filter(file => {
@@ -28,17 +27,29 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
       const isValidSize = file.size <= MAX_FILE_SIZE;
 
       if (!isValidType) {
-        toast.error(`不支持的文件格式: ${file.name}`);
+        ToastManager.error(`不支持的文件格式: ${file.name}`);
       }
       if (!isValidSize) {
-        toast.error(`文件大小超出限制 (300MB): ${file.name}`);
+        ToastManager.error(`文件大小超出限制 (1GB): ${file.name} (${formatFileSize(file.size)})`);
       }
 
       return isValidType && isValidSize;
     });
 
-    setFiles(prev => [...prev, ...validFiles]);
-  }, []);
+    // 清除已存在的相同文件
+    const existingFileNames = new Set(files.map(f => f.name));
+    const newValidFiles = validFiles.filter(file => !existingFileNames.has(file.name));
+
+    if (newValidFiles.length > 0) {
+      setFiles(prev => [...prev, ...newValidFiles]);
+      // 清除新文件的错误状态
+      setFileErrors(prev => {
+        const newErrors = { ...prev };
+        newValidFiles.forEach(file => delete newErrors[file.name]);
+        return newErrors;
+      });
+    }
+  }, [files]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -46,7 +57,13 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
   });
 
   const removeFile = (index) => {
+    const file = files[index];
     setFiles(prev => prev.filter((_, i) => i !== index));
+    setFileErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[file.name];
+      return newErrors;
+    });
   };
 
   const formatFileSize = (bytes) => {
@@ -57,95 +74,90 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const sanitizeFileName = (fileName) => {
+    const lastDotIndex = fileName.lastIndexOf('.');
+    const name = lastDotIndex !== -1 ? fileName.slice(0, lastDotIndex) : fileName;
+    const extension = lastDotIndex !== -1 ? fileName.slice(lastDotIndex) : '';
+    
+    const sanitized = name.replace(/[^\w--]/g, '_');
+    return sanitized + extension;
+  };
+
   const handleUpload = async () => {
     if (files.length === 0) {
-      toast.error('请选择要上传的文件');
+      ToastManager.error('请选择要上传的文件');
       return;
     }
 
-    console.log('开始上传文件:', {
-      filesCount: files.length,
-      fileDetails: files.map(f => ({
-        name: f.name,
-        size: f.size,
-        type: f.type
-      }))
-    });
+    setIsUploading(true);
+    setFileErrors({});
 
-        setIsUploading(true);
-        try {
-            // 初始化每个文件的进度为0
-            const initialProgress = {};
-            files.forEach(file => {
-                initialProgress[file.name] = 0;
-            });
-            setFileProgress(initialProgress);
+    try {
+      // 初始化进度
+      const initialProgress = {};
+      const fileNameMap = {};
+      const processedFiles = [];
 
-            console.log('调用uploadDocuments API');
-            const {data} = await uploadDocuments(files, knowledgeBaseId);
-            if (data?.uploadId) {
-                console.log('获取上传ID:', data.uploadId);
-                uploadIdRef.current = data.uploadId;
+      // 处理每个文件并建立映射关系
+      files.forEach(file => {
+        const sanitizedName = sanitizeFileName(file.name);
+        const processedFile = new File([file], sanitizedName, { type: file.type });
+        processedFiles.push(processedFile);
+        fileNameMap[sanitizedName] = file.name;
+        initialProgress[file.name] = 0;
+      });
+      setFileProgress(initialProgress);
 
-                // 清理可能存在的旧计时器
-                if (progressTimerRef.current) {
-                    clearInterval(progressTimerRef.current);
-                }
+      // 上传文件并处理结果
+      const { results, errors } = await uploadDocuments(
+        processedFiles,
+        knowledgeBaseId,
+        (processedName, progress) => {
+          // 使用映射找到原始文件名
+          const originalName = fileNameMap[processedName];
+          if (originalName) {
+            setFileProgress(prev => ({
+              ...prev,
+              [originalName]: progress
+            }));
+          }
+        }
+      );
 
-                // 更新进度条
-                progressTimerRef.current = setInterval(async () => {
-                    try {
-                        const {data: progressData} = await getUploadProgress(data.uploadId);
-                        if (progressData) {
-                            console.log('进度更新:', progressData);
-                            setFileProgress(progressData);
-
-                            // 检查是否所有文件都完成上传
-                            const allCompleted = Object.values(progressData).every(progress => progress >= 100);
-                            if (allCompleted) {
-                                if (progressTimerRef.current) {
-                                    clearInterval(progressTimerRef.current);
-                                    progressTimerRef.current = null;
-                                }
-                                console.log('所有文件上传完成');
-                                setIsUploading(false);
-                                setFileProgress({});
-                                setFiles([]);
-                                onClose();
-                                onUploadComplete();
-                            }
-                        }
-                    } catch (error) {
-                        console.error('获取上传进度失败:', error);
-                        if (progressTimerRef.current) {
-                            clearInterval(progressTimerRef.current);
-                            progressTimerRef.current = null;
-                        }
-                    }
-                }, 1000);
-            } else {
-                throw new Error('未获取到上传ID');
-            }
-        } catch (error) {
-            console.error('上传失败:', error);
-            setIsUploading(false);
-            if (progressTimerRef.current) {
-                clearInterval(progressTimerRef.current);
-                progressTimerRef.current = null;
-            }
-            toast.error(error.response?.data?.message || error.message || '上传失败');
-    }
-  };
-
-  // 清理计时器
-  useEffect(() => {
-    return () => {
-      if (progressTimerRef.current) {
-        clearInterval(progressTimerRef.current);
-        progressTimerRef.current = null;
+      // 处理错误
+      if (errors.length > 0) {
+        const newErrors = {};
+        errors.forEach(({fileName, error}) => {  // 修改这里，解构error属性
+          const originalName = fileNameMap[fileName] || fileName;
+          newErrors[originalName] = error;  // 使用error而不是errors.error
+          ToastManager.error(`文件 ${originalName} 上传失败: ${error}`);  // 同样使用error
+        });
+        setFileErrors(newErrors);
       }
-    };
-  }, []);
+
+      // 处理成功结果
+      if (results.length > 0) {
+        const successFileNames = new Set(
+          results.map(r => fileNameMap[r.fileName] || r.fileName)
+        );
+        setFiles(prev => prev.filter(f => !successFileNames.has(f.name)));
+        
+        if (results.length === files.length) {
+          ToastManager.success('所有文件上传成功');
+          onClose();
+          onUploadComplete();
+        } else {
+          ToastManager.success(`成功上传 ${results.length} 个文件，${errors.length} 个文件失败`);
+        }
+      }
+
+    } catch (error) {
+      console.error('上传过程发生错误:', error);
+      ToastManager.error('上传过程发生错误，请重试');
+    }
+
+    setIsUploading(false);
+  };
 
   if (!isOpen) return null;
 
@@ -209,6 +221,11 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
                         </p>
                       </div>
                     )}
+                    {fileErrors[file.name] && (
+                      <p className="text-xs text-red-500 mt-1">
+                        错误: {fileErrors[file.name]}
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => removeFile(index)}
@@ -223,14 +240,23 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
           )}
 
           <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="font-medium mb-2">支持的文件格式：</h3>
-            <div className="space-y-1">
-              {Object.entries(ALLOWED_FILE_TYPES).map(([type, extensions]) => (
-                <p key={type} className="text-sm text-gray-600">
-                  <span className="font-medium">{type}：</span>
-                  {extensions.join(', ')}
-                </p>
-              ))}
+            <h3 className="font-medium mb-2">上传说明：</h3>
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-1">文件大小限制：</p>
+                <p className="text-sm text-gray-600">单个文件大小不超过 {formatFileSize(MAX_FILE_SIZE)}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-1">支持的文件格式：</p>
+                <div className="space-y-1">
+                  {Object.entries(ALLOWED_FILE_TYPES).map(([type, extensions]) => (
+                    <p key={type} className="text-sm text-gray-600">
+                      <span className="font-medium">{type}：</span>
+                      {extensions.join(', ')}
+                    </p>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
