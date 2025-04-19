@@ -1,7 +1,9 @@
 package com.aibuffet.service;
 
+import com.aibuffet.controller.DocumentController;
 import com.aibuffet.model.DocFile;
 import com.aibuffet.model.KnowledgeBaseFile;
+import com.aibuffet.dto.UploadResult;
 import com.aibuffet.repository.DocFileRepository;
 import com.aibuffet.repository.KnowledgeBaseFileRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +20,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 @Service
 public class DocumentService {
@@ -35,46 +35,39 @@ public class DocumentService {
     private OSSService ossService;
 
     /**
-     * 上传文档并保存到知识库
+     * 上传单个文件
      */
     @Transactional
-    public List<DocFile> uploadDocuments(MultipartFile[] files, Long knowledgeBaseId, Long userId, BiConsumer<String, Integer> progressCallback) throws IOException {
-        List<DocFile> savedFiles = new ArrayList<>();
-        logger.info("开始处理文件上传: 文件数={}, 知识库ID={}, 用户ID={}", files.length, knowledgeBaseId, userId);
-
-        for (MultipartFile file : files) {
+    public UploadResult uploadSingleFile(MultipartFile file, Long knowledgeBaseId, Long userId, String uploadId, DocumentController controller) {
+        try {
             logger.info("处理文件: name={}, size={}, type={}", 
                 file.getOriginalFilename(), file.getSize(), file.getContentType());
 
-            logger.debug("验证文件格式");
+            // 验证文件格式
             if (!ossService.isValidKnowledgeDoc(file)) {
                 logger.error("文件验证失败: {}", file.getOriginalFilename());
-                throw new IllegalArgumentException("Invalid document: " + file.getOriginalFilename());
+                return UploadResult.error(file.getOriginalFilename(), 
+                    "Invalid document format: " + file.getContentType());
             }
 
-            logger.debug("计算文件MD5");
+            // 计算文件MD5
             String md5Hash = calculateMD5(file);
             logger.debug("文件MD5: {}", md5Hash);
 
+            // 检查文件是否已存在
             DocFile existingFile = docFileRepository.findByMd5Hash(md5Hash);
             if (existingFile != null) {
                 logger.info("文件已存在，直接关联到知识库: fileId={}", existingFile.getId());
                 knowledgeBaseFileRepository.save(new KnowledgeBaseFile(knowledgeBaseId, existingFile.getId(), userId));
-                savedFiles.add(existingFile);
-                continue;
+                return UploadResult.success(file.getOriginalFilename(), existingFile);
             }
 
+            // 上传到OSS
             logger.info("开始上传文件到OSS: {}", file.getOriginalFilename());
-            String fileUrl = ossService.uploadKnowledgeDoc(file, userId, progress -> {
-                if (progressCallback != null) {
-                    logger.debug("上传进度: file={}, progress={}%", 
-                        file.getOriginalFilename(), progress);
-                    progressCallback.accept(file.getOriginalFilename(), progress);
-                }
-            });
+            String fileUrl = ossService.uploadKnowledgeDoc(file, userId, uploadId, file.getOriginalFilename(), controller);
             logger.info("OSS上传完成，文件URL: {}", fileUrl);
 
-            logger.debug("保存文件信息到数据库");
+            // 保存文件信息到数据库
             DocFile docFile = new DocFile();
             docFile.setFileName(file.getOriginalFilename());
             docFile.setFileType(getFileExtension(file.getOriginalFilename()));
@@ -85,14 +78,40 @@ public class DocumentService {
             docFile = docFileRepository.save(docFile);
             logger.info("文件信息已保存: fileId={}", docFile.getId());
 
-            logger.debug("关联文件到知识库");
+            // 关联文件到知识库
             knowledgeBaseFileRepository.save(new KnowledgeBaseFile(knowledgeBaseId, docFile.getId(), userId));
             logger.info("文件已关联到知识库: fileId={}, knowledgeBaseId={}", docFile.getId(), knowledgeBaseId);
-            savedFiles.add(docFile);
+
+            return UploadResult.success(file.getOriginalFilename(), docFile);
+
+        } catch (Exception e) {
+            logger.error("文件处理失败: {}, 错误: {}", file.getOriginalFilename(), e.getMessage(), e);
+            return UploadResult.error(file.getOriginalFilename(), e.getMessage());
+        }
+    }
+
+    /**
+     * 批量上传文档并保存到知识库
+     */
+    @Transactional
+    public List<UploadResult> uploadDocuments(MultipartFile[] files, Long knowledgeBaseId, Long userId, String uploadId, DocumentController controller) {
+        List<UploadResult> results = new ArrayList<>();
+        logger.info("开始处理文件上传: 文件数={}, 知识库ID={}, 用户ID={}", files.length, knowledgeBaseId, userId);
+
+        for (MultipartFile file : files) {
+            UploadResult result = uploadSingleFile(file, knowledgeBaseId, userId, uploadId, controller);
+            results.add(result);
+            
+            // 更新上传进度
+            if (result.getFile() != null) {
+                controller.updateProgress(uploadId, file.getOriginalFilename(), 100);
+            }
         }
 
-        logger.info("文件上传处理完成，共处理{}个文件", savedFiles.size());
-        return savedFiles;
+        logger.info("文件上传处理完成，成功数={}, 失败数={}", 
+            results.stream().filter(r -> r.getFile() != null).count(),
+            results.stream().filter(r -> r.getError() != null).count());
+        return results;
     }
 
     /**

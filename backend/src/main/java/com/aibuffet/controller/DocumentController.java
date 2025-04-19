@@ -3,6 +3,7 @@ package com.aibuffet.controller;
 import com.aibuffet.common.ApiResponse;
 import com.aibuffet.common.ErrorCode;
 import com.aibuffet.model.DocFile;
+import com.aibuffet.dto.UploadResult;
 import com.aibuffet.service.DocumentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -16,9 +17,7 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
+import java.util.concurrent.*;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -30,7 +29,17 @@ public class DocumentController {
 
     // 存储每个上传ID下各文件的进度
     private final Map<String, Map<String, Integer>> uploadProgress = new ConcurrentHashMap<>();
-    private final Map<String, List<DocFile>> uploadResults = new ConcurrentHashMap<>();
+    private final Map<String, List<UploadResult>> uploadResults = new ConcurrentHashMap<>();
+
+    // 更新文件上传进度
+    public void updateProgress(String uploadId, String fileName, int progress) {
+        uploadProgress.computeIfPresent(uploadId, (id, progressMap) -> {
+            progressMap.put(fileName, progress);
+            logger.debug("更新上传进度: uploadId={}, file={}, progress={}%", 
+                uploadId, fileName, progress);
+            return progressMap;
+        });
+    }
 
     @PostMapping("/upload")
     public ApiResponse<Map<String, Object>> uploadDocuments(
@@ -54,44 +63,56 @@ public class DocumentController {
             }
             logger.info("生成上传ID: {}", uploadId);
 
-            // 创建进度回调
-            BiConsumer<String, Integer> progressCallback = (fileName, progress) -> {
-                if (uploadProgress.containsKey(uploadId)) {
-                    uploadProgress.get(uploadId).put(fileName, progress);
-                    logger.debug("更新上传进度: uploadId={}, file={}, progress={}%", 
-                        uploadId, fileName, progress);
-                }
-            };
-
             // 异步处理文件上传
-            CompletableFuture.runAsync(() -> {
+            CompletableFuture<List<UploadResult>> uploadFuture = CompletableFuture.supplyAsync(() -> {
                 try {
-                    List<DocFile> savedFiles = documentService.uploadDocuments(
+                    List<UploadResult> results = documentService.uploadDocuments(
                         files,
                         knowledgeBaseId,
                         user.getId(),
-                        progressCallback
+                        uploadId,
+                        this
                     );
-                    uploadResults.put(uploadId, savedFiles);
-                    logger.info("文件上传处理完成: uploadId={}, 保存的文件数={}", uploadId, savedFiles.size());
+                    if (results != null && !results.isEmpty()) {
+                        uploadResults.put(uploadId, results);
+                        logger.info("文件上传处理完成: uploadId={}, 总文件数={}, 成功数={}", 
+                            uploadId, results.size(),
+                            results.stream().filter(r -> r.getFile() != null).count());
 
-                    // 设置所有文件的进度为100%
-                    Map<String, Integer> finalProgress = uploadProgress.get(uploadId);
-                    if (finalProgress != null) {
-                        for (String fileName : finalProgress.keySet()) {
-                            finalProgress.put(fileName, 100);
+                        // 设置所有成功文件的进度为100%
+                        Map<String, Integer> finalProgress = uploadProgress.get(uploadId);
+                        if (finalProgress != null) {
+                            results.stream()
+                                .filter(r -> r.getFile() != null)
+                                .forEach(r -> finalProgress.put(r.getFileName(), 100));
                         }
+                    } else {
+                        logger.error("文件上传失败: 未返回处理结果");
+                        uploadProgress.remove(uploadId);
+                        throw new RuntimeException("File upload failed: No results");
                     }
+                    return results;
                 } catch (Exception e) {
-                    logger.error("文件上传失败: uploadId={}", uploadId, e);
+                    logger.error("文件上传失败: uploadId={}, error={}", uploadId, e.getMessage(), e);
                     // 出错时移除进度记录
                     uploadProgress.remove(uploadId);
+                    throw new CompletionException(e);
                 }
             });
 
-            // 立即返回uploadId
+            // 添加超时处理
+            try {
+                uploadFuture.get(5, TimeUnit.MINUTES);
+            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                logger.error("文件上传超时或失败: uploadId={}, error={}", uploadId, e.getMessage(), e);
+                uploadProgress.remove(uploadId);
+                return ApiResponse.error(ErrorCode.SYSTEM_ERROR, "文件上传失败: " + e.getMessage());
+            }
+
+            // 返回uploadId和上传结果
             Map<String, Object> response = new HashMap<>();
             response.put("uploadId", uploadId);
+            response.put("results", uploadResults.get(uploadId));
             return ApiResponse.success(response);
         } catch (Exception e) {
             logger.error("文件上传请求处理失败: ", e);
@@ -100,23 +121,31 @@ public class DocumentController {
     }
 
     @GetMapping("/progress/{uploadId}")
-    public ApiResponse<Map<String, Integer>> getUploadProgress(@PathVariable String uploadId) {
+    public ApiResponse<Map<String, Object>> getUploadProgress(@PathVariable String uploadId) {
         Map<String, Integer> progress = uploadProgress.getOrDefault(uploadId, new ConcurrentHashMap<>());
+        Map<String, Object> response = new HashMap<>();
+        response.put("progress", progress);
         
         // 检查是否所有文件都完成了
-        boolean allCompleted = progress.values().stream().allMatch(p -> p >= 100);
+        boolean allCompleted = !progress.isEmpty() && progress.values().stream().allMatch(p -> p >= 100);
+        response.put("completed", allCompleted);
+        
         if (allCompleted) {
             // 获取上传结果
-            List<DocFile> savedFiles = uploadResults.remove(uploadId);
-            if (savedFiles != null) {
-                logger.info("所有文件上传完成: uploadId={}, 文件数={}", uploadId, savedFiles.size());
+            List<UploadResult> results = uploadResults.remove(uploadId);
+            if (results != null) {
+                logger.info("所有文件上传完成: uploadId={}, 文件数={}", uploadId, results.size());
+                response.put("results", results);
+            } else {
+                logger.warn("未找到上传结果: uploadId={}", uploadId);
+                response.put("error", "No upload results found");
             }
             // 清理进度记录
             uploadProgress.remove(uploadId);
             logger.info("清理进度记录: uploadId={}", uploadId);
         }
         
-        return ApiResponse.success(progress);
+        return ApiResponse.success(response);
     }
 
     @GetMapping
