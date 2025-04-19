@@ -5,6 +5,7 @@ import com.aliyun.oss.model.ObjectMetadata;
 import com.aliyun.oss.model.PutObjectRequest;
 import com.aliyun.oss.model.PutObjectResult;
 import com.aibuffet.config.OSSConfig;
+import com.aibuffet.controller.DocumentController;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -12,11 +13,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.function.Consumer;
 import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.function.Consumer;
 
 @Service
 public class OSSService {
@@ -40,7 +41,7 @@ public class OSSService {
     };
 
     // 知识库文档相关常量
-    private static final long KNOWLEDGE_DOC_MAX_SIZE = 300 * 1024 * 1024; // 300MB
+    private static final long KNOWLEDGE_DOC_MAX_SIZE = 1024 * 1024 * 1024; // 1GB
     private static final String[] ALLOWED_DOC_TYPES = {
         // Office 文档
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
@@ -60,10 +61,13 @@ public class OSSService {
         // 电子邮件
         "message/rfc822",            // .eml
         "application/vnd.ms-outlook", // .msg
-        // 电子书
+    // 电子书
         "application/epub+zip",      // .epub
         "application/epub",          // .epub
-        "application/x-mobipocket-ebook" // .mobi
+        "application/x-mobipocket-ebook", // .mobi
+        "application/mobi",         // .mobi
+        "application/x-mobipocket", // .mobi
+        "application/octet-stream"  // 通用二进制类型，某些浏览器可能使用
     };
 
     private static final Set<String> ALLOWED_DOC_EXTENSIONS = Set.of(
@@ -139,25 +143,52 @@ public class OSSService {
      * 验证文件的基本属性
      */
     private boolean validateFile(MultipartFile file, String[] allowedTypes, long maxSize) {
-        if (file == null || file.isEmpty()) {
-            logger.error("文件为空或无效");
+        try {
+            logger.info("开始验证文件: name={}, size={}, type={}", 
+                file.getOriginalFilename(), file.getSize(), file.getContentType());
+
+            if (file == null || file.isEmpty()) {
+                throw new IllegalArgumentException("文件为空或大小为0");
+            }
+
+            String contentType = file.getContentType();
+            long size = file.getSize();
+
+            // 检查文件内容
+            try {
+                byte[] content = file.getBytes();
+                if (content == null || content.length == 0) {
+                    throw new IllegalArgumentException("文件内容为空");
+                }
+                logger.info("文件内容验证成功，大小: {} bytes", content.length);
+            } catch (IOException e) {
+                throw new IllegalArgumentException("读取文件内容失败: " + e.getMessage());
+            }
+
+            boolean isValidType = contentType != null && Arrays.asList(allowedTypes).contains(contentType);
+            if (!isValidType) {
+                throw new IllegalArgumentException(String.format(
+                    "不支持的文件类型: %s，支持的类型: %s", 
+                    contentType, 
+                    Arrays.toString(allowedTypes)
+                ));
+            }
+
+            boolean isValidSize = size <= maxSize;
+            if (!isValidSize) {
+                throw new IllegalArgumentException(String.format(
+                    "文件大小超出限制: %.2fMB > %.2fGB", 
+                    size / (1024.0 * 1024.0),
+                    maxSize / (1024.0 * 1024.0 * 1024.0)
+                ));
+            }
+
+            logger.info("文件验证通过: type={}, size={}", contentType, size);
+            return true;
+        } catch (Exception e) {
+            logger.error("文件验证过程发生异常: {}", e.getMessage(), e);
             return false;
         }
-
-        String contentType = file.getContentType();
-        long size = file.getSize();
-
-        boolean isValidType = contentType != null && Arrays.asList(allowedTypes).contains(contentType);
-        boolean isValidSize = size <= maxSize;
-
-        if (!isValidType) {
-            logger.error("不支持的文件类型: {}", contentType);
-        }
-        if (!isValidSize) {
-            logger.error("文件大小超出限制: {} > {}", size, maxSize);
-        }
-
-        return isValidType && isValidSize;
     }
 
     /**
@@ -209,25 +240,57 @@ public class OSSService {
     /**
      * 上传知识库文档
      */
-    public String uploadKnowledgeDoc(MultipartFile file, Long userId, Consumer<Integer> progressCallback) throws IOException {
-        logger.info("开始处理知识库文档上传: 用户ID={}, 文件名={}, 文件大小={}, 文件类型={}", 
-            userId, file.getOriginalFilename(), file.getSize(), file.getContentType());
+    private String sanitizeFileName(String originalFilename) {
+        try {
+            // 确保文件名使用UTF-8编码
+            String decodedName = new String(originalFilename.getBytes("ISO-8859-1"), "UTF-8");
+            logger.info("处理文件名编码: 原始名={}, 处理后={}", originalFilename, decodedName);
+            // 移除特殊字符，保留扩展名
+            int lastDotIndex = decodedName.lastIndexOf('.');
+            String name = lastDotIndex != -1 ? decodedName.substring(0, lastDotIndex) : decodedName;
+            String extension = lastDotIndex != -1 ? decodedName.substring(lastDotIndex) : "";
+            
+            // 将特殊字符替换为下划线
+            String sanitizedName = name.replaceAll("[^\\w\\-\\.]", "_");
+            return sanitizedName + extension;
+        } catch (Exception e) {
+            logger.error("文件名编码处理失败: {}", e.getMessage());
+            return originalFilename;
+        }
+    }
 
-        String extension = getFileExtension(file.getOriginalFilename());
+    public String uploadKnowledgeDoc(MultipartFile file, Long userId, String uploadId, String fileName, DocumentController controller) throws IOException {
+        String originalFileName = file.getOriginalFilename();
+        logger.info("开始处理知识库文档上传: 用户ID={}, 原始文件名={}, 文件大小={}, 文件类型={}", 
+            userId, originalFileName, file.getSize(), file.getContentType());
+
+        // 处理文件名编码
+        String sanitizedFileName = sanitizeFileName(originalFileName);
+        logger.info("处理后的文件名: {}", sanitizedFileName);
+
+        String extension = getFileExtension(sanitizedFileName);
         if (!validateFile(file, ALLOWED_DOC_TYPES, KNOWLEDGE_DOC_MAX_SIZE) || 
             !ALLOWED_DOC_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException("Invalid document file");
+            String error = String.format("文件验证失败[%s]: 类型=%s, 大小=%d, 扩展名=%s", 
+                sanitizedFileName,
+                file.getContentType(), 
+                file.getSize(), 
+                extension);
+            logger.error(error);
+            throw new IllegalArgumentException(error);
         }
 
-        String objectKey = generateObjectKey(KNOWLEDGE_DOC_DIR, userId, file.getOriginalFilename());
+        String objectKey = generateObjectKey(KNOWLEDGE_DOC_DIR, userId, sanitizedFileName);
+        logger.info("生成的OSS对象键: {}", objectKey);
 
         try {
-            String url = uploadToOSS(file, objectKey, progressCallback);
-            logger.info("知识库文档上传成功: {}", url);
+            String url = uploadToOSS(file, objectKey, progress -> controller.updateProgress(uploadId, fileName, progress));
+            logger.info("知识库文档上传成功: objectKey={}, url={}", objectKey, url);
             return url;
         } catch (Exception e) {
-            logger.error("知识库文档上传失败: {}", e.getMessage());
-            throw e;
+            String error = String.format("知识库文档上传失败: objectKey=%s, error=%s", objectKey, e.getMessage());
+            logger.error(error, e);
+            throw new IOException(error, e);
         }
     }
 
