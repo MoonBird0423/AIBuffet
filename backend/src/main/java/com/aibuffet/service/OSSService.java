@@ -95,8 +95,7 @@ public class OSSService {
      * 生成OSS对象键
      */
     private String generateObjectKey(String baseDir, Long userId, String filename) {
-        String extension = getFileExtension(filename);
-        return String.format("%s/%d/%s%s", baseDir, userId, UUID.randomUUID(), extension);
+        return String.format("%s/%d/%s", baseDir, userId, filename);
     }
 
     /**
@@ -237,42 +236,16 @@ public class OSSService {
         }
     }
 
-    /**
-     * 上传知识库文档
-     */
-    private String sanitizeFileName(String originalFilename) {
-        try {
-            // 确保文件名使用UTF-8编码
-            String decodedName = new String(originalFilename.getBytes("ISO-8859-1"), "UTF-8");
-            logger.info("处理文件名编码: 原始名={}, 处理后={}", originalFilename, decodedName);
-            // 移除特殊字符，保留扩展名
-            int lastDotIndex = decodedName.lastIndexOf('.');
-            String name = lastDotIndex != -1 ? decodedName.substring(0, lastDotIndex) : decodedName;
-            String extension = lastDotIndex != -1 ? decodedName.substring(lastDotIndex) : "";
-            
-            // 将特殊字符替换为下划线
-            String sanitizedName = name.replaceAll("[^\\w\\-\\.]", "_");
-            return sanitizedName + extension;
-        } catch (Exception e) {
-            logger.error("文件名编码处理失败: {}", e.getMessage());
-            return originalFilename;
-        }
-    }
-
     public String uploadKnowledgeDoc(MultipartFile file, Long userId, String uploadId, String fileName, DocumentController controller) throws IOException {
         String originalFileName = file.getOriginalFilename();
         logger.info("开始处理知识库文档上传: 用户ID={}, 原始文件名={}, 文件大小={}, 文件类型={}", 
             userId, originalFileName, file.getSize(), file.getContentType());
 
-        // 处理文件名编码
-        String sanitizedFileName = sanitizeFileName(originalFileName);
-        logger.info("处理后的文件名: {}", sanitizedFileName);
-
-        String extension = getFileExtension(sanitizedFileName);
+        String extension = getFileExtension(originalFileName);
         if (!validateFile(file, ALLOWED_DOC_TYPES, KNOWLEDGE_DOC_MAX_SIZE) || 
             !ALLOWED_DOC_EXTENSIONS.contains(extension)) {
             String error = String.format("文件验证失败[%s]: 类型=%s, 大小=%d, 扩展名=%s", 
-                sanitizedFileName,
+                originalFileName,
                 file.getContentType(), 
                 file.getSize(), 
                 extension);
@@ -280,7 +253,7 @@ public class OSSService {
             throw new IllegalArgumentException(error);
         }
 
-        String objectKey = generateObjectKey(KNOWLEDGE_DOC_DIR, userId, sanitizedFileName);
+        String objectKey = generateObjectKey(KNOWLEDGE_DOC_DIR, userId, originalFileName);
         logger.info("生成的OSS对象键: {}", objectKey);
 
         try {
