@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { getFileIcon, formatFileSize } from '../../utils/fileUtils';
-import useUploadProgress from '../../hooks/useUploadProgress';
+import { useFileUploadProgress } from '../../hooks/useFileUploadProgress';
 
 const FilePreviewCard = ({ 
   file, 
@@ -24,9 +24,7 @@ const FilePreviewCard = ({
   const isImage = file.type.startsWith('image/');
   
   const [previewUrl, setPreviewUrl] = useState('');
-  const [progress, completeProgress] = useUploadProgress(
-    uploadStatus === 'uploading'
-  );
+  const [progress, completeProgress] = useFileUploadProgress(uploadStatus === 'uploading');
   
   // 当上传状态变为success时，设置进度为100%
   useEffect(() => {

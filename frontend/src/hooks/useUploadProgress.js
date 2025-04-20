@@ -1,42 +1,82 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import apiClient from '../services/api';
 
-const useUploadProgress = (isUploading, duration = 2000) => {
-  const [progress, setProgress] = useState(0);
-  
-  useEffect(() => {
-    if (!isUploading) {
-      setProgress(0);
-      return;
-    }
+export const useUploadProgress = () => {
+  const [progress, setProgress] = useState({});
+  const [isPolling, setIsPolling] = useState(false);
+  const pollTimerRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
-    let startTime = Date.now();
-    let animationFrame;
-
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const nextProgress = Math.min((elapsed / duration) * 90, 90); // 最多到90%
-      
-      setProgress(nextProgress);
-      
-      if (nextProgress < 90) {
-        animationFrame = requestAnimationFrame(animate);
-      }
-    };
-
-    animationFrame = requestAnimationFrame(animate);
+  const startPolling = useCallback(async (uploadId) => {
+    if (!uploadId) return;
     
-    return () => {
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
-      }
-    };
-  }, [isUploading, duration]);
+    setIsPolling(true);
+    abortControllerRef.current = new AbortController();
 
-  const complete = () => {
-    setProgress(100);
+  const pollProgress = async (retryCount = 0) => {
+    try {
+      const response = await apiClient.get(`/documents/progress/${uploadId}`, {
+        signal: abortControllerRef.current.signal
+      });
+      
+      const { progress: fileProgresses, completed } = response.data.data;
+      setProgress(prevProgress => ({
+        ...prevProgress,
+        ...fileProgresses
+      }));
+
+      // 只有在确认完成时才停止轮询
+      if (completed) {
+        setIsPolling(false);
+      } else if (isPolling) {
+        // 确保在轮询状态下继续
+        pollTimerRef.current = setTimeout(() => pollProgress(0), 500);
+      }
+    } catch (error) {
+      // 只有在非取消错误且确实出错时进行重试
+      if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
+        console.error('Progress polling failed:', error);
+        
+        // 如果重试次数小于最大重试次数（3次）且仍在轮询状态
+        if (retryCount < 3 && isPolling) {
+          const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // 指数退避，最大5秒
+          console.log(`Retrying progress polling in ${retryDelay}ms (attempt ${retryCount + 1}/3)`);
+          pollTimerRef.current = setTimeout(() => pollProgress(retryCount + 1), retryDelay);
+        } else {
+          setIsPolling(false);
+        }
+      } else {
+        // 如果是取消错误，但仍在轮询状态，继续尝试
+        if (isPolling) {
+          pollTimerRef.current = setTimeout(() => pollProgress(0), 500);
+        }
+      }
+    }
   };
 
-  return [progress, complete];
-};
+    pollProgress();
+  }, []);
 
-export default useUploadProgress;
+  const stopPolling = useCallback(() => {
+    setIsPolling(false);
+    if (pollTimerRef.current) {
+      clearTimeout(pollTimerRef.current);
+    }
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => stopPolling();
+  }, [stopPolling]);
+
+  return {
+    progress,
+    startPolling,
+    stopPolling,
+    isPolling,
+    setProgress,
+    setIsPolling
+  };
+};

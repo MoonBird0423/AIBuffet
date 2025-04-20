@@ -3,6 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import { ToastManager } from '../../components/common/Toast';
 import { XMarkIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { uploadDocuments } from '../../services/api';
+import { useUploadProgress } from '../../hooks/useUploadProgress';
 
 const ALLOWED_FILE_TYPES = {
   'Office 文档': ['.docx', '.xlsx', '.pptx', '.doc', '.xls', '.ppt'],
@@ -17,8 +18,8 @@ const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1GB
 const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete }) => {
   const [files, setFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [fileProgress, setFileProgress] = useState({});
   const [fileErrors, setFileErrors] = useState({});
+  const { progress, startPolling, stopPolling, setProgress, setIsPolling } = useUploadProgress();
 
   const onDrop = useCallback((acceptedFiles) => {
     const validFiles = acceptedFiles.filter(file => {
@@ -89,7 +90,7 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
     setFileErrors({});
 
     try {
-      // 初始化进度
+      // 初始化进度状态
       const initialProgress = {};
       const fileNameMap = {};
       const processedFiles = [];
@@ -102,23 +103,21 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
         fileNameMap[sanitizedName] = file.name;
         initialProgress[file.name] = 0;
       });
-      setFileProgress(initialProgress);
+
+      // 立即设置初始进度
+      setProgress(initialProgress);
+
+      // 确保停止任何现有的轮询
+      stopPolling();
 
       // 上传文件并处理结果
-      const { results, errors } = await uploadDocuments(
-        processedFiles,
-        knowledgeBaseId,
-        (processedName, progress) => {
-          // 使用映射找到原始文件名
-          const originalName = fileNameMap[processedName];
-          if (originalName) {
-            setFileProgress(prev => ({
-              ...prev,
-              [originalName]: progress
-            }));
-          }
-        }
-      );
+      const { uploadId, results, errors } = await uploadDocuments(processedFiles, knowledgeBaseId, setProgress);
+      
+      if (uploadId) {
+        // 重置轮询状态并开始新的轮询
+        setIsPolling(false);
+        startPolling(uploadId);
+      }
 
       // 处理错误
       if (errors.length > 0) {
@@ -153,6 +152,7 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
     }
 
     setIsUploading(false);
+    stopPolling();
   };
 
   if (!isOpen) return null;
@@ -206,14 +206,17 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
                     <p className="text-xs text-gray-500 mt-0.5">{formatFileSize(file.size)}</p>
                     {isUploading && (
                       <div className="mt-2">
-                        <div className="h-1 bg-gray-200 rounded">
+                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-blue-500 rounded transition-all"
-                            style={{ width: `${fileProgress[file.name] || 0}%` }}
+                            className="h-full bg-blue-500 rounded-full transition-all duration-300 ease-in-out"
+                            style={{ 
+                              width: `${progress[file.name] || 0}%`,
+                              transition: 'width 0.3s ease-in-out'
+                            }}
                           />
                         </div>
                         <p className="text-xs text-gray-500 text-right mt-1">
-                          {fileProgress[file.name] || 0}%
+                          {Math.round(progress[file.name] || 0)}%
                         </p>
                       </div>
                     )}
