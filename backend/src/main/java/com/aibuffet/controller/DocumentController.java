@@ -2,11 +2,14 @@ package com.aibuffet.controller;
 
 import com.aibuffet.common.ApiResponse;
 import com.aibuffet.common.ErrorCode;
+import com.aibuffet.common.ResourceNotFoundException;
 import com.aibuffet.model.DocFile;
 import com.aibuffet.dto.UploadResult;
 import com.aibuffet.service.DocumentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityManager;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -14,6 +17,7 @@ import com.aibuffet.model.User;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +30,9 @@ public class DocumentController {
     
     @Autowired
     private DocumentService documentService;
+
+    @Autowired
+    private EntityManager entityManager;
 
     // 存储每个上传ID下各文件的进度
     private final Map<String, Map<String, Integer>> uploadProgress = new ConcurrentHashMap<>();
@@ -154,22 +161,48 @@ public class DocumentController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         try {
+            logger.info("收到获取文档列表请求: knowledgeBaseId={}, page={}, size={}", 
+                knowledgeBaseId, page, size);
             Page<DocFile> documents = documentService.getDocuments(knowledgeBaseId, page, size);
+            logger.info("文档列表获取成功: 总数={}, 总页数={}", 
+                documents.getTotalElements(), documents.getTotalPages());
             return ApiResponse.success(documents);
         } catch (Exception e) {
+            logger.error("获取文档列表失败: ", e);
             return ApiResponse.error(ErrorCode.SYSTEM_ERROR, e.getMessage());
         }
     }
 
     @DeleteMapping("/{id}")
+    @Transactional
     public ApiResponse<Void> deleteDocument(
             @PathVariable Long id,
+            @RequestParam Long knowledgeBaseId,
             @AuthenticationPrincipal User user) {
         try {
-            documentService.deleteDocument(id, user.getId());
+            logger.info("收到删除文档请求: docId={}, knowledgeBaseId={}, userId={}", 
+                id, knowledgeBaseId, user.getId());
+            
+            // 先验证文档是否存在且可删除
+            documentService.verifyDocumentDeletable(id, knowledgeBaseId, user.getId());
+            
+            // 执行删除操作
+            documentService.deleteDocument(id, knowledgeBaseId, user.getId());
+            
+            // 强制刷新事务
+            entityManager.flush();
+            entityManager.clear();
+            
             return ApiResponse.success(null);
+        } catch (ResourceNotFoundException e) {
+            logger.warn("删除文档失败，文档不存在: docId={}, userId={}", id, user.getId());
+            return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
+        } catch (IllegalArgumentException e) {
+            logger.warn("删除文档失败，无权限: docId={}, userId={}", id, user.getId());
+            return ApiResponse.error(ErrorCode.PERMISSION_DENIED, e.getMessage());
         } catch (Exception e) {
-            return ApiResponse.error(ErrorCode.SYSTEM_ERROR, e.getMessage());
+            logger.error("删除文档失败，系统错误: ", e);
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR, "系统错误，请稍后重试");
         }
     }
 }

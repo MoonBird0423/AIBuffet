@@ -1,7 +1,9 @@
 package com.aibuffet.service;
 
+import com.aibuffet.common.ResourceNotFoundException;
 import com.aibuffet.controller.DocumentController;
 import com.aibuffet.model.DocFile;
+import com.aibuffet.model.DocFile.Status;
 import com.aibuffet.model.KnowledgeBaseFile;
 import com.aibuffet.dto.UploadResult;
 import com.aibuffet.repository.DocFileRepository;
@@ -11,10 +13,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jakarta.persistence.EntityManager;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -115,31 +119,87 @@ public class DocumentService {
     }
 
     /**
-     * 删除文档
+     * 从知识库中删除文档
      */
-    @Transactional
-    public void deleteDocument(Long docId, Long userId) {
-        DocFile docFile = docFileRepository.findById(docId)
-                .orElseThrow(() -> new IllegalArgumentException("Document not found"));
+    @Autowired
+    private EntityManager entityManager;
 
-        if (!docFile.getUploadedBy().equals(userId)) {
-            throw new IllegalArgumentException("No permission to delete this document");
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
+    public void deleteDocument(Long docId, Long knowledgeBaseId, Long userId) {
+        logger.info("开始从知识库删除文档: docId={}, knowledgeBaseId={}, userId={}", docId, knowledgeBaseId, userId);
+        
+        // 检查文档存在且为激活状态
+        DocFile docFile = docFileRepository.findByIdAndStatus(docId, Status.ACTIVE)
+                .orElseThrow(() -> {
+                    logger.warn("文档不存在或已删除: docId={}", docId);
+                    return new ResourceNotFoundException("Document not found or already deleted");
+                });
+
+        // 验证知识库和文档的关联关系
+        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findByKbIdAndFileId(knowledgeBaseId, docId)
+                .orElseThrow(() -> {
+                    logger.warn("文档未关联到该知识库: docId={}, knowledgeBaseId={}", docId, knowledgeBaseId);
+                    return new ResourceNotFoundException("Document is not associated with this knowledge base");
+                });
+
+        // 验证用户权限
+        if (!relation.getCreatedBy().equals(userId)) {
+            logger.warn("用户无权限删除该知识库的文档: docId={}, knowledgeBaseId={}, userId={}", 
+                docId, knowledgeBaseId, userId);
+            throw new IllegalArgumentException("No permission to delete this document from the knowledge base");
         }
 
-        // 从OSS删除文件
-        String objectName = extractObjectNameFromUrl(docFile.getFileUrl());
-        ossService.deleteFile(objectName);
+        // 删除知识库和文档的关联关系
+        knowledgeBaseFileRepository.deleteByKbIdAndFileId(knowledgeBaseId, docId);
+        logger.info("已解除文档与知识库的关联: docId={}, knowledgeBaseId={}", docId, knowledgeBaseId);
 
-        // 删除数据库记录
-        knowledgeBaseFileRepository.deleteByFileId(docId);
-        docFileRepository.deleteById(docId);
+        // 检查是否还有其他知识库引用这个文档
+        long referenceCount = knowledgeBaseFileRepository.countByFileId(docId);
+        if (referenceCount == 0) {
+            // 没有其他知识库引用这个文档了，标记为删除
+            docFile.setStatus(Status.DELETED);
+            docFileRepository.save(docFile);
+            logger.info("文档无其他引用，已标记为删除: docId={}", docId);
+        } else {
+            logger.info("文档仍有其他知识库引用({}个), 保持激活状态: docId={}", referenceCount, docId);
+        }
+
+        // 强制刷新并清除持久化上下文
+        entityManager.flush();
+        entityManager.clear();
     }
 
     /**
-     * 获取知识库的文档列表
+     * 获取知识库的文档列表（只返回激活状态的文档）
      */
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public Page<DocFile> getDocuments(Long knowledgeBaseId, int page, int size) {
-        return docFileRepository.findByKnowledgeBaseId(knowledgeBaseId, PageRequest.of(page, size));
+        logger.info("开始查询文档列表: knowledgeBaseId={}, page={}, size={}", 
+            knowledgeBaseId, page, size);
+        Page<DocFile> result = docFileRepository.findByKbId(knowledgeBaseId, PageRequest.of(page, size));
+        logger.info("文档列表查询完成: 总数={}, 总页数={}", 
+            result.getTotalElements(), result.getTotalPages());
+        return result;
+    }
+
+    public void verifyDocumentDeletable(Long docId, Long knowledgeBaseId, Long userId) {
+        DocFile docFile = docFileRepository.findByIdAndStatus(docId, Status.ACTIVE)
+                .orElseThrow(() -> {
+                    logger.warn("文档不存在或已删除: docId={}", docId);
+                    return new ResourceNotFoundException("Document not found or already deleted");
+                });
+
+        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findByKbIdAndFileId(knowledgeBaseId, docId)
+                .orElseThrow(() -> {
+                    logger.warn("文档未关联到该知识库: docId={}, knowledgeBaseId={}", docId, knowledgeBaseId);
+                    return new ResourceNotFoundException("Document is not associated with this knowledge base");
+                });
+
+        if (!relation.getCreatedBy().equals(userId)) {
+            logger.warn("用户无权限删除该知识库的文档: docId={}, knowledgeBaseId={}, userId={}", 
+                docId, knowledgeBaseId, userId);
+            throw new IllegalArgumentException("No permission to delete this document from the knowledge base");
+        }
     }
 
     private String getFileExtension(String filename) {
