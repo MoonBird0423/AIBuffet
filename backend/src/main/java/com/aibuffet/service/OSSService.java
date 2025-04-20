@@ -95,7 +95,12 @@ public class OSSService {
      * 生成OSS对象键
      */
     private String generateObjectKey(String baseDir, Long userId, String filename) {
-        return String.format("%s/%d/%s", baseDir, userId, filename);
+        // 生成一个唯一的OSS文件名，但保留原始扩展名
+        String extension = getFileExtension(filename);
+        String ossFileName = UUID.randomUUID().toString() + extension;
+        logger.info("生成OSS文件名: 原始文件名={}, OSS文件名={}, 存储目录={}", 
+            filename, ossFileName, baseDir);
+        return String.format("%s/%d/%s", baseDir, userId, ossFileName);
     }
 
     /**
@@ -238,8 +243,8 @@ public class OSSService {
 
     public String uploadKnowledgeDoc(MultipartFile file, Long userId, String uploadId, String fileName, DocumentController controller) throws IOException {
         String originalFileName = file.getOriginalFilename();
-        logger.info("开始处理知识库文档上传: 用户ID={}, 原始文件名={}, 文件大小={}, 文件类型={}", 
-            userId, originalFileName, file.getSize(), file.getContentType());
+        logger.info("准备上传文件到OSS: 原始文件名={}, 文件大小={}, 文件类型={}, 用户ID={}, uploadId={}", 
+            originalFileName, file.getSize(), file.getContentType(), userId, uploadId);
 
         String extension = getFileExtension(originalFileName);
         if (!validateFile(file, ALLOWED_DOC_TYPES, KNOWLEDGE_DOC_MAX_SIZE) || 
@@ -254,16 +259,17 @@ public class OSSService {
         }
 
         String objectKey = generateObjectKey(KNOWLEDGE_DOC_DIR, userId, originalFileName);
-        logger.info("生成的OSS对象键: {}", objectKey);
+        logger.debug("开始OSS上传: 原始文件名={}, objectKey={}", originalFileName, objectKey);
 
         try {
             String url = uploadToOSS(file, objectKey, progress -> controller.updateProgress(uploadId, fileName, progress));
-            logger.info("知识库文档上传成功: objectKey={}, url={}", objectKey, url);
+            logger.info("OSS上传完成: 原始文件名={}, objectKey={}, URL={}", 
+                originalFileName, objectKey, url);
             return url;
         } catch (Exception e) {
-            String error = String.format("知识库文档上传失败: objectKey=%s, error=%s", objectKey, e.getMessage());
-            logger.error(error, e);
-            throw new IOException(error, e);
+            logger.error("OSS上传失败: 原始文件名={}, objectKey={}, 错误={}", 
+                originalFileName, objectKey, e.getMessage(), e);
+            throw new IOException(String.format("文件上传失败: %s", e.getMessage()), e);
         }
     }
 
