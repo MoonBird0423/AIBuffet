@@ -22,7 +22,11 @@ public enum ErrorCode {
     LOGIN_FAILED(3001, "登录失败"),
     REGISTER_FAILED(3002, "注册失败"),
     PHONE_NOT_EXISTS(3003, "手机号未注册"),
-    PHONE_EXISTS(3004, "手机号已注册");
+    PHONE_EXISTS(3004, "手机号已注册"),
+
+    // 资源访问相关错误码
+    RESOURCE_NOT_FOUND(4001, "资源不存在"),
+    PERMISSION_DENIED(4002, "无权限访问");
 
     private final int code;
     private final String message;
