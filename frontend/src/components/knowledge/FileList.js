@@ -2,9 +2,19 @@ import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import { deleteDocument } from '../../services/api';
 import { TrashIcon, DocumentIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import Tooltip from '../common/Tooltip';
 
 const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageSize = 20, total = 0, onPageChange }) => {
   const [deletingId, setDeletingId] = useState(null);
+
+  const truncateFileName = (fileName) => {
+    if (fileName.length > 20) {
+      const ext = fileName.split('.').pop();
+      const name = fileName.substring(0, 17);
+      return `${name}...${ext}`;
+    }
+    return fileName;
+  };
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 B';
@@ -84,7 +94,7 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
     
     return (
       <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 sm:px-6 mt-4">
-        <div>
+        <div className="overflow-visible">
           <p className="text-sm text-gray-700">
             显示 <span className="font-medium">{page * pageSize + 1}</span> 到 
             <span className="font-medium">{Math.min((page + 1) * pageSize, total)}</span> 条,
@@ -123,7 +133,7 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
               disabled={page >= totalPages - 1}
               className={`relative inline-flex items-center px-2 py-2 rounded-r-md border text-sm font-medium
                 ${page >= totalPages - 1
-                  ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
+                  ? 'border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed'
                   : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
                 }`}
             >
@@ -137,8 +147,8 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
   };
 
   return (
-    <div>
-      <div className="overflow-x-auto">
+    <div style={{ overflow: 'visible' }}>
+      <div style={{ overflow: 'visible' }}>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -159,12 +169,16 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
           <tbody className="bg-white divide-y divide-gray-200">
             {files.map((file) => (
               <tr key={file.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-6 py-4">
                   <div className="flex items-center space-x-3">
                     <DocumentIcon className="h-5 w-5 text-gray-400" />
-                    <div className="flex flex-col">
-                      <div className="font-medium text-gray-900 truncate max-w-md">
-                        {file.fileName}
+                    <div className="flex flex-col max-w-[180px] min-w-0">
+                      <div className="font-medium text-gray-900">
+                        <Tooltip content={file.fileName} position="top">
+                          <span className="truncate block hover:text-blue-600 transition-colors">
+                            {truncateFileName(file.fileName)}
+                          </span>
+                        </Tooltip>
                       </div>
                       <div className="text-sm text-gray-500">
                         {file.fileType}

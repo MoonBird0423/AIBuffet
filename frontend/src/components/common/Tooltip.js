@@ -1,37 +1,76 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { usePopper } from 'react-popper';
+import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 
 const Tooltip = ({ content, children, position = 'top' }) => {
-  const positionClasses = {
-    top: '-top-full bottom-[calc(100%+0.5rem)] left-1/2 -translate-x-1/2',
-    bottom: 'top-full top-[calc(100%+0.5rem)] left-1/2 -translate-x-1/2',
-    left: 'right-full right-[calc(100%+0.5rem)] top-1/2 -translate-y-1/2',
-    right: 'left-full left-[calc(100%+0.5rem)] top-1/2 -translate-y-1/2'
-  };
+  const [referenceElement, setReferenceElement] = useState(null);
+  const [popperElement, setPopperElement] = useState(null);
+  const [arrowElement, setArrowElement] = useState(null);
+  const [visible, setVisible] = useState(false);
+
+  const { styles, attributes } = usePopper(referenceElement, popperElement, {
+    placement: position,
+    modifiers: [
+      { name: 'arrow', options: { element: arrowElement } },
+      { name: 'offset', options: { offset: [0, 12] } },
+      { 
+        name: 'computeStyles',
+        options: {
+          gpuAcceleration: false
+        }
+      },
+      {
+        name: 'preventOverflow',
+        options: {
+          boundary: 'viewport',
+          padding: 12,
+          altAxis: true,
+          altBoundary: true
+        }
+      },
+      {
+        name: 'flip',
+        options: {
+          padding: 12,
+          fallbackPlacements: ['bottom', 'right', 'left']
+        }
+      }
+    ],
+  });
 
   return (
-    <div className="relative group inline-block">
-      {children}
+    <>
       <div
-        className={`
-          absolute z-50 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap
-          opacity-0 pointer-events-none transition-opacity duration-200
-          group-hover:opacity-100 ${positionClasses[position]}
-        `}
-        role="tooltip"
+        ref={setReferenceElement}
+        onMouseEnter={() => setVisible(true)}
+        onMouseLeave={() => setVisible(false)}
+        className="inline-block cursor-default"
       >
-        {content}
-        <div
-          className={`
-            absolute w-2 h-2 bg-gray-800 transform rotate-45
-            ${position === 'top' ? 'bottom-[-0.25rem] left-1/2 -translate-x-1/2' :
-              position === 'bottom' ? 'top-[-0.25rem] left-1/2 -translate-x-1/2' :
-              position === 'left' ? 'right-[-0.25rem] top-1/2 -translate-y-1/2' :
-              'left-[-0.25rem] top-1/2 -translate-y-1/2'}
-          `}
-        />
+        {children}
       </div>
-    </div>
+      {visible && createPortal(
+        <div
+          ref={setPopperElement}
+          style={styles.popper}
+          {...attributes.popper}
+          className="z-[9999] px-4 py-3 text-sm leading-6 text-white bg-gray-800 rounded max-w-[800px] whitespace-normal break-words shadow-lg"
+        >
+          {content}
+          <div
+            ref={setArrowElement}
+            style={styles.arrow}
+            className={`
+              w-2 h-2 bg-gray-800 transform rotate-45 absolute -z-10
+              ${position === 'top' ? 'bottom-[-4px]' :
+                position === 'bottom' ? 'top-[-4px]' :
+                position === 'left' ? 'right-[-4px]' :
+                'left-[-4px]'}
+            `}
+          />
+        </div>
+      , document.body)}
+    </>
   );
 };
 
