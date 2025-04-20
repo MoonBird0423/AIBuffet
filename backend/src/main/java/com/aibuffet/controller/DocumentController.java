@@ -174,7 +174,6 @@ public class DocumentController {
     }
 
     @DeleteMapping("/{id}")
-    @Transactional
     public ApiResponse<Void> deleteDocument(
             @PathVariable Long id,
             @RequestParam Long knowledgeBaseId,
@@ -183,15 +182,8 @@ public class DocumentController {
             logger.info("收到删除文档请求: docId={}, knowledgeBaseId={}, userId={}", 
                 id, knowledgeBaseId, user.getId());
             
-            // 先验证文档是否存在且可删除
-            documentService.verifyDocumentDeletable(id, knowledgeBaseId, user.getId());
-            
             // 执行删除操作
             documentService.deleteDocument(id, knowledgeBaseId, user.getId());
-            
-            // 强制刷新事务
-            entityManager.flush();
-            entityManager.clear();
             
             return ApiResponse.success(null);
         } catch (ResourceNotFoundException e) {

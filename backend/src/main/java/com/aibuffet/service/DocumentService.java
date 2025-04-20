@@ -63,8 +63,16 @@ public class DocumentService {
             // 检查文件是否已存在
             DocFile existingFile = docFileRepository.findByMd5Hash(md5Hash);
             if (existingFile != null) {
-                logger.info("发现重复文件: 原始文件名={}, 已存在文件名={}, 文件ID={}", 
-                    originalFileName, existingFile.getFileName(), existingFile.getId());
+                logger.info("发现重复文件: 原始文件名={}, 已存在文件名={}, 文件ID={}, 状态={}", 
+                    originalFileName, existingFile.getFileName(), existingFile.getId(), existingFile.getStatus());
+                    
+                // 如果文件状态为已删除，恢复为激活状态
+                if (existingFile.getStatus() == Status.DELETED) {
+                    existingFile.setStatus(Status.ACTIVE);
+                    existingFile = docFileRepository.save(existingFile);
+                    logger.info("恢复已删除文件状态为激活: 文件ID={}", existingFile.getId());
+                }
+                
                 knowledgeBaseFileRepository.save(new KnowledgeBaseFile(knowledgeBaseId, existingFile.getId(), userId));
                 logger.info("重复文件关联到知识库成功: 原始文件名={}, 文件ID={}, 知识库ID={}", 
                     originalFileName, existingFile.getId(), knowledgeBaseId);
@@ -166,18 +174,21 @@ public class DocumentService {
             docFile.setStatus(Status.DELETED);
             docFileRepository.save(docFile);
             
-            // 从文档URL中提取对象名并删除OSS文件
-            String objectName = extractObjectNameFromUrl(docFile.getFileUrl());
-            ossService.deleteFile(objectName);
-            
-            logger.info("文档无其他引用，已标记为删除并清理OSS文件: docId={}, objectName={}", docId, objectName);
+            try {
+                // 从文档URL中提取对象名并删除OSS文件
+                String objectName = extractObjectNameFromUrl(docFile.getFileUrl());
+                ossService.deleteFile(objectName);
+                logger.info("文档无其他引用，已标记为删除并清理OSS文件: docId={}, objectName={}", docId, objectName);
+            } catch (IllegalArgumentException e) {
+                logger.error("从URL提取对象名失败: fileUrl={}, error={}", docFile.getFileUrl(), e.getMessage());
+                // 即使OSS文件删除失败，仍然保持文档的软删除状态
+            } catch (Exception e) {
+                logger.error("删除OSS文件失败: docId={}, error={}", docId, e.getMessage());
+                // 即使OSS文件删除失败，仍然保持文档的软删除状态
+            }
         } else {
             logger.info("文档仍有其他知识库引用({}个), 保持激活状态: docId={}", referenceCount, docId);
         }
-
-        // 强制刷新并清除持久化上下文
-        entityManager.flush();
-        entityManager.clear();
     }
 
     /**
@@ -191,26 +202,6 @@ public class DocumentService {
         logger.info("文档列表查询完成: 总数={}, 总页数={}", 
             result.getTotalElements(), result.getTotalPages());
         return result;
-    }
-
-    public void verifyDocumentDeletable(Long docId, Long knowledgeBaseId, Long userId) {
-        DocFile docFile = docFileRepository.findByIdAndStatus(docId, Status.ACTIVE)
-                .orElseThrow(() -> {
-                    logger.warn("文档不存在或已删除: docId={}", docId);
-                    return new ResourceNotFoundException("Document not found or already deleted");
-                });
-
-        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findByKbIdAndFileId(knowledgeBaseId, docId)
-                .orElseThrow(() -> {
-                    logger.warn("文档未关联到该知识库: docId={}, knowledgeBaseId={}", docId, knowledgeBaseId);
-                    return new ResourceNotFoundException("Document is not associated with this knowledge base");
-                });
-
-        if (!relation.getCreatedBy().equals(userId)) {
-            logger.warn("用户无权限删除该知识库的文档: docId={}, knowledgeBaseId={}, userId={}", 
-                docId, knowledgeBaseId, userId);
-            throw new IllegalArgumentException("No permission to delete this document from the knowledge base");
-        }
     }
 
     private String getFileExtension(String filename) {
@@ -235,8 +226,18 @@ public class DocumentService {
     }
 
     private String extractObjectNameFromUrl(String fileUrl) {
+        if (fileUrl == null) {
+            throw new IllegalArgumentException("File URL cannot be null");
+        }
+        
+        int docIndex = fileUrl.indexOf("/knowledgebase-doc/");
+        if (docIndex == -1) {
+            throw new IllegalArgumentException("Invalid file URL format: missing /knowledgebase-doc/ path");
+        }
+        
         int questionMarkIndex = fileUrl.indexOf('?');
         String urlWithoutParams = questionMarkIndex == -1 ? fileUrl : fileUrl.substring(0, questionMarkIndex);
-        return urlWithoutParams.substring(urlWithoutParams.indexOf("/documents/"));
+        
+        return urlWithoutParams.substring(docIndex);
     }
 }
