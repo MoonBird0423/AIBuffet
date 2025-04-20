@@ -44,14 +44,20 @@ function KnowledgeDetail() {
 
   const loadDocuments = useCallback(async (page = 0) => {
     try {
+      console.log('开始加载文档列表:', { id, page });
       setDocumentsLoading(true);
       const response = await getDocuments(id, page, 20);
-      setDocuments(response.content);
-      setTotalPages(response.totalPages);
-      setTotalElements(response.totalElements);
+      console.log('文档列表API响应:', response);
+      setDocuments(response.data.content);
+      setTotalPages(response.data.totalPages);
+      setTotalElements(response.data.totalElements);
       setCurrentPage(page);
     } catch (error) {
-      console.error('Error loading documents:', error);
+      console.error('加载文档列表失败:', error, '完整错误:', {
+        message: error.message,
+        response: error.response,
+        stack: error.stack
+      });
       ToastManager.error(error.message || '加载文档列表失败');
     } finally {
       setDocumentsLoading(false);
@@ -96,10 +102,12 @@ function KnowledgeDetail() {
     window.open(`/chat?knowledgeId=${id}`, '_blank');
   };
 
-  const handleDocumentDelete = (docId) => {
+  const handleDocumentDelete = useCallback((docId) => {
     setDocuments(prev => prev.filter(doc => doc.id !== docId));
     setTotalElements(prev => prev - 1);
-  };
+    // 删除后立即刷新以确保数据同步
+    loadDocuments(currentPage);
+  }, [loadDocuments, currentPage]);
 
   if (loading) {
     return <div className="h-screen flex items-center justify-center">加载中...</div>;
@@ -210,39 +218,12 @@ function KnowledgeDetail() {
             files={documents}
             isLoading={documentsLoading}
             onDelete={handleDocumentDelete}
+            knowledgeBaseId={id}
+            page={currentPage}
+            total={totalElements}
+            pageSize={20}
+            onPageChange={setCurrentPage}
           />
-
-          {totalPages > 1 && (
-            <div className="mt-6 flex justify-between items-center">
-              <div className="text-sm text-gray-500">
-                共 {totalElements} 个文档
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setCurrentPage(prev => prev - 1)}
-                  disabled={currentPage === 0}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === 0
-                      ? 'bg-gray-100 text-gray-400'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  上一页
-                </button>
-                <button
-                  onClick={() => setCurrentPage(prev => prev + 1)}
-                  disabled={currentPage === totalPages - 1}
-                  className={`px-3 py-1 rounded ${
-                    currentPage === totalPages - 1
-                      ? 'bg-gray-100 text-gray-400'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  下一页
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </main>
 

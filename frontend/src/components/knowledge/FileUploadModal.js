@@ -75,12 +75,8 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
   };
 
   const sanitizeFileName = (fileName) => {
-    const lastDotIndex = fileName.lastIndexOf('.');
-    const name = lastDotIndex !== -1 ? fileName.slice(0, lastDotIndex) : fileName;
-    const extension = lastDotIndex !== -1 ? fileName.slice(lastDotIndex) : '';
-    
-    const sanitized = name.replace(/[^\w--]/g, '_');
-    return sanitized + extension;
+    // 保持原始文件名不变，让后端处理文件名规范化
+    return fileName;
   };
 
   const handleUpload = async () => {

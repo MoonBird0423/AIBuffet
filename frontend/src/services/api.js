@@ -391,13 +391,20 @@ export const deleteKnowledgeBase = async (id) => {
 
 // 文档相关API
 export const getDocuments = async (knowledgeBaseId, page = 0, size = 20) => {
+  console.log('调用getDocuments API, 参数:', { knowledgeBaseId, page, size });
   try {
     const response = await apiClient.get('/documents', {
       params: { knowledgeBaseId, page, size }
     });
-    return response.data.data;
+    console.log('getDocuments API响应:', response);
+    return response.data;
   } catch (error) {
-    console.error('Error fetching documents:', error);
+    console.error('getDocuments API错误:', {
+      error,
+      message: error.message,
+      response: error.response,
+      stack: error.stack
+    });
     throw error;
   }
 };
@@ -479,9 +486,9 @@ export const uploadDocuments = async (files, knowledgeBaseId, onProgress) => {
   }
 };
 
-export const deleteDocument = async (documentId) => {
+export const deleteDocument = async (documentId, knowledgeBaseId) => {
   try {
-    await apiClient.delete(`/documents/${documentId}`);
+    await apiClient.delete(`/documents/${documentId}?knowledgeBaseId=${knowledgeBaseId}`);
   } catch (error) {
     console.error('Error deleting document:', error);
     throw error;
