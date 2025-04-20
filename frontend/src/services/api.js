@@ -412,8 +412,12 @@ export const getDocuments = async (knowledgeBaseId, page = 0, size = 20) => {
 // 修改上传文档的功能
 export const uploadDocuments = async (files, knowledgeBaseId, onProgress) => {
   try {
+    console.log('开始上传文件:', {
+      fileCount: files.length,
+      knowledgeBaseId
+    });
+
     const formData = new FormData();
-    // 以数组形式添加所有文件
     files.forEach(file => {
       formData.append('files', file);
     });
@@ -423,50 +427,34 @@ export const uploadDocuments = async (files, knowledgeBaseId, onProgress) => {
       headers: {
         'Content-Type': 'multipart/form-data'
       },
-      timeout: 300000,
+      timeout: 300000, // 5分钟超时
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
       onUploadProgress: (progressEvent) => {
-        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        // 更新所有文件的进度
-        files.forEach(file => {
-          onProgress?.(file.name, progress);
-        });
-        console.log('文档上传进度:', {
-          loaded: progressEvent.loaded,
-          total: progressEvent.total,
-          progress
-        });
+        if (progressEvent.total) {
+          const overallProgress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          // 计算每个文件的进度并更新
+          const progressMap = {};
+          files.forEach(file => {
+            const fileProgress = Math.min(overallProgress, 99); // 保留最后1%给处理时间
+            progressMap[file.name] = fileProgress;
+            console.log(`文件 ${file.name} 上传进度: ${fileProgress}%`);
+          });
+          // 调用回调更新进度状态
+          onProgress?.(progressMap);
+        }
       }
     });
 
     console.log('文档上传响应:', response.data);
 
-    if (response.data?.data?.results) {
-      // 处理上传结果
-      const results = [];
-      const errors = [];
+    // 只返回上传ID和初始结果
+    return {
+      uploadId: response.data.data.uploadId,
+      results: response.data.data.results || [],
+      errors: response.data.data.errors || []
+    };
 
-      response.data.data.results.forEach(result => {
-        if (result.file) {
-          // 成功上传的文件
-          results.push({
-            fileName: result.fileName,
-            data: result.file
-          });
-        } else {
-          // 上传失败的文件
-          errors.push({
-            fileName: result.fileName,
-            error: result.error
-          });
-        }
-      });
-
-      return { results, errors };
-    }
-
-    throw new Error('Upload failed: No valid response data');
   } catch (error) {
     console.error('文档上传失败:', {
       error,
@@ -475,8 +463,8 @@ export const uploadDocuments = async (files, knowledgeBaseId, onProgress) => {
       errorStack: error.stack
     });
     
-    // 将错误转换为统一的返回格式
     return {
+      uploadId: null,
       results: [],
       errors: files.map(file => ({
         fileName: file.name,
