@@ -165,7 +165,12 @@ public class DocumentService {
             // 没有其他知识库引用这个文档了，标记为删除
             docFile.setStatus(Status.DELETED);
             docFileRepository.save(docFile);
-            logger.info("文档无其他引用，已标记为删除: docId={}", docId);
+            
+            // 从文档URL中提取对象名并删除OSS文件
+            String objectName = extractObjectNameFromUrl(docFile.getFileUrl());
+            ossService.deleteFile(objectName);
+            
+            logger.info("文档无其他引用，已标记为删除并清理OSS文件: docId={}, objectName={}", docId, objectName);
         } else {
             logger.info("文档仍有其他知识库引用({}个), 保持激活状态: docId={}", referenceCount, docId);
         }
