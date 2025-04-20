@@ -44,49 +44,55 @@ public class DocumentService {
     @Transactional
     public UploadResult uploadSingleFile(MultipartFile file, Long knowledgeBaseId, Long userId, String uploadId, DocumentController controller) {
         try {
-            logger.info("处理文件: name={}, size={}, type={}", 
-                file.getOriginalFilename(), file.getSize(), file.getContentType());
+            String originalFileName = file.getOriginalFilename();
+            logger.info("开始处理文件上传: 原始文件名={}, 大小={}, 类型={}, 知识库ID={}", 
+                originalFileName, file.getSize(), file.getContentType(), knowledgeBaseId);
 
             // 验证文件格式
             if (!ossService.isValidKnowledgeDoc(file)) {
-                logger.error("文件验证失败: {}", file.getOriginalFilename());
-                return UploadResult.error(file.getOriginalFilename(), 
+                logger.error("文件验证失败: 原始文件名={}, 类型={}", 
+                    originalFileName, file.getContentType());
+                return UploadResult.error(originalFileName, 
                     "Invalid document format: " + file.getContentType());
             }
 
             // 计算文件MD5
             String md5Hash = calculateMD5(file);
-            logger.debug("文件MD5: {}", md5Hash);
+            logger.debug("文件MD5计算完成: 原始文件名={}, MD5={}", originalFileName, md5Hash);
 
             // 检查文件是否已存在
             DocFile existingFile = docFileRepository.findByMd5Hash(md5Hash);
             if (existingFile != null) {
-                logger.info("文件已存在，直接关联到知识库: fileId={}", existingFile.getId());
+                logger.info("发现重复文件: 原始文件名={}, 已存在文件名={}, 文件ID={}", 
+                    originalFileName, existingFile.getFileName(), existingFile.getId());
                 knowledgeBaseFileRepository.save(new KnowledgeBaseFile(knowledgeBaseId, existingFile.getId(), userId));
-                return UploadResult.success(file.getOriginalFilename(), existingFile);
+                logger.info("重复文件关联到知识库成功: 原始文件名={}, 文件ID={}, 知识库ID={}", 
+                    originalFileName, existingFile.getId(), knowledgeBaseId);
+                return UploadResult.success(originalFileName, existingFile);
             }
 
             // 上传到OSS
-            logger.info("开始上传文件到OSS: {}", file.getOriginalFilename());
-            String fileUrl = ossService.uploadKnowledgeDoc(file, userId, uploadId, file.getOriginalFilename(), controller);
-            logger.info("OSS上传完成，文件URL: {}", fileUrl);
+            logger.info("开始上传文件到OSS: 原始文件名={}", originalFileName);
+            String fileUrl = ossService.uploadKnowledgeDoc(file, userId, uploadId, originalFileName, controller);
+            logger.debug("OSS上传完成，获取到URL: {}", fileUrl);
 
-            // 保存文件信息到数据库
+            logger.info("开始保存文件信息到数据库: 原始文件名={}", originalFileName);
             DocFile docFile = new DocFile();
-            docFile.setFileName(file.getOriginalFilename());
-            docFile.setFileType(getFileExtension(file.getOriginalFilename()));
+            docFile.setFileName(originalFileName);
+            docFile.setFileType(getFileExtension(originalFileName));
             docFile.setFileSize(file.getSize());
             docFile.setFileUrl(fileUrl);
             docFile.setUploadedBy(userId);
             docFile.setMd5Hash(md5Hash);
             docFile = docFileRepository.save(docFile);
-            logger.info("文件信息已保存: fileId={}", docFile.getId());
+            logger.info("文件信息已保存到数据库: ID={}, 原始文件名={}", docFile.getId(), docFile.getFileName());
 
             // 关联文件到知识库
             knowledgeBaseFileRepository.save(new KnowledgeBaseFile(knowledgeBaseId, docFile.getId(), userId));
-            logger.info("文件已关联到知识库: fileId={}, knowledgeBaseId={}", docFile.getId(), knowledgeBaseId);
+            logger.info("文件关联到知识库成功: 原始文件名={}, 文件ID={}, 知识库ID={}", 
+                originalFileName, docFile.getId(), knowledgeBaseId);
 
-            return UploadResult.success(file.getOriginalFilename(), docFile);
+            return UploadResult.success(originalFileName, docFile);
 
         } catch (Exception e) {
             logger.error("文件处理失败: {}, 错误: {}", file.getOriginalFilename(), e.getMessage(), e);
