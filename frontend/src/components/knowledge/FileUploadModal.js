@@ -3,7 +3,6 @@ import { useDropzone } from 'react-dropzone';
 import { ToastManager } from '../../components/common/Toast';
 import { XMarkIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { uploadDocuments } from '../../services/api';
-import { useUploadProgress } from '../../hooks/useUploadProgress';
 
 const ALLOWED_FILE_TYPES = {
   'Office 文档': ['.docx', '.xlsx', '.pptx', '.doc', '.xls', '.ppt'],
@@ -19,7 +18,7 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
   const [files, setFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [fileErrors, setFileErrors] = useState({});
-  const { progress, startPolling, stopPolling, setProgress, setIsPolling } = useUploadProgress();
+  const [progress, setProgress] = useState({});
 
   const onDrop = useCallback((acceptedFiles) => {
     const validFiles = acceptedFiles.filter(file => {
@@ -92,49 +91,27 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
     try {
       // 初始化进度状态
       const initialProgress = {};
-      const fileNameMap = {};
-      const processedFiles = [];
-
-      // 处理每个文件并建立映射关系
       files.forEach(file => {
-        const sanitizedName = sanitizeFileName(file.name);
-        const processedFile = new File([file], sanitizedName, { type: file.type });
-        processedFiles.push(processedFile);
-        fileNameMap[sanitizedName] = file.name;
         initialProgress[file.name] = 0;
       });
-
-      // 立即设置初始进度
       setProgress(initialProgress);
 
-      // 确保停止任何现有的轮询
-      stopPolling();
-
       // 上传文件并处理结果
-      const { uploadId, results, errors } = await uploadDocuments(processedFiles, knowledgeBaseId, setProgress);
-      
-      if (uploadId) {
-        // 重置轮询状态并开始新的轮询
-        setIsPolling(false);
-        startPolling(uploadId);
-      }
+      const { results, errors } = await uploadDocuments(files, knowledgeBaseId, setProgress);
 
       // 处理错误
       if (errors.length > 0) {
         const newErrors = {};
         errors.forEach(({fileName, error}) => {  // 修改这里，解构error属性
-          const originalName = fileNameMap[fileName] || fileName;
-          newErrors[originalName] = error;  // 使用error而不是errors.error
-          ToastManager.error(`文件 ${originalName} 上传失败: ${error}`);  // 同样使用error
+          newErrors[fileName] = error;
+          ToastManager.error(`文件 ${fileName} 上传失败: ${error}`);
         });
         setFileErrors(newErrors);
       }
 
       // 处理成功结果
       if (results.length > 0) {
-        const successFileNames = new Set(
-          results.map(r => fileNameMap[r.fileName] || r.fileName)
-        );
+        const successFileNames = new Set(results.map(r => r.fileName));
         setFiles(prev => prev.filter(f => !successFileNames.has(f.name)));
         
         if (results.length === files.length) {
@@ -147,12 +124,10 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
       }
 
     } catch (error) {
-      console.error('上传过程发生错误:', error);
       ToastManager.error('上传过程发生错误，请重试');
     }
 
     setIsUploading(false);
-    stopPolling();
   };
 
   if (!isOpen) return null;

@@ -173,13 +173,6 @@ export const invokeModel = ({ messages, model, onMessage, onError, onFinish, sig
     temperature: 0.7,
   };
 
-  console.log('Sending request to model service:', {
-    url: `${API_URL}/chat/completions`,
-    model,
-    messageCount: messages.length,
-    lastMessage: messages[messages.length - 1]
-  });
-
   // 使用fetch API发送请求并处理SSE响应
   fetch(`${API_URL}/chat/completions`, {
     method: 'POST',
@@ -195,7 +188,6 @@ export const invokeModel = ({ messages, model, onMessage, onError, onFinish, sig
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    console.log('SSE connection established');
     
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -210,7 +202,6 @@ export const invokeModel = ({ messages, model, onMessage, onError, onFinish, sig
         if (!line.trim()) return;
         
         if (line.trim() === 'data: [DONE]') {
-          console.log('Received [DONE] signal');
           onFinish?.();
           return;
         }
@@ -219,7 +210,6 @@ export const invokeModel = ({ messages, model, onMessage, onError, onFinish, sig
           // 检查并删除"data:"前缀
           const jsonStr = line.startsWith('data:') ? line.slice(5) : line;
           const data = JSON.parse(jsonStr);
-          console.debug('Received chunk:', data);
           onMessage?.(data);
         } catch (error) {
           console.warn('Error parsing SSE message:', error, line);
@@ -230,7 +220,6 @@ export const invokeModel = ({ messages, model, onMessage, onError, onFinish, sig
     const pump = () => reader.read()
       .then(({ value, done }) => {
         if (done) {
-          console.log('Stream complete');
           onFinish?.();
           return;
         }
@@ -247,7 +236,6 @@ export const invokeModel = ({ messages, model, onMessage, onError, onFinish, sig
 
   // 返回一个取消函数
   return () => {
-    console.log('Cancelling model invocation');
     if (signal) {
       signal.abort();
     }
@@ -267,12 +255,6 @@ export const queryModels = async (params) => {
 // 上传聊天图片
 export const uploadChatImage = async (file) => {
   try {
-    console.log('开始上传图片:', {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type
-    });
-
     const formData = new FormData();
     formData.append('file', file);
 
@@ -285,15 +267,9 @@ export const uploadChatImage = async (file) => {
       maxBodyLength: Infinity,
       onUploadProgress: (progressEvent) => {
         const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        console.log('上传进度:', {
-          loaded: progressEvent.loaded,
-          total: progressEvent.total,
-          progress
-        });
       }
     });
     
-    console.log('图片上传成功:', response.data);
     return response.data;
   } catch (error) {
     console.error('图片上传失败:', {
@@ -309,9 +285,7 @@ export const uploadChatImage = async (file) => {
 // 知识库相关API
 export const createKnowledgeBase = async (data) => {
   try {
-    console.log('Creating knowledge base with data:', data);
     const response = await apiClient.post('/knowledge-bases', data);
-    console.log('Knowledge base creation response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error creating knowledge base:', {
@@ -391,12 +365,10 @@ export const deleteKnowledgeBase = async (id) => {
 
 // 文档相关API
 export const getDocuments = async (knowledgeBaseId, page = 0, size = 20) => {
-  console.log('调用getDocuments API, 参数:', { knowledgeBaseId, page, size });
   try {
     const response = await apiClient.get('/documents', {
       params: { knowledgeBaseId, page, size }
     });
-    console.log('getDocuments API响应:', response);
     return response.data;
   } catch (error) {
     console.error('getDocuments API错误:', {
@@ -412,11 +384,6 @@ export const getDocuments = async (knowledgeBaseId, page = 0, size = 20) => {
 // 修改上传文档的功能
 export const uploadDocuments = async (files, knowledgeBaseId, onProgress) => {
   try {
-    console.log('开始上传文件:', {
-      fileCount: files.length,
-      knowledgeBaseId
-    });
-
     const formData = new FormData();
     files.forEach(file => {
       formData.append('files', file);
@@ -436,9 +403,8 @@ export const uploadDocuments = async (files, knowledgeBaseId, onProgress) => {
           // 计算每个文件的进度并更新
           const progressMap = {};
           files.forEach(file => {
-            const fileProgress = Math.min(overallProgress, 99); // 保留最后1%给处理时间
-            progressMap[file.name] = fileProgress;
-            console.log(`文件 ${file.name} 上传进度: ${fileProgress}%`);
+          const fileProgress = Math.min(overallProgress, 99); // 保留最后1%给处理时间
+          progressMap[file.name] = fileProgress;
           });
           // 调用回调更新进度状态
           onProgress?.(progressMap);
@@ -446,11 +412,8 @@ export const uploadDocuments = async (files, knowledgeBaseId, onProgress) => {
       }
     });
 
-    console.log('文档上传响应:', response.data);
-
-    // 只返回上传ID和初始结果
+    // 返回上传结果
     return {
-      uploadId: response.data.data.uploadId,
       results: response.data.data.results || [],
       errors: response.data.data.errors || []
     };
@@ -464,7 +427,6 @@ export const uploadDocuments = async (files, knowledgeBaseId, onProgress) => {
     });
     
     return {
-      uploadId: null,
       results: [],
       errors: files.map(file => ({
         fileName: file.name,

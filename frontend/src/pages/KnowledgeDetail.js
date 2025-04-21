@@ -44,20 +44,14 @@ function KnowledgeDetail() {
 
   const loadDocuments = useCallback(async (page = 0) => {
     try {
-      console.log('开始加载文档列表:', { id, page });
       setDocumentsLoading(true);
       const response = await getDocuments(id, page, 20);
-      console.log('文档列表API响应:', response);
       setDocuments(response.data.content);
       setTotalPages(response.data.totalPages);
       setTotalElements(response.data.totalElements);
       setCurrentPage(page);
     } catch (error) {
-      console.error('加载文档列表失败:', error, '完整错误:', {
-        message: error.message,
-        response: error.response,
-        stack: error.stack
-      });
+      console.error('加载文档列表失败:', error.message);
       ToastManager.error(error.message || '加载文档列表失败');
     } finally {
       setDocumentsLoading(false);
@@ -73,7 +67,7 @@ function KnowledgeDetail() {
       const data = await getKnowledgeBase(id);
       setKnowledgeBase(data);
     } catch (error) {
-      console.error('Error loading knowledge base:', error);
+      console.error('加载知识库失败:', error.message);
       ToastManager.error(error.message || '加载知识库失败');
     } finally {
       setLoading(false);
@@ -85,7 +79,7 @@ function KnowledgeDetail() {
       await updateKnowledgeBaseColor(id, color);
       setKnowledgeBase(prev => ({ ...prev, colorMark: color }));
     } catch (error) {
-      console.error('Error updating color:', error);
+      console.error('更新颜色失败:', error.message);
       ToastManager.error(error.message || '更新颜色失败');
     }
   };
