@@ -42,8 +42,6 @@ public class DocumentController {
     public void updateProgress(String uploadId, String fileName, int progress) {
         uploadProgress.computeIfPresent(uploadId, (id, progressMap) -> {
             progressMap.put(fileName, progress);
-            logger.debug("更新上传进度: uploadId={}, file={}, progress={}%", 
-                uploadId, fileName, progress);
             return progressMap;
         });
     }
@@ -54,21 +52,12 @@ public class DocumentController {
             @RequestParam("knowledgeBaseId") Long knowledgeBaseId,
             @AuthenticationPrincipal User user) {
         try {
-            logger.info("收到文件上传请求: 文件数={}, 知识库ID={}, 用户ID={}", 
-                files.length, knowledgeBaseId, user.getId());
-            
-            for (MultipartFile file : files) {
-                logger.info("文件详情: name={}, size={}, type={}", 
-                    file.getOriginalFilename(), file.getSize(), file.getContentType());
-            }
-
             String uploadId = String.format("%d_%d", knowledgeBaseId, System.currentTimeMillis());
             uploadProgress.put(uploadId, new ConcurrentHashMap<>());
             // 初始化每个文件的进度
             for (MultipartFile file : files) {
                 uploadProgress.get(uploadId).put(file.getOriginalFilename(), 0);
             }
-            logger.info("生成上传ID: {}", uploadId);
 
             // 异步处理文件上传
             CompletableFuture<List<UploadResult>> uploadFuture = CompletableFuture.supplyAsync(() -> {
@@ -82,9 +71,6 @@ public class DocumentController {
                     );
                     if (results != null && !results.isEmpty()) {
                         uploadResults.put(uploadId, results);
-                        logger.info("文件上传处理完成: uploadId={}, 总文件数={}, 成功数={}", 
-                            uploadId, results.size(),
-                            results.stream().filter(r -> r.getFile() != null).count());
 
                         // 设置所有成功文件的进度为100%
                         Map<String, Integer> finalProgress = uploadProgress.get(uploadId);
@@ -149,7 +135,6 @@ public class DocumentController {
             }
             // 清理进度记录
             uploadProgress.remove(uploadId);
-            logger.info("清理进度记录: uploadId={}", uploadId);
         }
         
         return ApiResponse.success(response);
@@ -161,11 +146,7 @@ public class DocumentController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         try {
-            logger.info("收到获取文档列表请求: knowledgeBaseId={}, page={}, size={}", 
-                knowledgeBaseId, page, size);
             Page<DocFile> documents = documentService.getDocuments(knowledgeBaseId, page, size);
-            logger.info("文档列表获取成功: 总数={}, 总页数={}", 
-                documents.getTotalElements(), documents.getTotalPages());
             return ApiResponse.success(documents);
         } catch (Exception e) {
             logger.error("获取文档列表失败: ", e);
@@ -179,8 +160,6 @@ public class DocumentController {
             @RequestParam Long knowledgeBaseId,
             @AuthenticationPrincipal User user) {
         try {
-            logger.info("收到删除文档请求: docId={}, knowledgeBaseId={}, userId={}", 
-                id, knowledgeBaseId, user.getId());
             
             // 执行删除操作
             documentService.deleteDocument(id, knowledgeBaseId, user.getId());
