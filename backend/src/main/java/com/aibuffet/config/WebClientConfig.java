@@ -5,6 +5,7 @@ import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.netty.handler.logging.LogLevel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +17,10 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import jakarta.annotation.PostConstruct;
 
 @Configuration
 public class WebClientConfig {
@@ -41,6 +45,25 @@ public class WebClientConfig {
     @Value("${monitor.resolver.enabled:true}")
     private boolean monitoringEnabled;
     
+    @PostConstruct
+    public void init() {
+        // 设置系统DNS服务器
+        StringBuilder dnsServers = new StringBuilder();
+        for (String ns : nameservers) {
+            if (dnsServers.length() > 0) {
+                dnsServers.append(",");
+            }
+            dnsServers.append(ns.split(":")[0]);
+        }
+        System.setProperty("sun.net.dns.server.list", dnsServers.toString());
+        
+        // 设置DNS查询超时
+        System.setProperty("sun.net.client.defaultConnectTimeout", String.valueOf(queryTimeout * 1000));
+        System.setProperty("sun.net.client.defaultReadTimeout", String.valueOf(queryTimeout * 1000));
+        
+        logger.info("已配置DNS服务器: {}", dnsServers);
+    }
+    
     @Bean
     public WebClient.Builder webClientBuilder() {
         // 创建优化的连接池
@@ -58,13 +81,9 @@ public class WebClientConfig {
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
             .responseTimeout(Duration.ofSeconds(45))
             
-            // 配置DNS解析
-            .resolver(spec -> spec
-                .queryTimeout(Duration.ofSeconds(queryTimeout))
-                .maxQueriesPerResolve(maxQueries)
-                .cacheMaxTimeToLive(Duration.ofSeconds(cacheTtl))
-                .cacheNegativeTimeToLive(Duration.ofSeconds(minTtl))
-            )
+            // 启用wiretap以便调试
+            .wiretap(this.getClass().getCanonicalName(), 
+                    monitoringEnabled ? LogLevel.DEBUG : LogLevel.INFO)
             
             // 超时和监控配置
             .doOnConnected(connection -> {
