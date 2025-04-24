@@ -21,5 +21,7 @@ public interface KnowledgeBaseFileRepository extends JpaRepository<KnowledgeBase
 
     Optional<KnowledgeBaseFile> findByKbIdAndFileId(Long kbId, Long fileId);
 
+    Optional<KnowledgeBaseFile> findFirstByFileId(Long fileId);
+
     long countByFileId(Long fileId);
 }

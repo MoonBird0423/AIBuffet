@@ -18,4 +18,7 @@ public interface ModelRepository extends JpaRepository<Model, Integer> {
 
     @Query("SELECT m FROM Model m WHERE LOWER(m.name) = LOWER(:name)")
     Optional<Model> findByNameExact(@Param("name") String name);
+
+    @Query("SELECT m FROM Model m WHERE LOWER(m.purpose) = LOWER(:purpose)")
+    Optional<Model> findByPurposeExact(@Param("purpose") String purpose);
 }

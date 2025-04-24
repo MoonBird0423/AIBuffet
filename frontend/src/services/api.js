@@ -445,4 +445,26 @@ export const deleteDocument = async (documentId, knowledgeBaseId) => {
   }
 };
 
+// 重试文档处理
+export const retryProcessing = async (documentId) => {
+  try {
+    const response = await apiClient.post(`/documents/${documentId}/retry`);
+    return response.data;
+  } catch (error) {
+    console.error('重试文档处理失败:', error);
+    throw error;
+  }
+};
+
+// 获取文档分块
+export const getDocumentChunks = async (documentId) => {
+  try {
+    const response = await apiClient.get(`/documents/${documentId}/chunks`);
+    return response.data;
+  } catch (error) {
+    console.error('获取文档分块失败:', error);
+    throw error;
+  }
+};
+
 export default apiClient;
