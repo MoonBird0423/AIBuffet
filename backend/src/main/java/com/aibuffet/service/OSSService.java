@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -299,5 +300,31 @@ public class OSSService {
         String extension = getFileExtension(file.getOriginalFilename());
         return validateFile(file, ALLOWED_DOC_TYPES, KNOWLEDGE_DOC_MAX_SIZE) && 
                ALLOWED_DOC_EXTENSIONS.contains(extension);
+    }
+
+    /**
+     * 从OSS下载文件
+     * @param fileUrl OSS文件URL
+     * @return 文件输入流
+     */
+    public InputStream downloadFile(String fileUrl) {
+        String objectKey = extractObjectNameFromUrl(fileUrl);
+        return ossClient.getObject(ossConfig.getBucketName(), objectKey).getObjectContent();
+    }
+
+    private String extractObjectNameFromUrl(String fileUrl) {
+        if (fileUrl == null) {
+            throw new IllegalArgumentException("File URL cannot be null");
+        }
+        
+        int docIndex = fileUrl.indexOf("/knowledgebase-doc/");
+        if (docIndex == -1) {
+            throw new IllegalArgumentException("Invalid file URL format: missing /knowledgebase-doc/ path");
+        }
+        
+        int questionMarkIndex = fileUrl.indexOf('?');
+        String urlWithoutParams = questionMarkIndex == -1 ? fileUrl : fileUrl.substring(0, questionMarkIndex);
+        
+        return urlWithoutParams.substring(docIndex + 1);
     }
 }

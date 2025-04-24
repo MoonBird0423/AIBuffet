@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
-import { deleteDocument } from '../../services/api';
-import { TrashIcon, DocumentIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { deleteDocument, retryProcessing, getDocumentChunks } from '../../services/api';
+import { TrashIcon, DocumentIcon, ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, ViewfinderCircleIcon } from '@heroicons/react/24/outline';
 import Tooltip from '../common/Tooltip';
+import ChunkViewModal from './ChunkViewModal';
 
 const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageSize = 20, total = 0, onPageChange }) => {
   const [deletingId, setDeletingId] = useState(null);
+  const [processingId, setProcessingId] = useState(null);
+  const [selectedFileId, setSelectedFileId] = useState(null);
+  const [showChunkModal, setShowChunkModal] = useState(false);
 
   const truncateFileName = (fileName) => {
     if (fileName.length > 20) {
@@ -33,6 +37,53 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const getStatusClass = (status) => {
+    const classes = {
+      'PENDING': 'text-gray-500',
+      'PROCESSING': 'text-blue-500',
+      'TEXT_EXTRACTION': 'text-blue-500',
+      'CHUNKING': 'text-blue-500',
+      'VECTORIZING': 'text-blue-500',
+      'STORING': 'text-blue-500',
+      'COMPLETED': 'text-green-500',
+      'FAILED': 'text-red-500'
+    };
+    return classes[status] || 'text-gray-500';
+  };
+
+  const getStatusText = (status) => {
+    const statusMap = {
+      'PENDING': '待处理',
+      'PROCESSING': '处理中',
+      'TEXT_EXTRACTION': '提取文本中',
+      'CHUNKING': '分块中',
+      'VECTORIZING': '向量化中',
+      'STORING': '存储中',
+      'COMPLETED': '已完成',
+      'FAILED': '处理失败'
+    };
+    return statusMap[status] || status;
+  };
+
+  const handleRetry = async (id) => {
+    setProcessingId(id);
+    try {
+      await retryProcessing(id);
+      toast.success('已重新开始处理');
+      // 刷新文件列表
+      onPageChange(page);
+    } catch (error) {
+      toast.error('重试失败：' + (error.response?.data?.message || '系统错误'));
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleViewChunks = async (id) => {
+    setSelectedFileId(id);
+    setShowChunkModal(true);
   };
 
   const handleDelete = async (id) => {
@@ -162,6 +213,9 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
                 上传时间
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                状态
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 操作
               </th>
             </tr>
@@ -192,16 +246,42 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {formatDate(file.uploadedAt)}
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <span className={getStatusClass(file.parseStatus)}>
+                    {getStatusText(file.parseStatus)}
+                  </span>
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleDelete(file.id)}
-                    disabled={deletingId === file.id}
-                    className={`text-red-600 hover:text-red-900 inline-flex items-center space-x-1
-                      ${deletingId === file.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                    <span>{deletingId === file.id ? '删除中...' : '删除'}</span>
-                  </button>
+                  <div className="flex space-x-3">
+                    {file.parseStatus === 'FAILED' && (
+                      <button
+                        onClick={() => handleRetry(file.id)}
+                        disabled={processingId === file.id}
+                        className="text-blue-600 hover:text-blue-900 inline-flex items-center space-x-1"
+                      >
+                        <ArrowPathIcon className="h-4 w-4" />
+                        <span>{processingId === file.id ? '处理中...' : '重试'}</span>
+                      </button>
+                    )}
+                    {file.parseStatus === 'COMPLETED' && (
+                      <button
+                        onClick={() => handleViewChunks(file.id)}
+                        className="text-green-600 hover:text-green-900 inline-flex items-center space-x-1"
+                      >
+                        <ViewfinderCircleIcon className="h-4 w-4" />
+                        <span>查看分块</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDelete(file.id)}
+                      disabled={deletingId === file.id}
+                      className={`text-red-600 hover:text-red-900 inline-flex items-center space-x-1
+                        ${deletingId === file.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                      <span>{deletingId === file.id ? '删除中...' : '删除'}</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -209,6 +289,12 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
         </table>
       </div>
       {total > pageSize && <Pagination />}
+      
+      <ChunkViewModal
+        isOpen={showChunkModal}
+        onClose={() => setShowChunkModal(false)}
+        fileId={selectedFileId}
+      />
     </div>
   );
 };

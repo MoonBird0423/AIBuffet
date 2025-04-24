@@ -4,6 +4,7 @@ import com.aibuffet.common.ApiResponse;
 import com.aibuffet.common.ErrorCode;
 import com.aibuffet.common.ResourceNotFoundException;
 import com.aibuffet.model.DocFile;
+import com.aibuffet.model.DocChunk;
 import com.aibuffet.dto.UploadResult;
 import com.aibuffet.service.DocumentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -173,6 +174,44 @@ public class DocumentController {
             return ApiResponse.error(ErrorCode.PERMISSION_DENIED, e.getMessage());
         } catch (Exception e) {
             logger.error("删除文档失败，系统错误: ", e);
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR, "系统错误，请稍后重试");
+        }
+    }
+
+    @PostMapping("/{id}/retry")
+    public ApiResponse<Void> retryProcessing(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        try {
+            documentService.retryProcessing(id, user.getId());
+            return ApiResponse.success(null);
+        } catch (ResourceNotFoundException e) {
+            logger.warn("重试文档处理失败，文档不存在: docId={}, userId={}", id, user.getId());
+            return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
+        } catch (IllegalArgumentException e) {
+            logger.warn("重试文档处理失败，无权限: docId={}, userId={}", id, user.getId());
+            return ApiResponse.error(ErrorCode.PERMISSION_DENIED, e.getMessage());
+        } catch (Exception e) {
+            logger.error("重试文档处理失败，系统错误: ", e);
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR, "系统错误，请稍后重试");
+        }
+    }
+
+    @GetMapping("/{id}/chunks")
+    public ApiResponse<List<DocChunk>> getDocumentChunks(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        try {
+            List<DocChunk> chunks = documentService.getDocumentChunks(id, user.getId());
+            return ApiResponse.success(chunks);
+        } catch (ResourceNotFoundException e) {
+            logger.warn("获取文档分块失败，文档不存在: docId={}, userId={}", id, user.getId());
+            return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
+        } catch (IllegalArgumentException e) {
+            logger.warn("获取文档分块失败，无权限: docId={}, userId={}", id, user.getId());
+            return ApiResponse.error(ErrorCode.PERMISSION_DENIED, e.getMessage());
+        } catch (Exception e) {
+            logger.error("获取文档分块失败，系统错误: ", e);
             return ApiResponse.error(ErrorCode.SYSTEM_ERROR, "系统错误，请稍后重试");
         }
     }

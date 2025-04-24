@@ -1,0 +1,146 @@
+package com.aibuffet.service.impl;
+
+import com.aibuffet.config.TextProcessingProperties;
+import com.aibuffet.model.TextChunk;
+import com.aibuffet.service.OSSService;
+import com.aibuffet.service.TextProcessingService;
+import org.apache.tika.Tika;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Service
+public class TextProcessingServiceImpl implements TextProcessingService {
+    private static final Logger logger = LoggerFactory.getLogger(TextProcessingServiceImpl.class);
+    private static final String SENTENCE_DELIMITER = "(?<=[。！？.!?])\\s*";
+
+    private final Tika tika;
+    private final TextProcessingProperties properties;
+    private final OSSService ossService;
+
+    @Autowired
+    public TextProcessingServiceImpl(
+            Tika tika,
+            TextProcessingProperties properties,
+            OSSService ossService) {
+        this.tika = tika;
+        this.properties = properties;
+        this.ossService = ossService;
+    }
+
+    @Override
+    public String extractText(String fileUrl) throws IOException {
+        logger.info("开始提取文本内容: fileUrl={}", fileUrl);
+        try (InputStream inputStream = ossService.downloadFile(fileUrl)) {
+            String text = tika.parseToString(inputStream);
+            logger.debug("文本提取完成: 字符数={}", text.length());
+            return text;
+        } catch (Exception e) {
+            logger.error("文本提取失败: {}", e.getMessage());
+            throw new IOException("文本提取失败: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<TextChunk> createChunks(String text) {
+        logger.info("开始文本分块: 输入文本长度={}", text.length());
+        
+        // 使用正则表达式进行句子分割
+        String[] sentences = text.split(SENTENCE_DELIMITER);
+        logger.debug("句子分割完成: 句子数={}", sentences.length);
+        
+        List<TextChunk> chunks = new ArrayList<>();
+        StringBuilder currentChunk = new StringBuilder();
+        int currentTokens = 0;
+        int startIndex = 0;
+        int chunkIndex = 0;
+        
+        for (String sentence : sentences) {
+            if (sentence.trim().isEmpty()) {
+                continue;
+            }
+            
+            int sentenceTokens = countTokens(sentence);
+            
+            // 如果当前块加上这个句子会超出最大token数
+            if (currentTokens + sentenceTokens > properties.getMaxTokensPerChunk()) {
+                if (currentChunk.length() > 0) {
+                    // 保存当前块
+                    chunks.add(createChunk(currentChunk.toString(), currentTokens, startIndex, chunkIndex));
+                    
+                    // 如果需要重叠，保留最后一个句子
+                    if (properties.getChunkOverlap() > 0) {
+                        String[] lastSentences = currentChunk.toString().split(SENTENCE_DELIMITER);
+                        if (lastSentences.length > 0) {
+                            String lastSentence = lastSentences[lastSentences.length - 1];
+                            currentChunk = new StringBuilder(lastSentence).append(" ");
+                            currentTokens = countTokens(lastSentence);
+                            startIndex = Math.max(0, startIndex + currentChunk.length() - properties.getChunkOverlap());
+                        } else {
+                            currentChunk = new StringBuilder();
+                            currentTokens = 0;
+                        }
+                    } else {
+                        currentChunk = new StringBuilder();
+                        currentTokens = 0;
+                    }
+                    chunkIndex++;
+                }
+            }
+            
+            currentChunk.append(sentence).append(" ");
+            currentTokens += sentenceTokens;
+        }
+        
+        // 处理最后一个块
+        if (currentChunk.length() > 0) {
+            chunks.add(createChunk(currentChunk.toString(), currentTokens, startIndex, chunkIndex));
+        }
+        
+        logger.info("文本分块完成: 块数={}", chunks.size());
+        return chunks;
+    }
+
+    @Override
+    public int countTokens(String text) {
+        // 按照中英文混合文本的特点进行分词：
+        // 1. 按空格分割英文单词
+        // 2. 按标点符号分割
+        // 3. 每个中文字符视为一个token
+        String[] words = text.split("[\\s,.!?，。！？]+");
+        int tokenCount = 0;
+        for (String word : words) {
+            if (!word.isEmpty()) {
+                // 中文字符计数
+                tokenCount += word.codePoints().filter(ch -> Character.UnicodeScript.of(ch) == Character.UnicodeScript.HAN).count();
+                // 非中文部分按单词计数
+                tokenCount += word.codePoints().filter(ch -> Character.UnicodeScript.of(ch) != Character.UnicodeScript.HAN).count() > 0 ? 1 : 0;
+            }
+        }
+        return tokenCount;
+    }
+
+    private TextChunk createChunk(String content, int tokenCount, int startIndex, int chunkIndex) {
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("chunkIndex", chunkIndex);
+        metadata.put("startIndex", startIndex);
+        metadata.put("endIndex", startIndex + content.length());
+        
+        return new TextChunk(
+            content.trim(),
+            tokenCount,
+            startIndex,
+            startIndex + content.length(),
+            metadata
+        );
+    }
+}
