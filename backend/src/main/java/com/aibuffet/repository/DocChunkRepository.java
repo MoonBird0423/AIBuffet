@@ -13,21 +13,21 @@ import java.util.Map;
 @Repository
 public interface DocChunkRepository extends JpaRepository<DocChunk, Long> {
     
-    List<DocChunk> findByFileIdAndVectorStatus(Long fileId, VectorStatus status);
+    List<DocChunk> findByFileIdAndVectorStatus(Long fileId, String status);
     
     @Query("SELECT COUNT(c) FROM DocChunk c WHERE c.fileId = :fileId AND c.vectorStatus = :status")
-    long countByFileIdAndStatus(Long fileId, VectorStatus status);
+    long countByFileIdAndStatus(Long fileId, String status);
     
     @Query("SELECT COUNT(c) FROM DocChunk c WHERE c.fileId = :fileId")
     long countByFileId(Long fileId);
     
     @Modifying
     @Query("UPDATE DocChunk c SET c.vectorStatus = :status, c.vectorError = :error WHERE c.id = :chunkId")
-    void updateStatus(Long chunkId, VectorStatus status, String error);
+    void updateStatus(Long chunkId, String status, String error);
     
     @Modifying
     @Query("UPDATE DocChunk c SET c.vectorId = :vectorId, c.vectorStatus = :status, c.vectorError = NULL WHERE c.id = :chunkId")
-    void setVectorComplete(Long chunkId, String vectorId, VectorStatus status);
+    void setVectorComplete(Long chunkId, String vectorId, String status);
     
     // 修正方法名称以匹配实体类中的字段名
     List<DocChunk> findByFileIdOrderByChunkIndexAsc(Long fileId);

@@ -12,6 +12,7 @@ import com.aibuffet.repository.DocChunkRepository;
 import com.aibuffet.repository.KnowledgeBaseFileRepository;
 import com.aibuffet.service.DocumentService;
 import com.aibuffet.service.OSSService;
+import com.aibuffet.service.VectorService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -24,6 +25,10 @@ import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import jakarta.persistence.EntityManager;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.transaction.annotation.Propagation;
+import com.aibuffet.service.TextProcessingService;
+import com.aibuffet.model.TextChunk;
 
 import java.io.IOException;
 import java.security.MessageDigest;
@@ -46,6 +51,12 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Autowired
     private OSSService ossService;
+
+    @Autowired
+    private VectorService vectorService;
+    
+    @Autowired
+    private TextProcessingService textProcessingService;
 
     @Autowired
     private EntityManager entityManager;
@@ -109,6 +120,10 @@ public class DocumentServiceImpl implements DocumentService {
             knowledgeBaseFileRepository.save(new KnowledgeBaseFile(knowledgeBaseId, docFile.getId(), userId));
             logger.info("文件关联到知识库成功: 原始文件名={}, 文件ID={}, 知识库ID={}", 
                 originalFileName, docFile.getId(), knowledgeBaseId);
+
+            // 异步触发文档处理
+            processDocumentAsync(docFile);
+            logger.info("已触发异步文档处理: docId={}", docFile.getId());
 
             return UploadResult.success(originalFileName, docFile);
 
@@ -227,10 +242,11 @@ public class DocumentServiceImpl implements DocumentService {
             throw new IllegalArgumentException("No permission to retry this document");
         }
 
-        // 更新文档状态为待处理
-        docFile.setParseStatus(DocFile.ParseStatus.PENDING);
-        docFileRepository.save(docFile);
-        logger.info("文档状态已更新为待处理: docId={}", docId);
+        // 重试文档的失败分块
+        vectorService.retryFailedChunks(docId);
+        // 重新触发整个文档的处理流程
+        processDocumentAsync(docFile);
+        logger.info("已触发文档重新处理: docId={}", docId);
     }
 
     @Override
@@ -255,7 +271,7 @@ public class DocumentServiceImpl implements DocumentService {
             throw new IllegalArgumentException("No permission to view document chunks");
         }
 
-        List<DocChunk> chunks = docChunkRepository.findByFileIdOrderByChunkIndex(docId);
+        List<DocChunk> chunks = docChunkRepository.findByFileIdOrderByChunkIndexAsc(docId);
         logger.info("成功获取文档分块: docId={}, 分块数量={}", docId, chunks.size());
         return chunks;
     }
@@ -278,6 +294,50 @@ public class DocumentServiceImpl implements DocumentService {
             return hexString.toString();
         } catch (NoSuchAlgorithmException | IOException e) {
             throw new RuntimeException("Failed to calculate MD5", e);
+        }
+    }
+
+    @Async("documentProcessingExecutor")
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void processDocumentAsync(DocFile docFile) {
+        try {
+            logger.info("开始异步处理文档: docId={}, fileName={}", docFile.getId(), docFile.getFileName());
+            
+            // 1. 提取文本
+            logger.debug("开始提取文本: docId={}", docFile.getId());
+            String text = textProcessingService.extractText(docFile.getFileUrl());
+            logger.debug("文本提取完成: docId={}, 文本长度={}", docFile.getId(), text.length());
+            
+            // 2. 文本分块
+            logger.debug("开始文本分块: docId={}", docFile.getId());
+            List<TextChunk> chunks = textProcessingService.createChunks(text);
+            logger.info("文本分块完成: docId={}, 分块数={}", docFile.getId(), chunks.size());
+            
+            // 3. 保存分块并触发向量化
+            for (int i = 0; i < chunks.size(); i++) {
+                TextChunk chunk = chunks.get(i);
+                DocChunk docChunk = new DocChunk();
+                docChunk.setFileId(docFile.getId());
+                docChunk.setContent(chunk.getContent());
+                docChunk.setChunkIndex(i);
+                docChunk.setTokenCount(chunk.getTokenCount());
+                docChunk.setMetadataMap(chunk.getMetadata());
+                docChunkRepository.save(docChunk);
+                
+                // 异步触发向量化
+                vectorService.processChunkAsync(docChunk);
+                
+                if ((i + 1) % 100 == 0) {
+                    logger.info("文档处理进度: docId={}, 已处理分块数={}/{}", 
+                        docFile.getId(), i + 1, chunks.size());
+                }
+            }
+            
+            logger.info("文档处理完成: docId={}, 总分块数={}", docFile.getId(), chunks.size());
+            
+        } catch (Exception e) {
+            logger.error("文档处理失败: docId={}, error={}", docFile.getId(), e.getMessage(), e);
+            // 这里仅记录错误，不抛出异常，让用户可以通过重试机制来处理失败的情况
         }
     }
 

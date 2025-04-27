@@ -23,7 +23,7 @@ public interface VectorService {
     CompletableFuture<String> processChunkAsync(DocChunk chunk);
     
     // 更新文档块状态
-    void updateChunkStatus(Long chunkId, VectorStatus status, String error);
+    void updateChunkStatus(Long chunkId, String status, String error);
     
     // 重试失败的向量化
     CompletableFuture<Void> retryFailedChunks(Long fileId);
