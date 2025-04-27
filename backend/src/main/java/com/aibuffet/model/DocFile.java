@@ -24,10 +24,6 @@ public class DocFile {
     @Column(name = "file_size", nullable = false)
     private Long fileSize;
 
-    @Column(name = "parse_status")
-    @Enumerated(EnumType.STRING)
-    private ParseStatus parseStatus = ParseStatus.PENDING;
-
     @Column(name = "file_url", nullable = false)
     private String fileUrl;
 
@@ -43,10 +39,6 @@ public class DocFile {
 
     @Column(name = "md5_hash")
     private String md5Hash;
-
-    public enum ParseStatus {
-        PENDING, PROCESSING, COMPLETED, FAILED
-    }
 
     public enum Status {
         ACTIVE, DELETED

@@ -309,8 +309,19 @@ public class VectorServiceImpl implements VectorService {
 
     @Override
     @Transactional
-    public void updateChunkStatus(Long chunkId, VectorStatus status, String error) {
+    public void updateChunkStatus(Long chunkId, String status, String error) {
+        DocChunk chunk = chunkRepository.findById(chunkId)
+            .orElseThrow(() -> new RuntimeException("Chunk not found: " + chunkId));
+        
+        String oldStatus = chunk.getVectorStatus();
         chunkRepository.updateStatus(chunkId, status, error);
+        
+        logger.info("Chunk status changed: chunkId={}, from={} to={}, error={}",
+            chunkId, oldStatus, status, error != null ? "present" : "none");
+        
+        if (error != null) {
+            logger.debug("Chunk error details: chunkId={}, error={}", chunkId, error);
+        }
     }
 
     @Override
@@ -319,15 +330,20 @@ public class VectorServiceImpl implements VectorService {
     public CompletableFuture<Void> retryFailedChunks(Long fileId) {
         List<DocChunk> failedChunks = chunkRepository.findByFileIdAndVectorStatus(fileId, VectorStatus.FAILED);
         
+        logger.info("Found {} failed chunks for fileId={}", failedChunks.size(), fileId);
+        
         List<CompletableFuture<String>> futures = failedChunks.stream()
             .filter(chunk -> chunk.getRetryCount() < 3)
             .map(chunk -> {
+                logger.info("Retrying chunk processing: chunkId={}, retryCount={}", chunk.getId(), chunk.getRetryCount());
+                chunk.resetForRetry();
                 chunk.incrementRetryCount();
                 chunkRepository.save(chunk);
                 return processChunkAsync(chunk);
             })
             .collect(Collectors.toList());
-            
+        
+        logger.info("Started {} retry tasks for fileId={}", futures.size(), fileId);
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
     }
 

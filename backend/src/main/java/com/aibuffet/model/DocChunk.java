@@ -6,8 +6,10 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import org.hibernate.annotations.CreationTimestamp;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Data
 @Entity
@@ -38,13 +40,31 @@ public class DocChunk {
     @Column(columnDefinition = "json")
     private String metadata;
     
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+    
+    public void setMetadataMap(Map<String, Object> metadataMap) {
+        try {
+            this.metadata = objectMapper.writeValueAsString(metadataMap);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize metadata", e);
+        }
+    }
+    
+    public Map<String, Object> getMetadataMap() {
+        try {
+            if (this.metadata == null) return null;
+            return objectMapper.readValue(this.metadata, Map.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to deserialize metadata", e);
+        }
+    }
+    
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     
-    @Enumerated(EnumType.STRING)
     @Column(name = "vector_status", length = 20)
-    private VectorStatus vectorStatus = VectorStatus.PENDING;
+    private String vectorStatus = VectorStatus.PENDING;
     
     @Column(name = "vector_error", columnDefinition = "TEXT")
     private String vectorError;
@@ -61,7 +81,13 @@ public class DocChunk {
         this.retryCount = (this.retryCount == null ? 0 : this.retryCount) + 1;
     }
     
-    public void updateVectorStatus(VectorStatus status, String error) {
+    public void resetForRetry() {
+        this.retryCount = 0;
+        this.vectorError = null;
+        this.vectorStatus = VectorStatus.PENDING;
+    }
+    
+    public void updateVectorStatus(String status, String error) {
         this.vectorStatus = status;
         this.vectorError = error;
     }
