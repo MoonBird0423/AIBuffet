@@ -17,6 +17,7 @@ import io.milvus.v2.service.collection.request.AddFieldReq;
 import io.milvus.v2.service.collection.request.CreateCollectionReq;
 import io.milvus.v2.service.collection.request.DescribeCollectionReq;
 import io.milvus.v2.service.collection.request.GetLoadStateReq;
+import io.milvus.v2.service.collection.request.HasCollectionReq;
 import io.milvus.v2.service.vector.request.InsertReq;
 import io.milvus.v2.service.vector.response.InsertResp;
 import org.slf4j.Logger;
@@ -70,33 +71,46 @@ public class VectorServiceImpl implements VectorService {
 
     @PostConstruct
     public void init() {
-        vectorModel = modelRepository.findByPurposeExact(VECTOR_MODEL_PURPOSE)
-                .orElseThrow(() -> new RuntimeException("Vector model not found"));
-        
-        webClient = webClientBuilder
-                .baseUrl(vectorModel.getBaseUrl())
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + vectorModel.getApiKey())
-                .build();
+        logger.info("Initializing VectorService");
+        try {
+            logger.debug("Loading vector model for purpose: {}", VECTOR_MODEL_PURPOSE);
+            vectorModel = modelRepository.findByPurposeExact(VECTOR_MODEL_PURPOSE)
+                    .orElseThrow(() -> new RuntimeException("Vector model not found"));
+            logger.debug("Found vector model: baseUrl={}", vectorModel.getBaseUrl());
+            
+            logger.debug("Configuring web client");
+            webClient = webClientBuilder
+                    .baseUrl(vectorModel.getBaseUrl())
+                    .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + vectorModel.getApiKey())
+                    .build();
+            logger.info("Web client configured successfully");
 
-        ensureMilvusCollection();
+            logger.info("Initializing Milvus collection");
+            ensureMilvusCollection();
+            logger.info("VectorService initialization completed successfully");
+        } catch (Exception e) {
+            logger.error("Failed to initialize VectorService", e);
+            throw e;
+        }
     }
 
     private void ensureMilvusCollection() {
         String collectionName = config.getMilvusCollection();
+        logger.info("Ensuring Milvus collection exists: {}", collectionName);
         
         try {
-            DescribeCollectionReq describeReq = DescribeCollectionReq.builder()
+            logger.debug("Checking if collection exists");
+            boolean exists = milvusClient.hasCollection(HasCollectionReq.builder()
                 .collectionName(collectionName)
-                .build();
+                .build());
             
-            var response = milvusClient.describeCollection(describeReq);
-            
-            if (response == null || response.getCollectionName() == null) {
-                // 创建集合的schema
+            if (!exists) {
+                logger.info("Collection {} does not exist, creating new collection", collectionName);
+                logger.debug("Creating collection schema");
                 CreateCollectionReq.CollectionSchema schema = milvusClient.createSchema();
 
-                // 添加ID字段
+                logger.debug("Adding ID field to schema");
                 schema.addField(AddFieldReq.builder()
                     .fieldName("id")
                     .dataType(DataType.Int64)
@@ -104,24 +118,24 @@ public class VectorServiceImpl implements VectorService {
                     .autoID(true)
                     .build());
 
-                // 添加向量字段
+                logger.debug("Adding vector field to schema with dimensions: {}", config.getEmbeddingDimensions());
                 schema.addField(AddFieldReq.builder()
                     .fieldName("vector")
                     .dataType(DataType.FloatVector)
                     .dimension(config.getEmbeddingDimensions())
                     .build());
 
-                // 添加元数据字段
+                logger.debug("Adding metadata field to schema");
                 schema.addField(AddFieldReq.builder()
                     .fieldName("metadata")
                     .dataType(DataType.VarChar)
                     .maxLength(4096)
                     .build());
 
-                // 准备索引参数
+                logger.debug("Preparing index parameters");
                 IndexParam idIndexParam = IndexParam.builder()
                     .fieldName("id")
-                    .indexType(IndexParam.IndexType.AUTOINDEX)
+                    .indexType(IndexParam.IndexType.STL_SORT)
                     .build();
 
                 IndexParam vectorIndexParam = IndexParam.builder()
@@ -133,7 +147,7 @@ public class VectorServiceImpl implements VectorService {
 
                 List<IndexParam> indexParams = Arrays.asList(idIndexParam, vectorIndexParam);
 
-                // 创建集合
+                logger.info("Creating collection with schema and index parameters");
                 CreateCollectionReq createReq = CreateCollectionReq.builder()
                     .collectionName(collectionName)
                     .collectionSchema(schema)
@@ -141,19 +155,25 @@ public class VectorServiceImpl implements VectorService {
                     .build();
 
                 milvusClient.createCollection(createReq);
+                logger.info("Collection {} created successfully", collectionName);
 
-                // 检查加载状态
+                logger.debug("Checking collection load state");
                 GetLoadStateReq loadStateReq = GetLoadStateReq.builder()
                     .collectionName(collectionName)
                     .build();
 
                 Boolean loaded = milvusClient.getLoadState(loadStateReq);
-                logger.info("Milvus collection created and loaded: {}, loaded: {}", collectionName, loaded);
+                logger.info("Collection {} load state: {}", collectionName, loaded);
             } else {
-                logger.info("Milvus collection already exists: {}", collectionName);
+                logger.info("Collection {} already exists", collectionName);
+                var collectionInfo = milvusClient.describeCollection(DescribeCollectionReq.builder()
+                    .collectionName(collectionName)
+                    .build());
+                logger.debug("Collection details: {}", collectionInfo);
             }
         } catch (Exception e) {
             logger.error("Failed to ensure Milvus collection: {}", e.getMessage());
+            logger.debug("Detailed error", e);
             throw new RuntimeException("Failed to initialize Milvus collection", e);
         }
     }
