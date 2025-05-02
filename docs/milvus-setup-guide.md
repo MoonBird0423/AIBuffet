@@ -131,3 +131,50 @@ docker compose -f backend/milvus/docker-compose.yml logs milvus-standalone
 2. MinIO的默认凭据仅用于开发环境，生产环境必须修改
 3. 定期备份volumes目录以防止数据丢失
 4. 监控系统资源使用情况，特别是在处理大量向量数据时
+
+## Attu管理界面
+
+### 1. 功能介绍
+Attu是Milvus的官方管理界面，提供以下功能：
+- 可视化查看集合(Collection)和分区(Partition)
+- 执行向量搜索和查询
+- 监控系统状态和性能指标
+- 管理用户和权限
+
+### 2. 服务配置
+在docker-compose.yml中添加以下配置：
+
+```yaml
+  attu:
+    container_name: milvus-attu
+    image: zilliz/attu:v2.5
+    environment:
+      - MILVUS_URL=standalone:19530
+      - ATTU_LOG_LEVEL=info
+    ports:
+      - "8000:3000"
+    depends_on:
+      - standalone
+```
+
+### 3. 环境变量配置
+| 变量名 | 默认值 | 说明 |
+|--------|--------|------|
+| MILVUS_URL | standalone:19530 | Milvus服务地址 |
+| ATTU_LOG_LEVEL | info | 日志级别(debug/info/warn/error) |
+| SERVER_PORT | 3000 | Attu服务监听端口 |
+
+### 4. 启动和访问
+启动服务：
+```bash
+docker compose -f backend/milvus/docker-compose.yml up -d
+```
+
+访问管理界面：
+http://localhost:8000
+
+### 5. 基本操作
+1. 登录界面(默认无需认证)
+2. 查看集合和分区
+3. 执行向量搜索
+4. 监控系统状态
