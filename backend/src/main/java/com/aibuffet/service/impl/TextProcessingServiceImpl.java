@@ -20,7 +20,7 @@ import java.util.Map;
 @Service
 public class TextProcessingServiceImpl implements TextProcessingService {
     private static final Logger logger = LoggerFactory.getLogger(TextProcessingServiceImpl.class);
-    private static final String SENTENCE_DELIMITER = "(?<=[。！？.!?])\\s*";
+    private static final String SENTENCE_DELIMITER = "(?<=[。！？.!?])\\s*(?!\\s)";
 
     private final Tika tika;
     private final TextProcessingProperties properties;
@@ -52,6 +52,9 @@ public class TextProcessingServiceImpl implements TextProcessingService {
     @Override
     public List<TextChunk> createChunks(String text) {
         logger.info("开始文本分块: 输入文本长度={}", text.length());
+        
+        // 预处理文本
+        text = preprocessText(text);
         
         // 使用正则表达式进行句子分割
         String[] sentences = text.split(SENTENCE_DELIMITER);
@@ -96,7 +99,11 @@ public class TextProcessingServiceImpl implements TextProcessingService {
                 }
             }
             
-            currentChunk.append(sentence).append(" ");
+            // 智能添加分隔符
+            currentChunk.append(sentence);
+            if (!sentence.matches(".*[。！？.!?]\\s*$")) {
+                currentChunk.append(" ");
+            }
             currentTokens += sentenceTokens;
         }
         
@@ -126,6 +133,11 @@ public class TextProcessingServiceImpl implements TextProcessingService {
             }
         }
         return tokenCount;
+    }
+
+    private String preprocessText(String text) {
+        // 规范化空格：将多个连续空格替换为单个空格，并去除首尾空格
+        return text.replaceAll("\\s+", " ").trim();
     }
 
     private TextChunk createChunk(String content, int tokenCount, int startIndex, int chunkIndex) {
