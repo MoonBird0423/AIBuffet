@@ -6,6 +6,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
+import jakarta.persistence.QueryHint;
 import org.springframework.stereotype.Repository;
 import jakarta.persistence.LockModeType;
 
@@ -19,7 +21,7 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
     Optional<DocFile> findByIdAndStatus(Long id, DocFile.Status status);
     
     @Query(value = """
-        SELECT DISTINCT d.* FROM doc_files d 
+        SELECT d.* FROM doc_files d 
         INNER JOIN knowledge_base_files kbf ON d.id = kbf.file_id 
         WHERE kbf.kb_id = :knowledgeBaseId 
         AND d.status = 'ACTIVE'
@@ -32,5 +34,6 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
             AND d.status = 'ACTIVE'
             """,
         nativeQuery = true)
+    @QueryHints({@QueryHint(name = "org.hibernate.cacheable", value = "false")})
     Page<DocFile> findByKbId(Long knowledgeBaseId, Pageable pageable);
 }

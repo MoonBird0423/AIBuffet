@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import { deleteDocument, retryProcessing, getDocumentChunks } from '../../services/api';
-import { TrashIcon, DocumentIcon, ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, ViewfinderCircleIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, DocumentIcon, ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, ViewfinderCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import Tooltip from '../common/Tooltip';
 import ChunkViewModal from './ChunkViewModal';
 
@@ -41,28 +41,22 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
 
   const getStatusClass = (status) => {
     const classes = {
-      'PENDING': 'text-gray-500',
-      'PROCESSING': 'text-blue-500',
-      'TEXT_EXTRACTION': 'text-blue-500',
-      'CHUNKING': 'text-blue-500',
-      'VECTORIZING': 'text-blue-500',
-      'STORING': 'text-blue-500',
-      'COMPLETED': 'text-green-500',
-      'FAILED': 'text-red-500'
+      'PENDING': 'text-yellow-700 bg-yellow-50 border border-yellow-200 px-2 py-1 rounded-full',    // 待处理显示为黄色
+      'CHUNKING': 'text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-full',     // 分块中显示为蓝色
+      'VECTORIZING': 'text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-full',  // 向量化中显示为蓝色
+      'COMPLETED': 'text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full',   // 完成显示为绿色
+      'FAILED': 'text-red-700 bg-red-50 border border-red-200 px-2 py-1 rounded-full'         // 错误显示为红色
     };
-    return classes[status] || 'text-gray-500';
+    return classes[status] || 'text-gray-700 bg-gray-50 border border-gray-200 px-2 py-1 rounded-full';
   };
 
   const getStatusText = (status) => {
     const statusMap = {
       'PENDING': '待处理',
-      'PROCESSING': '处理中',
-      'TEXT_EXTRACTION': '提取文本中',
       'CHUNKING': '分块中',
       'VECTORIZING': '向量化中',
-      'STORING': '存储中',
-      'COMPLETED': '已完成',
-      'FAILED': '处理失败'
+      'COMPLETED': '完成',
+      'FAILED': '错误'
     };
     return statusMap[status] || status;
   };
@@ -247,13 +241,20 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
                   {formatDate(file.uploadedAt)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span className={getStatusClass(file.parseStatus)}>
-                    {getStatusText(file.parseStatus)}
-                  </span>
+                  <div className="flex items-center">
+                    <span className={getStatusClass(file.processing_status)}>
+                      {getStatusText(file.processing_status)}
+                    </span>
+                    {file.processing_status === 'FAILED' && file.error_message && (
+                      <Tooltip content={file.error_message} position="top">
+                        <ExclamationCircleIcon className="ml-2 h-5 w-5 text-red-500 cursor-help" />
+                      </Tooltip>
+                    )}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex space-x-3">
-                    {file.parseStatus === 'FAILED' && (
+                    {file.processing_status === 'FAILED' && (
                       <button
                         onClick={() => handleRetry(file.id)}
                         disabled={processingId === file.id}
@@ -263,15 +264,13 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
                         <span>{processingId === file.id ? '处理中...' : '重试'}</span>
                       </button>
                     )}
-                    {file.parseStatus === 'COMPLETED' && (
-                      <button
-                        onClick={() => handleViewChunks(file.id)}
-                        className="text-green-600 hover:text-green-900 inline-flex items-center space-x-1"
-                      >
-                        <ViewfinderCircleIcon className="h-4 w-4" />
-                        <span>查看分块</span>
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleViewChunks(file.id)}
+                      className="text-green-600 hover:text-green-900 inline-flex items-center space-x-1"
+                    >
+                      <ViewfinderCircleIcon className="h-4 w-4" />
+                      <span>查看分块</span>
+                    </button>
                     <button
                       onClick={() => handleDelete(file.id)}
                       disabled={deletingId === file.id}
