@@ -6,6 +6,7 @@ import com.aibuffet.model.DocFile;
 import com.aibuffet.model.DocFile.Status;
 import com.aibuffet.model.DocChunk;
 import com.aibuffet.model.KnowledgeBaseFile;
+import com.aibuffet.model.VectorStatus;
 import com.aibuffet.dto.UploadResult;
 import com.aibuffet.repository.DocFileRepository;
 import com.aibuffet.repository.DocChunkRepository;
@@ -113,6 +114,7 @@ public class DocumentServiceImpl implements DocumentService {
             docFile.setFileUrl(fileUrl);
             docFile.setUploadedBy(userId);
             docFile.setMd5Hash(md5Hash);
+            docFile.setProcessingStatus(DocFile.ProcessingStatus.PENDING);
             docFile = docFileRepository.save(docFile);
             logger.info("文件信息已保存到数据库: ID={}, 原始文件名={}", docFile.getId(), docFile.getFileName());
 
@@ -242,6 +244,11 @@ public class DocumentServiceImpl implements DocumentService {
             throw new IllegalArgumentException("No permission to retry this document");
         }
 
+        // 重置处理状态
+        docFile.setProcessingStatus(DocFile.ProcessingStatus.PENDING);
+        docFile.setErrorMessage(null);
+        docFileRepository.save(docFile);
+        
         // 重试文档的失败分块
         vectorService.retryFailedChunks(docId);
         // 重新触发整个文档的处理流程
@@ -303,6 +310,10 @@ public class DocumentServiceImpl implements DocumentService {
         try {
             logger.info("开始异步处理文档: docId={}, fileName={}", docFile.getId(), docFile.getFileName());
             
+            // 更新为分块状态
+            docFile.setProcessingStatus(DocFile.ProcessingStatus.CHUNKING);
+            docFileRepository.save(docFile);
+            
             // 1. 提取文本
             logger.debug("开始提取文本: docId={}", docFile.getId());
             String text = textProcessingService.extractText(docFile.getFileUrl());
@@ -310,12 +321,16 @@ public class DocumentServiceImpl implements DocumentService {
             
             // 2. 文本分块
             logger.debug("开始文本分块: docId={}", docFile.getId());
-            List<TextChunk> chunks = textProcessingService.createChunks(text);
-            logger.info("文本分块完成: docId={}, 分块数={}", docFile.getId(), chunks.size());
+            List<TextChunk> textChunks = textProcessingService.createChunks(text);
+            logger.info("文本分块完成: docId={}, 分块数={}", docFile.getId(), textChunks.size());
+            
+            // 更新为向量化状态
+            docFile.setProcessingStatus(DocFile.ProcessingStatus.VECTORIZING);
+            docFileRepository.save(docFile);
             
             // 3. 保存分块并触发向量化
-            for (int i = 0; i < chunks.size(); i++) {
-                TextChunk chunk = chunks.get(i);
+            for (int i = 0; i < textChunks.size(); i++) {
+                TextChunk chunk = textChunks.get(i);
                 DocChunk docChunk = new DocChunk();
                 docChunk.setFileId(docFile.getId());
                 docChunk.setContent(chunk.getContent());
@@ -329,15 +344,27 @@ public class DocumentServiceImpl implements DocumentService {
                 
                 if ((i + 1) % 100 == 0) {
                     logger.info("文档处理进度: docId={}, 已处理分块数={}/{}", 
-                        docFile.getId(), i + 1, chunks.size());
+                        docFile.getId(), i + 1, textChunks.size());
                 }
             }
             
-            logger.info("文档处理完成: docId={}, 总分块数={}", docFile.getId(), chunks.size());
+            // 检查所有分块是否处理完成
+            List<DocChunk> docChunks = docChunkRepository.findByFileIdOrderByChunkIndexAsc(docFile.getId());
+            boolean allCompleted = docChunks.stream()
+                .allMatch(chunk -> VectorStatus.COMPLETED.equals(chunk.getVectorStatus()));
+            
+            if (allCompleted) {
+                docFile.setProcessingStatus(DocFile.ProcessingStatus.COMPLETED);
+                docFileRepository.save(docFile);
+            }
+            
+            logger.info("文档处理完成: docId={}, 总分块数={}", docFile.getId(), docChunks.size());
             
         } catch (Exception e) {
             logger.error("文档处理失败: docId={}, error={}", docFile.getId(), e.getMessage(), e);
-            // 这里仅记录错误，不抛出异常，让用户可以通过重试机制来处理失败的情况
+            docFile.setProcessingStatus(DocFile.ProcessingStatus.FAILED);
+            docFile.setErrorMessage(e.getMessage());
+            docFileRepository.save(docFile);
         }
     }
 
