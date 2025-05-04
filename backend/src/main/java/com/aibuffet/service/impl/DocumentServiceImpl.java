@@ -212,10 +212,13 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
-    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    @Transactional(readOnly = true)
     public Page<DocFile> getDocuments(Long knowledgeBaseId, int page, int size) {
         logger.info("开始查询文档列表: knowledgeBaseId={}, page={}, size={}", 
             knowledgeBaseId, page, size);
+        // 清除一级缓存
+        entityManager.clear();
+        // 执行查询
         Page<DocFile> result = docFileRepository.findByKbId(knowledgeBaseId, PageRequest.of(page, size));
         logger.info("文档列表查询完成: 总数={}, 总页数={}", 
             result.getTotalElements(), result.getTotalPages());
