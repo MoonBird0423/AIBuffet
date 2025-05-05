@@ -43,8 +43,6 @@ import jakarta.annotation.PostConstruct;
 public class VectorServiceImpl implements VectorService {
     private static final Logger logger = LoggerFactory.getLogger(VectorServiceImpl.class);
     private static final String VECTOR_MODEL_PURPOSE = "向量化";
-    private static final String MODEL_NAME = "text-embedding-v3";
-    private static final String INDEX_NAME = "vector_index";
 
     private final VectorServiceConfig config;
     private final ModelRepository modelRepository;
@@ -78,11 +76,11 @@ public class VectorServiceImpl implements VectorService {
             logger.debug("Loading vector model for purpose: {}", VECTOR_MODEL_PURPOSE);
             vectorModel = modelRepository.findByPurposeExact(VECTOR_MODEL_PURPOSE)
                     .orElseThrow(() -> new RuntimeException("Vector model not found"));
-            logger.debug("Found vector model: baseUrl={}", vectorModel.getBaseUrl());
+            logger.debug("Found vector model: {}", vectorModel.getName());
             
             logger.debug("Configuring web client");
             webClient = webClientBuilder
-                    .baseUrl(vectorModel.getBaseUrl())
+                    .baseUrl("")  // 空baseUrl，因为我们使用完整URL
                     .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                     .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + vectorModel.getApiKey())
                     .build();
@@ -185,19 +183,20 @@ public class VectorServiceImpl implements VectorService {
     public float[] generateVector(String text, int dimensions) {
         logger.debug("开始生成向量: textLength={}, dimensions={}", text.length(), dimensions);
         
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", MODEL_NAME);
-        requestBody.put("input", text);
-        requestBody.put("dimensions", dimensions);
-        requestBody.put("encoding_format", "float");
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", vectorModel.getName());
+            requestBody.put("input", text);
+            requestBody.put("dimensions", dimensions);
+            requestBody.put("encoding_format", "float");
 
         try {
-            logger.debug("发送API请求: model={}, dimensions={}", MODEL_NAME, dimensions);
+            logger.debug("发送API请求: model={}, dimensions={}", vectorModel.getName(), dimensions);
             String response = webClient.post()
+                    .uri(vectorModel.getBaseUrl())
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .timeout(Duration.ofSeconds(30)) // 添加超时
+                    .timeout(Duration.ofSeconds(60))
                     .doOnError(e -> logger.error("API调用失败: error={}", e.getMessage()))
                     .block();
 
@@ -228,16 +227,18 @@ public class VectorServiceImpl implements VectorService {
         }
 
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", MODEL_NAME);
+        requestBody.put("model", vectorModel.getName());
         requestBody.put("input", texts);
         requestBody.put("dimensions", dimensions);
         requestBody.put("encoding_format", "float");
 
         try {
             String response = webClient.post()
+                    .uri(vectorModel.getBaseUrl())
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(String.class)
+                    .timeout(Duration.ofSeconds(60))
                     .block();
 
             var jsonResponse = JSON.parseObject(response);
@@ -266,7 +267,7 @@ public class VectorServiceImpl implements VectorService {
         try {
             JsonObject data = new JsonObject();
             data.add("vector", gson.toJsonTree(vector));
-            data.add("metadata", gson.toJsonTree(metadata));
+            data.addProperty("metadata", gson.toJson(metadata));  // 将metadata转换为JSON字符串
 
             InsertReq insertReq = InsertReq.builder()
                 .collectionName(config.getMilvusCollection())
@@ -315,100 +316,54 @@ public class VectorServiceImpl implements VectorService {
         try {
             logger.info("开始向量化处理 [线程: {}]: chunkId={}, fileId={}, chunkIndex={}", 
                 Thread.currentThread().getName(), chunk.getId(), chunk.getFileId(), chunk.getChunkIndex());
-                
-            // 验证和更新状态
-            validateVectorStatus(chunk.getId());
-            updateChunkStatus(chunk.getId(), VectorStatus.PROCESSING, null);
             
-            // 生成向量前记录
+            // 1. 设置初始状态
+            logger.debug("更新初始状态: chunkId={}", chunk.getId());
+            chunkRepository.updateStatus(chunk.getId(), VectorStatus.PROCESSING, null);
+            
+            // 2. 生成向量
             logger.info("开始调用API生成向量: chunkId={}, contentLength={}", 
                 chunk.getId(), chunk.getContent().length());
-                
-            // 生成向量
             float[] vector = generateVector(chunk.getContent(), config.getEmbeddingDimensions());
             logger.info("向量生成完成: chunkId={}, vectorLength={}", chunk.getId(), vector.length);
             
-            // 准备存储元数据
-            logger.debug("准备存储向量到Milvus: chunkId={}", chunk.getId());
-            Map<String, Object> metadata = new HashMap<>();
-            metadata.put("fileId", chunk.getFileId());
-            metadata.put("chunkIndex", chunk.getChunkIndex());
-            metadata.put("content", chunk.getContent());
-            
-            // 存储向量
+            // 3. 存储向量
+            Map<String, Object> metadata = buildMetadata(chunk);
             String vectorId = storeVector(vector, metadata);
             logger.info("向量存储完成: chunkId={}, vectorId={}", chunk.getId(), vectorId);
             
-            // 更新状态
+            // 4. 更新完成状态
+            logger.debug("更新完成状态: chunkId={}, vectorId={}", chunk.getId(), vectorId);
             chunkRepository.setVectorComplete(chunk.getId(), vectorId, VectorStatus.COMPLETED);
             logger.info("向量化处理完成: chunkId={}", chunk.getId());
             
             return CompletableFuture.completedFuture(vectorId);
         } catch (Exception e) {
             logger.error("向量化处理失败: chunkId={}, error={}", chunk.getId(), e.getMessage(), e);
-            String error = e.getMessage();
-            updateChunkStatus(chunk.getId(), VectorStatus.FAILED, error);
+            chunkRepository.updateStatus(chunk.getId(), VectorStatus.FAILED, e.getMessage());
             return CompletableFuture.failedFuture(e);
         }
     }
 
-    @Retryable(
-        value = RuntimeException.class,
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 1000)
-    )
-    private void validateVectorStatus(Long chunkId) {
-        int maxAttempts = 3;
-        int attempt = 0;
-        while (attempt < maxAttempts) {
-            try {
-                DocChunk chunk = chunkRepository.findById(chunkId)
-                    .orElseThrow(() -> new RuntimeException("Chunk not found: " + chunkId));
-                
-                if (chunk.getVectorStatus() == null) {
-                    logger.warn("Chunk has null vector status: chunkId={}", chunkId);
-                    return;
-                }
-                
-                if (VectorStatus.PROCESSING.equals(chunk.getVectorStatus())) {
-                    logger.warn("Chunk is already in PROCESSING state: chunkId={}, status={}, attempt={}", 
-                        chunkId, chunk.getVectorStatus(), attempt + 1);
-                    throw new IllegalStateException("Chunk is already being processed");
-                }
-                return; // 成功则返回
-            } catch (RuntimeException e) {
-                attempt++;
-                if (attempt >= maxAttempts) {
-                    logger.error("Failed to validate vector status after {} attempts: chunkId={}, error={}", 
-                        maxAttempts, chunkId, e.getMessage());
-                    throw e;
-                }
-                logger.warn("Failed to validate vector status, will retry: chunkId={}, attempt={}, error={}", 
-                    chunkId, attempt, e.getMessage());
-                try {
-                    Thread.sleep(1000); // 等待1秒后重试
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    throw new RuntimeException("Interrupted while retrying", ie);
-                }
-            }
-        }
+    private Map<String, Object> buildMetadata(DocChunk chunk) {
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("fileId", chunk.getFileId());
+        metadata.put("chunkIndex", chunk.getChunkIndex());
+        metadata.put("content", chunk.getContent());
+        return metadata;
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void updateChunkStatus(Long chunkId, String status, String error) {
-        DocChunk chunk = chunkRepository.findById(chunkId)
-            .orElseThrow(() -> new RuntimeException("Chunk not found: " + chunkId));
-        
-        String oldStatus = chunk.getVectorStatus();
-        chunkRepository.updateStatus(chunkId, status, error);
-        
-        logger.info("Chunk status changed: chunkId={}, from={} to={}, error={}",
-            chunkId, oldStatus, status, error != null ? "present" : "none");
-        
-        if (error != null) {
-            logger.debug("Chunk error details: chunkId={}, error={}", chunkId, error);
+        try {
+            chunkRepository.updateStatus(chunkId, status, error);
+            logger.debug("更新状态成功: chunkId={}, status={}, error={}", 
+                chunkId, status, error != null ? "present" : "none");
+        } catch (Exception e) {
+            logger.error("更新状态失败: chunkId={}, status={}, error={}", 
+                chunkId, status, e.getMessage());
+            throw e;
         }
     }
 

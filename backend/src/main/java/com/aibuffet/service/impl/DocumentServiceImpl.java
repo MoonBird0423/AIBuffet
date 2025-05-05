@@ -314,7 +314,6 @@ public class DocumentServiceImpl implements DocumentService {
         }
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Async("documentProcessingExecutor")
     public CompletableFuture<Void> processDocumentAsync(DocFile docFile) {
         try {
@@ -322,24 +321,23 @@ public class DocumentServiceImpl implements DocumentService {
                 Thread.currentThread().getName(), docFile.getId(), docFile.getFileName());
             
             // 更新为分块状态
-            docFile.setProcessingStatus(DocFile.ProcessingStatus.CHUNKING);
-            docFileRepository.save(docFile);
+            updateDocStatus(docFile.getId(), DocFile.ProcessingStatus.CHUNKING, null);
             
-            // 1. 提取文本
+            // 1. 提取文本（无需事务）
             logger.debug("开始提取文本: docId={}", docFile.getId());
             String text = textProcessingService.extractText(docFile.getFileUrl());
             logger.debug("文本提取完成: docId={}, 文本长度={}", docFile.getId(), text.length());
             
-            // 2. 文本分块
+            // 2. 文本分块（无需事务）
             logger.debug("开始文本分块: docId={}", docFile.getId());
             List<TextChunk> textChunks = textProcessingService.createChunks(text);
             logger.info("文本分块完成: docId={}, 分块数={}", docFile.getId(), textChunks.size());
             
             // 更新为向量化状态
-            docFile.setProcessingStatus(DocFile.ProcessingStatus.VECTORIZING);
-            docFileRepository.save(docFile);
+            updateDocStatus(docFile.getId(), DocFile.ProcessingStatus.VECTORIZING, null);
             
-            // 3. 保存分块并触发向量化
+            // 3. 准备所有分块数据
+            List<DocChunk> chunks = new ArrayList<>();
             for (int i = 0; i < textChunks.size(); i++) {
                 TextChunk chunk = textChunks.get(i);
                 DocChunk docChunk = new DocChunk();
@@ -348,39 +346,44 @@ public class DocumentServiceImpl implements DocumentService {
                 docChunk.setChunkIndex(i);
                 docChunk.setTokenCount(chunk.getTokenCount());
                 docChunk.setMetadataMap(chunk.getMetadata());
-                docChunkRepository.save(docChunk);
-                
-                // 异步触发向量化
-                logger.info("触发向量化处理 [线程: {}]: docId={}, chunkId={}, chunkIndex={}", 
-                    Thread.currentThread().getName(), docFile.getId(), docChunk.getId(), i);
-                vectorService.processChunkAsync(docChunk);
-                
-                if ((i + 1) % 100 == 0) {
-                    logger.info("文档处理进度: docId={}, 已处理分块数={}/{}", 
-                        docFile.getId(), i + 1, textChunks.size());
-                }
+                chunks.add(docChunk);
+            }
+
+            // 批量保存分块（使用独立事务方法）
+            logger.info("开始批量保存分块: docId={}, 分块数量={}", docFile.getId(), chunks.size());
+            List<DocChunk> savedChunks = saveChunks(chunks);
+            
+            // 4. 触发向量化处理
+            logger.info("开始触发向量化处理: docId={}, 总分块数={}", docFile.getId(), savedChunks.size());
+            for (DocChunk chunk : savedChunks) {
+                logger.info("触发向量化处理: docId={}, chunkId={}, chunkIndex={}", 
+                    docFile.getId(), chunk.getId(), chunk.getChunkIndex());
+                vectorService.processChunkAsync(chunk);
             }
             
-            // 检查所有分块是否处理完成
-            List<DocChunk> docChunks = docChunkRepository.findByFileIdOrderByChunkIndexAsc(docFile.getId());
-            boolean allCompleted = docChunks.stream()
-                .allMatch(chunk -> VectorStatus.COMPLETED.equals(chunk.getVectorStatus()));
-            
-            if (allCompleted) {
-                docFile.setProcessingStatus(DocFile.ProcessingStatus.COMPLETED);
-                docFileRepository.save(docFile);
-            }
-            
-            logger.info("文档处理完成: docId={}, 总分块数={}", docFile.getId(), docChunks.size());
+            logger.info("文档处理完成: docId={}, 总分块数={}", docFile.getId(), savedChunks.size());
             return CompletableFuture.completedFuture(null);
             
         } catch (Exception e) {
             logger.error("文档处理失败: docId={}, error={}", docFile.getId(), e.getMessage(), e);
-            docFile.setProcessingStatus(DocFile.ProcessingStatus.FAILED);
-            docFile.setErrorMessage(e.getMessage());
-            docFileRepository.save(docFile);
+            updateDocStatus(docFile.getId(), DocFile.ProcessingStatus.FAILED, e.getMessage());
             return CompletableFuture.failedFuture(e);
         }
+    }
+
+    @Transactional
+    private List<DocChunk> saveChunks(List<DocChunk> chunks) {
+        return docChunkRepository.saveAll(chunks);
+    }
+
+    @Transactional
+    private void updateDocStatus(Long docId, DocFile.ProcessingStatus status, String error) {
+        DocFile docFile = docFileRepository.findById(docId)
+            .orElseThrow(() -> new RuntimeException("Document not found: " + docId));
+        docFile.setProcessingStatus(status);
+        docFile.setErrorMessage(error);
+        docFileRepository.save(docFile);
+        logger.info("更新文档状态: docId={}, status={}, error={}", docId, status, error);
     }
 
     private String extractObjectNameFromUrl(String fileUrl) {
