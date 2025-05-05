@@ -30,11 +30,13 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import java.time.Duration;
 import jakarta.annotation.PostConstruct;
 
 @Service
@@ -181,7 +183,7 @@ public class VectorServiceImpl implements VectorService {
     @Override
     @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 1000))
     public float[] generateVector(String text, int dimensions) {
-        logger.debug("Generating vector for text (length: {})", text.length());
+        logger.debug("开始生成向量: textLength={}, dimensions={}", text.length(), dimensions);
         
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", MODEL_NAME);
@@ -190,12 +192,16 @@ public class VectorServiceImpl implements VectorService {
         requestBody.put("encoding_format", "float");
 
         try {
+            logger.debug("发送API请求: model={}, dimensions={}", MODEL_NAME, dimensions);
             String response = webClient.post()
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(String.class)
+                    .timeout(Duration.ofSeconds(30)) // 添加超时
+                    .doOnError(e -> logger.error("API调用失败: error={}", e.getMessage()))
                     .block();
 
+            logger.debug("API响应成功，解析向量数据");
             var jsonResponse = JSON.parseObject(response);
             var embedding = jsonResponse.getJSONArray("data")
                     .getJSONObject(0)
@@ -207,10 +213,11 @@ public class VectorServiceImpl implements VectorService {
                 vector[i] = embedding.get(i);
             }
             
+            logger.info("向量生成成功: dimensions={}", vector.length);
             return vector;
         } catch (Exception e) {
-            logger.error("Failed to generate vector: {}", e.getMessage());
-            throw new RuntimeException("Vector generation failed", e);
+            logger.error("向量生成失败: textLength={}, error={}", text.length(), e.getMessage(), e);
+            throw new RuntimeException("向量生成失败: " + e.getMessage(), e);
         }
     }
 
@@ -303,27 +310,88 @@ public class VectorServiceImpl implements VectorService {
 
     @Override
     @Async("vectorProcessingExecutor")
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CompletableFuture<String> processChunkAsync(DocChunk chunk) {
         try {
+            logger.info("开始向量化处理 [线程: {}]: chunkId={}, fileId={}, chunkIndex={}", 
+                Thread.currentThread().getName(), chunk.getId(), chunk.getFileId(), chunk.getChunkIndex());
+                
+            // 验证和更新状态
+            validateVectorStatus(chunk.getId());
             updateChunkStatus(chunk.getId(), VectorStatus.PROCESSING, null);
             
+            // 生成向量前记录
+            logger.info("开始调用API生成向量: chunkId={}, contentLength={}", 
+                chunk.getId(), chunk.getContent().length());
+                
+            // 生成向量
             float[] vector = generateVector(chunk.getContent(), config.getEmbeddingDimensions());
+            logger.info("向量生成完成: chunkId={}, vectorLength={}", chunk.getId(), vector.length);
             
+            // 准备存储元数据
+            logger.debug("准备存储向量到Milvus: chunkId={}", chunk.getId());
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("fileId", chunk.getFileId());
             metadata.put("chunkIndex", chunk.getChunkIndex());
             metadata.put("content", chunk.getContent());
             
+            // 存储向量
             String vectorId = storeVector(vector, metadata);
+            logger.info("向量存储完成: chunkId={}, vectorId={}", chunk.getId(), vectorId);
             
+            // 更新状态
             chunkRepository.setVectorComplete(chunk.getId(), vectorId, VectorStatus.COMPLETED);
+            logger.info("向量化处理完成: chunkId={}", chunk.getId());
             
             return CompletableFuture.completedFuture(vectorId);
         } catch (Exception e) {
+            logger.error("向量化处理失败: chunkId={}, error={}", chunk.getId(), e.getMessage(), e);
             String error = e.getMessage();
             updateChunkStatus(chunk.getId(), VectorStatus.FAILED, error);
             return CompletableFuture.failedFuture(e);
+        }
+    }
+
+    @Retryable(
+        value = RuntimeException.class,
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000)
+    )
+    private void validateVectorStatus(Long chunkId) {
+        int maxAttempts = 3;
+        int attempt = 0;
+        while (attempt < maxAttempts) {
+            try {
+                DocChunk chunk = chunkRepository.findById(chunkId)
+                    .orElseThrow(() -> new RuntimeException("Chunk not found: " + chunkId));
+                
+                if (chunk.getVectorStatus() == null) {
+                    logger.warn("Chunk has null vector status: chunkId={}", chunkId);
+                    return;
+                }
+                
+                if (VectorStatus.PROCESSING.equals(chunk.getVectorStatus())) {
+                    logger.warn("Chunk is already in PROCESSING state: chunkId={}, status={}, attempt={}", 
+                        chunkId, chunk.getVectorStatus(), attempt + 1);
+                    throw new IllegalStateException("Chunk is already being processed");
+                }
+                return; // 成功则返回
+            } catch (RuntimeException e) {
+                attempt++;
+                if (attempt >= maxAttempts) {
+                    logger.error("Failed to validate vector status after {} attempts: chunkId={}, error={}", 
+                        maxAttempts, chunkId, e.getMessage());
+                    throw e;
+                }
+                logger.warn("Failed to validate vector status, will retry: chunkId={}, attempt={}, error={}", 
+                    chunkId, attempt, e.getMessage());
+                try {
+                    Thread.sleep(1000); // 等待1秒后重试
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Interrupted while retrying", ie);
+                }
+            }
         }
     }
 

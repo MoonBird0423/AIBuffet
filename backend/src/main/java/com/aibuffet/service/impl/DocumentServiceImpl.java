@@ -36,6 +36,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class DocumentServiceImpl implements DocumentService {
@@ -124,8 +125,14 @@ public class DocumentServiceImpl implements DocumentService {
                 originalFileName, docFile.getId(), knowledgeBaseId);
 
             // 异步触发文档处理
-            processDocumentAsync(docFile);
-            logger.info("已触发异步文档处理: docId={}", docFile.getId());
+            final Long processedDocId = docFile.getId();
+            CompletableFuture<Void> future = processDocumentAsync(docFile);
+            future.whenComplete((result, ex) -> {
+                if (ex != null) {
+                    logger.error("异步处理失败: docId={}, error={}", processedDocId, ex.getMessage());
+                }
+            });
+            logger.info("已触发异步文档处理: docId={}", processedDocId);
 
             return UploadResult.success(originalFileName, docFile);
 
@@ -307,11 +314,12 @@ public class DocumentServiceImpl implements DocumentService {
         }
     }
 
-    @Async("documentProcessingExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void processDocumentAsync(DocFile docFile) {
+    @Async("documentProcessingExecutor")
+    public CompletableFuture<Void> processDocumentAsync(DocFile docFile) {
         try {
-            logger.info("开始异步处理文档: docId={}, fileName={}", docFile.getId(), docFile.getFileName());
+            logger.info("开始异步处理文档 [线程: {}]: docId={}, fileName={}", 
+                Thread.currentThread().getName(), docFile.getId(), docFile.getFileName());
             
             // 更新为分块状态
             docFile.setProcessingStatus(DocFile.ProcessingStatus.CHUNKING);
@@ -343,6 +351,8 @@ public class DocumentServiceImpl implements DocumentService {
                 docChunkRepository.save(docChunk);
                 
                 // 异步触发向量化
+                logger.info("触发向量化处理 [线程: {}]: docId={}, chunkId={}, chunkIndex={}", 
+                    Thread.currentThread().getName(), docFile.getId(), docChunk.getId(), i);
                 vectorService.processChunkAsync(docChunk);
                 
                 if ((i + 1) % 100 == 0) {
@@ -362,12 +372,14 @@ public class DocumentServiceImpl implements DocumentService {
             }
             
             logger.info("文档处理完成: docId={}, 总分块数={}", docFile.getId(), docChunks.size());
+            return CompletableFuture.completedFuture(null);
             
         } catch (Exception e) {
             logger.error("文档处理失败: docId={}, error={}", docFile.getId(), e.getMessage(), e);
             docFile.setProcessingStatus(DocFile.ProcessingStatus.FAILED);
             docFile.setErrorMessage(e.getMessage());
             docFileRepository.save(docFile);
+            return CompletableFuture.failedFuture(e);
         }
     }
 
