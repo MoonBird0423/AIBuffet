@@ -33,6 +33,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.*;
@@ -267,9 +268,18 @@ public class VectorServiceImpl implements VectorService {
         }
     }
 
+    private void validateMetadata(Map<String, Object> metadata) {
+        String jsonMetadata = gson.toJson(metadata);
+        if (jsonMetadata.length() > 4096) {
+            throw new IllegalArgumentException("Metadata JSON exceeds maximum length of 4096 characters");
+        }
+    }
+
     @Override
     public String storeVector(float[] vector, Map<String, Object> metadata) {
         try {
+            validateMetadata(metadata);
+            
             JsonObject data = new JsonObject();
             data.add("vector", gson.toJsonTree(vector));
             data.addProperty("metadata", gson.toJson(metadata));  // 将metadata转换为JSON字符串
@@ -293,9 +303,12 @@ public class VectorServiceImpl implements VectorService {
             List<JsonObject> dataList = new ArrayList<>();
             
             for (int i = 0; i < vectors.size(); i++) {
+                // 验证每个metadata
+                validateMetadata(metadata.get(i));
+                
                 JsonObject data = new JsonObject();
                 data.add("vector", gson.toJsonTree(vectors.get(i)));
-                data.add("metadata", gson.toJsonTree(metadata.get(i)));
+                data.addProperty("metadata", gson.toJson(metadata.get(i)));
                 dataList.add(data);
             }
             
@@ -316,7 +329,9 @@ public class VectorServiceImpl implements VectorService {
 
     @Override
     @Async("vectorProcessingExecutor")
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRES_NEW,
+                  isolation = Isolation.READ_COMMITTED,
+                  timeout = 30)
     public CompletableFuture<String> processChunkAsync(DocChunk chunk) {
         try {
             logger.info("开始向量化处理 [线程: {}]: chunkId={}, fileId={}, chunkIndex={}", 
@@ -375,12 +390,21 @@ public class VectorServiceImpl implements VectorService {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("fileId", chunk.getFileId());
         metadata.put("chunkIndex", chunk.getChunkIndex());
-        metadata.put("content", chunk.getContent());
+        
+        // 控制content长度，避免超出限制
+        String content = chunk.getContent();
+        if (content.length() > 1000) {
+            content = content.substring(0, 1000) + "...";
+        }
+        metadata.put("content", content);
+        
         return metadata;
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRES_NEW,
+                  isolation = Isolation.READ_COMMITTED,
+                  timeout = 30)
     public void updateChunkStatus(Long chunkId, String status, String error) {
         try {
             chunkRepository.updateStatus(chunkId, status, error);
@@ -395,7 +419,8 @@ public class VectorServiceImpl implements VectorService {
 
     @Override
     @Async("vectorProcessingExecutor")
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED,
+                  timeout = 30)
     public CompletableFuture<Void> retryFailedChunks(Long fileId) {
         List<DocChunk> failedChunks = chunkRepository.findByFileIdAndVectorStatus(fileId, VectorStatus.FAILED);
         

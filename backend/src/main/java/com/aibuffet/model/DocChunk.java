@@ -59,6 +59,9 @@ public class DocChunk {
         }
     }
     
+    @Version
+    private Long version;
+
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;
