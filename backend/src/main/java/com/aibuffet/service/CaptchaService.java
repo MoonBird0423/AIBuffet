@@ -29,29 +29,45 @@ public class CaptchaService {
      */
     @Transactional
     public CaptchaResponse generateCaptcha(String ipAddress) {
-        // 每次获取新的验证码实例
-        SpecCaptcha captcha = specCaptchaFactory.getObject();
-        // 生成验证码
-        String code = captcha.text().toLowerCase();
-        String base64 = captcha.toBase64();
-        
-        // 生成唯一ID
-        String captchaId = UUID.randomUUID().toString();
-        
-        // 创建验证码记录
-        CaptchaRecord record = new CaptchaRecord();
-        record.setCaptchaId(captchaId);
-        record.setCaptchaCode(code);
-        record.setIpAddress(ipAddress);
-        record.setStatus(0); // 0表示未使用
-        record.setCreatedAt(LocalDateTime.now());
-        record.setExpiredAt(LocalDateTime.now().plusMinutes(5)); // 5分钟有效期
-        
-        // 保存记录
-        captchaRecordRepository.save(record);
-        
-        // 返回响应
-        return new CaptchaResponse(captchaId, base64);
+        try {
+            System.out.println("开始生成验证码...");
+            
+            // 每次获取新的验证码实例
+            SpecCaptcha captcha = specCaptchaFactory.getObject();
+            if (captcha == null) {
+                System.err.println("Error: SpecCaptcha实例创建失败");
+                throw new RuntimeException("验证码生成组件初始化失败");
+            }
+            System.out.println("验证码实例创建成功");
+            
+            // 生成验证码
+            String code = captcha.text().toLowerCase();
+            String base64 = captcha.toBase64();
+            System.out.println("验证码图片生成成功");
+            
+            // 生成唯一ID
+            String captchaId = UUID.randomUUID().toString();
+            
+            // 创建验证码记录
+            CaptchaRecord record = new CaptchaRecord();
+            record.setCaptchaId(captchaId);
+            record.setCaptchaCode(code);
+            record.setIpAddress(ipAddress);
+            record.setStatus(0); // 0表示未使用
+            record.setCreatedAt(LocalDateTime.now());
+            record.setExpiredAt(LocalDateTime.now().plusMinutes(5)); // 5分钟有效期
+            
+            // 保存记录
+            CaptchaRecord savedRecord = captchaRecordRepository.save(record);
+            System.out.println("验证码记录保存成功, ID: " + savedRecord.getId());
+            
+            // 返回响应
+            return new CaptchaResponse(captchaId, base64);
+        } catch (Exception e) {
+            System.err.println("验证码生成过程中出现异常: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     /**

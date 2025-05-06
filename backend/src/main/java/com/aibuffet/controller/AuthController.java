@@ -28,10 +28,15 @@ public class AuthController {
     @GetMapping("/captcha/generate")
     public ApiResponse generateCaptcha(HttpServletRequest request) {
         try {
+            System.out.println("正在处理验证码生成请求...");
             String ipAddress = getClientIp(request);
+            System.out.println("客户端IP地址: " + ipAddress);
             CaptchaResponse response = captchaService.generateCaptcha(ipAddress);
+            System.out.println("验证码生成成功，captchaId: " + response.getCaptchaId());
             return ApiResponse.success(response);
         } catch (Exception e) {
+            System.err.println("验证码生成失败: " + e.getMessage());
+            e.printStackTrace();
             return ApiResponse.error(ErrorCode.SYSTEM_ERROR);
         }
     }
