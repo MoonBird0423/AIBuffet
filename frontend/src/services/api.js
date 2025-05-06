@@ -414,8 +414,8 @@ export const uploadDocuments = async (files, knowledgeBaseId, onProgress) => {
 
     // 返回上传结果
     return {
-      results: response.data.data.results || [],
-      errors: response.data.data.errors || []
+      results: response.data.results || [],
+      errors: response.data.errors || []
     };
 
   } catch (error) {
