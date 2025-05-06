@@ -2,9 +2,11 @@ package com.aibuffet.service.impl;
 
 import com.aibuffet.config.VectorServiceConfig;
 import com.aibuffet.model.DocChunk;
+import com.aibuffet.model.DocFile;
 import com.aibuffet.model.Model;
 import com.aibuffet.model.VectorStatus;
 import com.aibuffet.repository.DocChunkRepository;
+import com.aibuffet.repository.DocFileRepository;
 import com.aibuffet.repository.ModelRepository;
 import com.aibuffet.service.VectorService;
 import com.alibaba.fastjson.JSON;
@@ -47,6 +49,7 @@ public class VectorServiceImpl implements VectorService {
     private final VectorServiceConfig config;
     private final ModelRepository modelRepository;
     private final DocChunkRepository chunkRepository;
+    private final DocFileRepository docFileRepository;
     private final WebClient.Builder webClientBuilder;
     private final MilvusClientV2 milvusClient;
     private final Gson gson;
@@ -59,11 +62,13 @@ public class VectorServiceImpl implements VectorService {
             VectorServiceConfig config,
             ModelRepository modelRepository,
             DocChunkRepository chunkRepository,
+            DocFileRepository docFileRepository,
             WebClient.Builder webClientBuilder,
             MilvusClientV2 milvusClient) {
         this.config = config;
         this.modelRepository = modelRepository;
         this.chunkRepository = chunkRepository;
+        this.docFileRepository = docFileRepository;
         this.webClientBuilder = webClientBuilder;
         this.milvusClient = milvusClient;
         this.gson = new Gson();
@@ -335,8 +340,29 @@ public class VectorServiceImpl implements VectorService {
             // 4. 更新完成状态
             logger.debug("更新完成状态: chunkId={}, vectorId={}", chunk.getId(), vectorId);
             chunkRepository.setVectorComplete(chunk.getId(), vectorId, VectorStatus.COMPLETED);
-            logger.info("向量化处理完成: chunkId={}", chunk.getId());
             
+            // 5. 检查所有分块是否处理完成
+            if (chunkRepository.areAllChunksProcessed(chunk.getFileId())) {
+                // 检查是否有失败的分块
+                long failedCount = chunkRepository.countByFileIdAndStatus(chunk.getFileId(), VectorStatus.FAILED);
+                
+                // 更新文档状态
+                DocFile.ProcessingStatus finalStatus = failedCount > 0 ? 
+                    DocFile.ProcessingStatus.FAILED : DocFile.ProcessingStatus.COMPLETED;
+                
+                docFileRepository.findById(chunk.getFileId())
+                    .ifPresent(doc -> {
+                        doc.setProcessingStatus(finalStatus);
+                        if (finalStatus == DocFile.ProcessingStatus.FAILED) {
+                            doc.setErrorMessage("Some chunks failed to process");
+                        }
+                        docFileRepository.save(doc);
+                        logger.info("所有分块处理完成，更新文档状态: fileId={}, status={}", 
+                            chunk.getFileId(), finalStatus);
+                    });
+            }
+            
+            logger.info("向量化处理完成: chunkId={}", chunk.getId());
             return CompletableFuture.completedFuture(vectorId);
         } catch (Exception e) {
             logger.error("向量化处理失败: chunkId={}, error={}", chunk.getId(), e.getMessage(), e);

@@ -26,6 +26,36 @@ const ChunkViewModal = ({ isOpen, onClose, fileId }) => {
     }
   };
 
+  const getStatusStyle = (status) => {
+    switch (status) {
+      case 'PENDING':
+        return 'bg-gray-100 text-gray-600';
+      case 'PROCESSING':
+        return 'bg-blue-100 text-blue-600';
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-600';
+      case 'FAILED':
+        return 'bg-red-100 text-red-600';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'PENDING':
+        return '等待处理';
+      case 'PROCESSING':
+        return '处理中';
+      case 'COMPLETED':
+        return '已完成';
+      case 'FAILED':
+        return '失败';
+      default:
+        return '未知状态';
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -55,13 +85,23 @@ const ChunkViewModal = ({ isOpen, onClose, fileId }) => {
               {chunks.map((chunk, index) => (
                 <div key={chunk.id} className="border rounded-lg p-4">
                   <div className="flex justify-between items-center mb-2">
-                    <div className="font-medium text-gray-700">
-                      第 {chunk.chunkIndex + 1} 块
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-gray-700">
+                        第 {chunk.chunkIndex + 1} 块
+                      </div>
+                      <div className={`text-sm px-2 py-0.5 rounded ${getStatusStyle(chunk.vectorStatus)}`}>
+                        {getStatusText(chunk.vectorStatus)}
+                      </div>
                     </div>
                     <div className="text-sm text-gray-500">
                       Token数: {chunk.tokenCount || '未知'}
                     </div>
                   </div>
+                  {chunk.vectorStatus === 'FAILED' && chunk.vectorError && (
+                    <div className="text-red-600 text-sm mb-2 bg-red-50 p-2 rounded">
+                      错误: {chunk.vectorError}
+                    </div>
+                  )}
                   <div className="text-gray-600 whitespace-pre-wrap bg-gray-50 rounded p-3">
                     {chunk.content}
                   </div>

@@ -44,4 +44,12 @@ public interface DocChunkRepository extends JpaRepository<DocChunk, Long> {
         GROUP BY c.vectorStatus
     """)
     List<Map<String, Object>> getProcessingStatusByFileId(Long fileId);
+    
+    @Query("""
+        SELECT COUNT(c) = 0
+        FROM DocChunk c 
+        WHERE c.fileId = :fileId 
+        AND c.vectorStatus NOT IN ('COMPLETED', 'FAILED')
+    """)
+    boolean areAllChunksProcessed(Long fileId);
 }
