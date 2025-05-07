@@ -328,61 +328,26 @@ public class VectorServiceImpl implements VectorService {
     }
 
     @Override
-    @Async("vectorProcessingExecutor")
-    @Transactional(propagation = Propagation.REQUIRES_NEW,
-                  isolation = Isolation.READ_COMMITTED,
-                  timeout = 30)
-    public CompletableFuture<String> processChunkAsync(DocChunk chunk) {
+    @Transactional
+    public String processChunk(DocChunk chunk, float[] vector) {
         try {
-            logger.info("开始向量化处理 [线程: {}]: chunkId={}, fileId={}, chunkIndex={}", 
-                Thread.currentThread().getName(), chunk.getId(), chunk.getFileId(), chunk.getChunkIndex());
+            logger.info("开始向量化处理: chunkId={}, fileId={}, chunkIndex={}", 
+                chunk.getId(), chunk.getFileId(), chunk.getChunkIndex());
             
-            // 1. 设置初始状态
-            logger.debug("更新初始状态: chunkId={}", chunk.getId());
-            chunkRepository.updateStatus(chunk.getId(), VectorStatus.PROCESSING, null);
-            
-            // 2. 生成向量
-            logger.info("开始调用API生成向量: chunkId={}, contentLength={}", 
-                chunk.getId(), chunk.getContent().length());
-            float[] vector = generateVector(chunk.getContent(), config.getEmbeddingDimensions());
-            logger.info("向量生成完成: chunkId={}, vectorLength={}", chunk.getId(), vector.length);
-            
-            // 3. 存储向量
+            // 存储向量
             Map<String, Object> metadata = buildMetadata(chunk);
             String vectorId = storeVector(vector, metadata);
             logger.info("向量存储完成: chunkId={}, vectorId={}", chunk.getId(), vectorId);
             
-            // 4. 更新完成状态
-            logger.debug("更新完成状态: chunkId={}, vectorId={}", chunk.getId(), vectorId);
+            // 更新完成状态
             chunkRepository.setVectorComplete(chunk.getId(), vectorId, VectorStatus.COMPLETED);
             
-            // 5. 检查所有分块是否处理完成
-            if (chunkRepository.areAllChunksProcessed(chunk.getFileId())) {
-                // 检查是否有失败的分块
-                long failedCount = chunkRepository.countByFileIdAndStatus(chunk.getFileId(), VectorStatus.FAILED);
-                
-                // 更新文档状态
-                DocFile.ProcessingStatus finalStatus = failedCount > 0 ? 
-                    DocFile.ProcessingStatus.FAILED : DocFile.ProcessingStatus.COMPLETED;
-                
-                docFileRepository.findById(chunk.getFileId())
-                    .ifPresent(doc -> {
-                        doc.setProcessingStatus(finalStatus);
-                        if (finalStatus == DocFile.ProcessingStatus.FAILED) {
-                            doc.setErrorMessage("Some chunks failed to process");
-                        }
-                        docFileRepository.save(doc);
-                        logger.info("所有分块处理完成，更新文档状态: fileId={}, status={}", 
-                            chunk.getFileId(), finalStatus);
-                    });
-            }
-            
             logger.info("向量化处理完成: chunkId={}", chunk.getId());
-            return CompletableFuture.completedFuture(vectorId);
+            return vectorId;
         } catch (Exception e) {
             logger.error("向量化处理失败: chunkId={}, error={}", chunk.getId(), e.getMessage(), e);
             chunkRepository.updateStatus(chunk.getId(), VectorStatus.FAILED, e.getMessage());
-            return CompletableFuture.failedFuture(e);
+            throw e;
         }
     }
 
@@ -418,7 +383,7 @@ public class VectorServiceImpl implements VectorService {
     }
 
     @Override
-    @Async("vectorProcessingExecutor")
+    @Async("documentProcessingExecutor")
     @Transactional(isolation = Isolation.READ_COMMITTED,
                   timeout = 30)
     public CompletableFuture<Void> retryFailedChunks(Long fileId) {
@@ -426,19 +391,32 @@ public class VectorServiceImpl implements VectorService {
         
         logger.info("Found {} failed chunks for fileId={}", failedChunks.size(), fileId);
         
-        List<CompletableFuture<String>> futures = failedChunks.stream()
-            .filter(chunk -> chunk.getRetryCount() < 3)
-            .map(chunk -> {
-                logger.info("Retrying chunk processing: chunkId={}, retryCount={}", chunk.getId(), chunk.getRetryCount());
+        for (DocChunk chunk : failedChunks) {
+            if (chunk.getRetryCount() >= 3) {
+                continue;
+            }
+            
+            try {
+                logger.info("Retrying chunk processing: chunkId={}, retryCount={}", 
+                    chunk.getId(), chunk.getRetryCount());
+                
                 chunk.resetForRetry();
                 chunk.incrementRetryCount();
                 chunkRepository.save(chunk);
-                return processChunkAsync(chunk);
-            })
-            .collect(Collectors.toList());
+                
+                // 生成向量
+                float[] vector = generateVector(chunk.getContent(), config.getEmbeddingDimensions());
+                // 处理向量化
+                processChunk(chunk, vector);
+                
+            } catch (Exception e) {
+                logger.error("Retry failed for chunk: chunkId={}, error={}", 
+                    chunk.getId(), e.getMessage(), e);
+            }
+        }
         
-        logger.info("Started {} retry tasks for fileId={}", futures.size(), fileId);
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        logger.info("Completed retry processing for fileId={}", fileId);
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override
