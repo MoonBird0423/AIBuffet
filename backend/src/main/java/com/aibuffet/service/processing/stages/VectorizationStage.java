@@ -43,15 +43,11 @@ public class VectorizationStage implements ProcessingStage {
             docFile.setProcessingStatus(DocFile.ProcessingStatus.VECTORIZING);
             docFileRepository.save(docFile);
             log.info("开始向量化处理: docId={}, chunkCount={}", docFile.getId(), chunks.size());
-            AtomicInteger processedCount = new AtomicInteger(0);
             
             // 按批次处理
             List<List<DocChunk>> batches = splitIntoBatches(chunks, BATCH_SIZE);
             for (List<DocChunk> batch : batches) {
                 processBatch(batch, docFile.getId());
-                processedCount.addAndGet(batch.size());
-                log.info("批次处理完成: docId={}, progress={}/{}", 
-                    docFile.getId(), processedCount.get(), chunks.size());
             }
             
             // 检查是否所有分块都处理成功
