@@ -4,6 +4,7 @@ import com.aibuffet.model.DocChunk;
 import com.aibuffet.model.DocFile;
 import com.aibuffet.model.VectorStatus;
 import com.aibuffet.repository.DocChunkRepository;
+import com.aibuffet.repository.DocFileRepository;
 import com.aibuffet.service.VectorService;
 import com.aibuffet.service.processing.ProcessContext;
 import com.aibuffet.service.processing.ProcessingException;
@@ -20,13 +21,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 public class VectorizationStage implements ProcessingStage {
     
-    private static final int BATCH_SIZE = 10;
+    private static final int BATCH_SIZE = 5;  // 减小批处理大小，降低单批次处理的数据量
     
     @Autowired
     private VectorService vectorService;
     
     @Autowired
     private DocChunkRepository docChunkRepository;
+    
+    @Autowired
+    private DocFileRepository docFileRepository;
 
     @Override
     @Transactional
@@ -35,6 +39,9 @@ public class VectorizationStage implements ProcessingStage {
             DocFile docFile = context.getDocFile();
             List<DocChunk> chunks = context.getChunks();
             
+            // 更新文档状态并保存
+            docFile.setProcessingStatus(DocFile.ProcessingStatus.VECTORIZING);
+            docFileRepository.save(docFile);
             log.info("开始向量化处理: docId={}, chunkCount={}", docFile.getId(), chunks.size());
             AtomicInteger processedCount = new AtomicInteger(0);
             
@@ -58,11 +65,13 @@ public class VectorizationStage implements ProcessingStage {
             docFile.setProcessingStatus(finalStatus);
             if (!allSuccess) {
                 docFile.setErrorMessage("部分分块向量化失败");
+                docFileRepository.save(docFile);  // 保存失败状态
                 throw new ProcessingException("部分分块向量化失败")
                     .withStage(this)
                     .withContext(context);
             }
             
+            docFileRepository.save(docFile);  // 保存完成状态
             log.info("向量化处理完成: docId={}, status={}", docFile.getId(), finalStatus);
             
         } catch (Exception e) {
@@ -99,7 +108,13 @@ public class VectorizationStage implements ProcessingStage {
                     Map<String, Object> meta = new HashMap<>();
                     meta.put("fileId", docId);
                     meta.put("chunkIndex", chunk.getChunkIndex());
-                    meta.put("content", chunk.getContent());
+                    
+                    // 控制content长度在4000字符以内，避免metadata超出限制
+                    String content = chunk.getContent();
+                    if (content.length() > 4000) {
+                        content = content.substring(0, 3997) + "...";
+                    }
+                    meta.put("content", content);
                     return meta;
                 })
                 .toList();
