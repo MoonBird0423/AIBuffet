@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaShare, FaEdit, FaComments, FaUpload } from 'react-icons/fa';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { BsSearch } from 'react-icons/bs';
 import ColorPicker from '../components/common/ColorPicker';
 import Navbar from '../components/layout/Navbar';
@@ -185,12 +186,20 @@ function KnowledgeDetail() {
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-800">文档管理</h2>
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="bg-blue-50 text-blue-700 hover:bg-blue-100 py-2 px-4 rounded-md transition-colors flex items-center"
-            >
-              <FaUpload className="mr-2" /> 上传文档
-            </button>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => loadDocuments(currentPage)}
+                className="bg-gray-50 text-gray-700 hover:bg-gray-100 py-2 px-4 rounded-md transition-colors flex items-center"
+              >
+                <ArrowPathIcon className="h-5 w-5 mr-2" /> 刷新列表
+              </button>
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="bg-blue-50 text-blue-700 hover:bg-blue-100 py-2 px-4 rounded-md transition-colors flex items-center"
+              >
+                <FaUpload className="mr-2" /> 上传文档
+              </button>
+            </div>
           </div>
 
           {/* 搜索栏 */}
