@@ -97,30 +97,52 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
       setProgress(initialProgress);
 
       // 上传文件并处理结果
+      console.log('开始上传文件:', files.map(f => f.name));
       const { results, errors } = await uploadDocuments(files, knowledgeBaseId, setProgress);
+      console.log('上传服务器返回结果:', { results, errors });
 
       // 处理错误
-      if (errors.length > 0) {
+      if (errors && errors.length > 0) {
+        console.log('处理上传错误:', errors);
         const newErrors = {};
-        errors.forEach(({fileName, error}) => {  // 修改这里，解构error属性
+        errors.forEach(({fileName, error}) => {
           newErrors[fileName] = error;
           ToastManager.error(`文件 ${fileName} 上传失败: ${error}`);
         });
         setFileErrors(newErrors);
       }
 
-      // 处理成功结果
-      if (results.length > 0) {
-        const successFileNames = new Set(results.map(r => r.fileName));
-        setFiles(prev => prev.filter(f => !successFileNames.has(f.name)));
+      // 处理成功上传的文件
+      if (results && results.length > 0) {
+        console.log('处理成功上传的文件:', results);
         
+        // 将文件名转换为小写进行比较
+        const successFileNames = new Map(
+          results.map(r => [r.fileName.toLowerCase(), r.fileName])
+        );
+        console.log('成功上传的文件名映射:', [...successFileNames.entries()]);
+        
+        // 移除成功上传的文件
+        setFiles(prev => {
+          const remainingFiles = prev.filter(f => !successFileNames.has(f.name.toLowerCase()));
+          console.log('剩余文件:', remainingFiles.map(f => f.name));
+          return remainingFiles;
+        });
+
+        // 刷新文件列表
+        onUploadComplete();
+        
+        // 处理最终状态提示
         if (results.length === files.length) {
+          console.log('所有文件上传成功');
           ToastManager.success('所有文件上传成功');
           onClose();
-          onUploadComplete();
         } else {
+          console.log(`部分文件上传成功: ${results.length}/${files.length}`);
           ToastManager.success(`成功上传 ${results.length} 个文件，${errors.length} 个文件失败`);
         }
+      } else {
+        console.log('没有文件上传成功');
       }
 
     } catch (error) {

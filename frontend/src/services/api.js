@@ -413,9 +413,13 @@ export const uploadDocuments = async (files, knowledgeBaseId, onProgress) => {
     });
 
     // 返回上传结果
+    console.log('Upload API response:', response.data);
+    
+    // 正确提取 API 返回的数据结构
+    const responseData = response.data.data || {};
     return {
-      results: response.data.results || [],
-      errors: response.data.errors || []
+      results: responseData.results || [],
+      errors: responseData.errors || []
     };
 
   } catch (error) {
