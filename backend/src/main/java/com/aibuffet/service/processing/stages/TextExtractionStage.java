@@ -22,8 +22,8 @@ public class TextExtractionStage implements ProcessingStage {
             DocFile docFile = context.getDocFile();
             log.info("开始文本提取: docId={}, fileName={}", docFile.getId(), docFile.getFileName());
             
-            // 更新文档状态
-            docFile.setProcessingStatus(DocFile.ProcessingStatus.CHUNKING);
+            // 更新文档状态为文本提取中
+            docFile.setProcessingStatus(DocFile.ProcessingStatus.EXTRACTING_TEXT);
             
             // 提取文本
             String extractedText = textProcessingService.extractText(docFile.getFileUrl());

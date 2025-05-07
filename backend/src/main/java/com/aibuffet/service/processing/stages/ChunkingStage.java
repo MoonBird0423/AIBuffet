@@ -34,7 +34,7 @@ public class ChunkingStage implements ProcessingStage {
             log.info("开始文本分块: docId={}, fileName={}", docFile.getId(), docFile.getFileName());
             
             // 更新文档状态
-            docFile.setProcessingStatus(DocFile.ProcessingStatus.VECTORIZING);
+            docFile.setProcessingStatus(DocFile.ProcessingStatus.CHUNKING);
             
             // 分块处理
             List<TextChunk> textChunks = textProcessingService.createChunks(context.getExtractedText());
