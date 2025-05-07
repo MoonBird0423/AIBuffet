@@ -356,10 +356,11 @@ public class VectorServiceImpl implements VectorService {
         metadata.put("fileId", chunk.getFileId());
         metadata.put("chunkIndex", chunk.getChunkIndex());
         
-        // 控制content长度，避免超出限制
+        // 控制content长度在4000字符以内，避免整个metadata超出Milvus 4096限制
+        // fileId和chunkIndex的JSON格式大约占用50字符，所以content留4000字符比较安全
         String content = chunk.getContent();
-        if (content.length() > 1000) {
-            content = content.substring(0, 1000) + "...";
+        if (content.length() > 4000) {
+            content = content.substring(0, 3997) + "...";
         }
         metadata.put("content", content);
         
