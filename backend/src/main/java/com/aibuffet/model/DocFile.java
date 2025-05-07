@@ -57,6 +57,11 @@ public class DocFile {
     }
 
     public enum ProcessingStatus {
-        PENDING, CHUNKING, VECTORIZING, COMPLETED, FAILED
+        PENDING,         // 待处理
+        EXTRACTING_TEXT, // 文本提取中
+        CHUNKING,        // 文本分块中
+        VECTORIZING,     // 向量化中
+        COMPLETED,       // 完成
+        FAILED          // 失败
     }
 }
