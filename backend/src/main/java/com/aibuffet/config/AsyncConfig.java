@@ -24,19 +24,4 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
-
-    @Bean(name = "vectorProcessingExecutor")
-    public Executor vectorProcessingExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(3);  // 降低基础并发数
-        executor.setMaxPoolSize(5);   // 限制最大并发
-        executor.setQueueCapacity(50);
-        executor.setThreadNamePrefix("vector-processor-");
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-        executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setKeepAliveSeconds(60); // 空闲线程的存活时间
-        executor.setAllowCoreThreadTimeOut(true); // 允许核心线程超时
-        executor.initialize();
-        return executor;
-    }
 }

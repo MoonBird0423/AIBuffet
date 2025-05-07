@@ -2,22 +2,19 @@ package com.aibuffet.service.impl;
 
 import com.aibuffet.common.ResourceNotFoundException;
 import com.aibuffet.controller.DocumentController;
-import com.aibuffet.model.DocFile;
-import com.aibuffet.model.DocFile.Status;
-import com.aibuffet.model.DocChunk;
-import com.aibuffet.model.KnowledgeBaseFile;
-import com.aibuffet.model.VectorStatus;
-import com.aibuffet.dto.UploadResult;
+import com.aibuffet.model.*;
 import com.aibuffet.repository.DocFileRepository;
 import com.aibuffet.repository.DocChunkRepository;
 import com.aibuffet.repository.KnowledgeBaseFileRepository;
-import com.aibuffet.service.DocumentService;
-import com.aibuffet.service.OSSService;
-import com.aibuffet.service.VectorService;
+import com.aibuffet.service.*;
+import com.aibuffet.service.processing.*;
+import com.aibuffet.service.processing.stages.*;
+import com.aibuffet.dto.UploadResult;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Isolation;
@@ -26,10 +23,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import jakarta.persistence.EntityManager;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.transaction.annotation.Propagation;
-import com.aibuffet.service.TextProcessingService;
-import com.aibuffet.model.TextChunk;
 
 import java.io.IOException;
 import java.security.MessageDigest;
@@ -63,6 +56,17 @@ public class DocumentServiceImpl implements DocumentService {
     @Autowired
     private EntityManager entityManager;
 
+    @Async("documentProcessingExecutor")
+    public CompletableFuture<Void> processDocumentAsync(DocFile docFile) {
+        try {
+            processDocument(docFile);
+            return CompletableFuture.completedFuture(null);
+        } catch (Exception e) {
+            logger.error("异步处理失败: docId={}, error={}", docFile.getId(), e.getMessage(), e);
+            return CompletableFuture.failedFuture(e);
+        }
+    }
+
     @Override
     @Transactional
     public UploadResult uploadSingleFile(MultipartFile file, Long knowledgeBaseId, Long userId, String uploadId, DocumentController controller) {
@@ -90,8 +94,8 @@ public class DocumentServiceImpl implements DocumentService {
                     originalFileName, existingFile.getFileName(), existingFile.getId(), existingFile.getStatus());
                     
                 // 如果文件状态为已删除，恢复为激活状态
-                if (existingFile.getStatus() == Status.DELETED) {
-                    existingFile.setStatus(Status.ACTIVE);
+                if (existingFile.getStatus() == DocFile.Status.DELETED) {
+                    existingFile.setStatus(DocFile.Status.ACTIVE);
                     existingFile = docFileRepository.save(existingFile);
                     logger.info("恢复已删除文件状态为激活: 文件ID={}", existingFile.getId());
                 }
@@ -170,7 +174,7 @@ public class DocumentServiceImpl implements DocumentService {
         logger.info("开始从知识库删除文档: docId={}, knowledgeBaseId={}, userId={}", docId, knowledgeBaseId, userId);
         
         // 检查文档存在且为激活状态
-        DocFile docFile = docFileRepository.findByIdAndStatus(docId, Status.ACTIVE)
+        DocFile docFile = docFileRepository.findByIdAndStatus(docId, DocFile.Status.ACTIVE)
                 .orElseThrow(() -> {
                     logger.warn("文档不存在或已删除: docId={}", docId);
                     return new ResourceNotFoundException("Document not found or already deleted");
@@ -198,7 +202,7 @@ public class DocumentServiceImpl implements DocumentService {
         long referenceCount = knowledgeBaseFileRepository.countByFileId(docId);
         if (referenceCount == 0) {
             // 没有其他知识库引用这个文档了，标记为删除
-            docFile.setStatus(Status.DELETED);
+            docFile.setStatus(DocFile.Status.DELETED);
             docFileRepository.save(docFile);
             
             try {
@@ -314,61 +318,50 @@ public class DocumentServiceImpl implements DocumentService {
         }
     }
 
-    @Async("documentProcessingExecutor")
-    public CompletableFuture<Void> processDocumentAsync(DocFile docFile) {
-        try {
-            logger.info("开始异步处理文档 [线程: {}]: docId={}, fileName={}", 
-                Thread.currentThread().getName(), docFile.getId(), docFile.getFileName());
-            
-            // 更新为分块状态
-            updateDocStatus(docFile.getId(), DocFile.ProcessingStatus.CHUNKING, null);
-            
-            // 1. 提取文本（无需事务）
-            logger.debug("开始提取文本: docId={}", docFile.getId());
-            String text = textProcessingService.extractText(docFile.getFileUrl());
-            logger.debug("文本提取完成: docId={}, 文本长度={}", docFile.getId(), text.length());
-            
-            // 2. 文本分块（无需事务）
-            logger.debug("开始文本分块: docId={}", docFile.getId());
-            List<TextChunk> textChunks = textProcessingService.createChunks(text);
-            logger.info("文本分块完成: docId={}, 分块数={}", docFile.getId(), textChunks.size());
-            
-            // 更新为向量化状态
-            updateDocStatus(docFile.getId(), DocFile.ProcessingStatus.VECTORIZING, null);
-            
-            // 3. 准备所有分块数据
-            List<DocChunk> chunks = new ArrayList<>();
-            for (int i = 0; i < textChunks.size(); i++) {
-                TextChunk chunk = textChunks.get(i);
-                DocChunk docChunk = new DocChunk();
-                docChunk.setFileId(docFile.getId());
-                docChunk.setContent(chunk.getContent());
-                docChunk.setChunkIndex(i);
-                docChunk.setTokenCount(chunk.getTokenCount());
-                docChunk.setMetadataMap(chunk.getMetadata());
-                chunks.add(docChunk);
-            }
+    @Autowired
+    private ProcessingQueue processingQueue;
 
-            // 批量保存分块（使用独立事务方法）
-            logger.info("开始批量保存分块: docId={}, 分块数量={}", docFile.getId(), chunks.size());
-            List<DocChunk> savedChunks = saveChunks(chunks);
+    @Autowired
+    private TextExtractionStage textExtractionStage;
+
+    @Autowired
+    private ChunkingStage chunkingStage;
+
+    @Autowired
+    private VectorizationStage vectorizationStage;
+
+    private void processDocument(DocFile docFile) {
+        // 创建处理上下文
+        ProcessContext context = new ProcessContext(docFile);
+        
+        // 按顺序创建处理任务
+        ProcessingTask textExtractionTask = ProcessingTask.builder()
+            .docId(docFile.getId())
+            .type(ProcessingTask.TaskType.TEXT_EXTRACTION)
+            .context(context)
+            .processor(textExtractionStage)
+            .build();
             
-            // 4. 触发向量化处理
-            logger.info("开始触发向量化处理: docId={}, 总分块数={}", docFile.getId(), savedChunks.size());
-            for (DocChunk chunk : savedChunks) {
-                logger.info("触发向量化处理: docId={}, chunkId={}, chunkIndex={}", 
-                    docFile.getId(), chunk.getId(), chunk.getChunkIndex());
-                vectorService.processChunkAsync(chunk);
-            }
+        ProcessingTask chunkingTask = ProcessingTask.builder()
+            .docId(docFile.getId())
+            .type(ProcessingTask.TaskType.CHUNKING)
+            .context(context)
+            .processor(chunkingStage)
+            .build();
             
-            logger.info("文档处理完成: docId={}, 总分块数={}", docFile.getId(), savedChunks.size());
-            return CompletableFuture.completedFuture(null);
-            
-        } catch (Exception e) {
-            logger.error("文档处理失败: docId={}, error={}", docFile.getId(), e.getMessage(), e);
-            updateDocStatus(docFile.getId(), DocFile.ProcessingStatus.FAILED, e.getMessage());
-            return CompletableFuture.failedFuture(e);
-        }
+        ProcessingTask vectorizationTask = ProcessingTask.builder()
+            .docId(docFile.getId())
+            .type(ProcessingTask.TaskType.VECTORIZATION)
+            .context(context)
+            .processor(vectorizationStage)
+            .build();
+        
+        // 将任务添加到处理队列
+        processingQueue.enqueue(textExtractionTask);
+        processingQueue.enqueue(chunkingTask);
+        processingQueue.enqueue(vectorizationTask);
+        
+        logger.info("文档处理任务已加入队列: docId={}", docFile.getId());
     }
 
     @Transactional
