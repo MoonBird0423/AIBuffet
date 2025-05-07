@@ -106,15 +106,9 @@ public class VectorizationStage implements ProcessingStage {
             List<Map<String, Object>> metadata = batch.stream()
                 .map(chunk -> {
                     Map<String, Object> meta = new HashMap<>();
+                    meta.put("chunkId", chunk.getId());
                     meta.put("fileId", docId);
                     meta.put("chunkIndex", chunk.getChunkIndex());
-                    
-                    // 控制content长度在4000字符以内，避免metadata超出限制
-                    String content = chunk.getContent();
-                    if (content.length() > 4000) {
-                        content = content.substring(0, 3997) + "...";
-                    }
-                    meta.put("content", content);
                     return meta;
                 })
                 .toList();

@@ -353,17 +353,9 @@ public class VectorServiceImpl implements VectorService {
 
     private Map<String, Object> buildMetadata(DocChunk chunk) {
         Map<String, Object> metadata = new HashMap<>();
+        metadata.put("chunkId", chunk.getId());
         metadata.put("fileId", chunk.getFileId());
         metadata.put("chunkIndex", chunk.getChunkIndex());
-        
-        // 控制content长度在4000字符以内，避免整个metadata超出Milvus 4096限制
-        // fileId和chunkIndex的JSON格式大约占用50字符，所以content留4000字符比较安全
-        String content = chunk.getContent();
-        if (content.length() > 4000) {
-            content = content.substring(0, 3997) + "...";
-        }
-        metadata.put("content", content);
-        
         return metadata;
     }
 
