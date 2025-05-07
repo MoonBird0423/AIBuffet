@@ -39,26 +39,29 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
     });
   };
 
-  const getStatusClass = (status) => {
-    const classes = {
-      'PENDING': 'text-yellow-700 bg-yellow-50 border border-yellow-200 px-2 py-1 rounded-full',    // 待处理显示为黄色
-      'CHUNKING': 'text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-full',     // 分块中显示为蓝色
-      'VECTORIZING': 'text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-full',  // 向量化中显示为蓝色
-      'COMPLETED': 'text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full',   // 完成显示为绿色
-      'FAILED': 'text-red-700 bg-red-50 border border-red-200 px-2 py-1 rounded-full'         // 错误显示为红色
-    };
-    return classes[status] || 'text-gray-700 bg-gray-50 border border-gray-200 px-2 py-1 rounded-full';
-  };
 
   const getStatusText = (status) => {
     const statusMap = {
       'PENDING': '待处理',
+      'EXTRACTING_TEXT': '文本提取中',
       'CHUNKING': '分块中',
       'VECTORIZING': '向量化中',
       'COMPLETED': '完成',
       'FAILED': '错误'
     };
     return statusMap[status] || status;
+  };
+
+  const getStatusClass = (status) => {
+    const classes = {
+      'PENDING': 'text-yellow-700 bg-yellow-50 border border-yellow-200',
+      'EXTRACTING_TEXT': 'text-blue-700 bg-blue-50 border border-blue-200',
+      'CHUNKING': 'text-blue-700 bg-blue-50 border border-blue-200',
+      'VECTORIZING': 'text-blue-700 bg-blue-50 border border-blue-200',
+      'COMPLETED': 'text-green-700 bg-green-50 border border-green-200',
+      'FAILED': 'text-red-700 bg-red-50 border border-red-200'
+    };
+    return (classes[status] || 'text-gray-700 bg-gray-50 border border-gray-200') + ' px-2 py-1 rounded-full';
   };
 
   const handleRetry = async (id) => {
