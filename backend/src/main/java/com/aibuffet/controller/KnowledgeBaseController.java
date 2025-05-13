@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/knowledge-bases")
 public class KnowledgeBaseController {
 
+
     @Autowired
     private KnowledgeBaseService knowledgeBaseService;
     
@@ -28,6 +29,19 @@ public class KnowledgeBaseController {
             Authentication authentication) {
         Long userId = ((User) authentication.getPrincipal()).getId();
         KnowledgeBase knowledgeBase = knowledgeBaseService.createKnowledgeBase(request, userId);
+        return ApiResponse.success(knowledgeBase);
+    }
+
+    /**
+     * 更新知识库
+     */
+    @PutMapping("/{id}")
+    public ApiResponse<KnowledgeBase> updateKnowledgeBase(
+            @PathVariable Long id,
+            @RequestBody CreateKnowledgeBaseRequest request,
+            Authentication authentication) {
+        Long userId = ((User) authentication.getPrincipal()).getId();
+        KnowledgeBase knowledgeBase = knowledgeBaseService.updateKnowledgeBase(id, request, userId);
         return ApiResponse.success(knowledgeBase);
     }
 

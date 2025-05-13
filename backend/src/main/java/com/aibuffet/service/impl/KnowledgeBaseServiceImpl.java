@@ -32,6 +32,27 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     
     private static final Logger logger = LoggerFactory.getLogger(KnowledgeBaseServiceImpl.class);
 
+    @Override
+    @Transactional
+    public KnowledgeBase updateKnowledgeBase(Long id, CreateKnowledgeBaseRequest request, Long userId) {
+        logger.debug("Updating knowledge base with id: {}, name: {}", id, request.getName());
+        
+        KnowledgeBase knowledgeBase = knowledgeBaseRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("知识库不存在"));
+            
+        if (!knowledgeBase.getCreatedBy().equals(userId)) {
+            logger.warn("User {} attempted to update knowledge base {} owned by {}", 
+                userId, id, knowledgeBase.getCreatedBy());
+            throw new IllegalArgumentException("无权修改此知识库");
+        }
+        
+        knowledgeBase.setName(request.getName());
+        KnowledgeBase savedKnowledgeBase = knowledgeBaseRepository.save(knowledgeBase);
+        logger.debug("Successfully updated knowledge base: {}", savedKnowledgeBase.getId());
+        
+        return savedKnowledgeBase;
+    }
+
     @Autowired
     private KnowledgeBaseRepository knowledgeBaseRepository;
 
