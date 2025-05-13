@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocuChat - 图书分享阅读平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <span class="text-2xl font-bold text-indigo-600">DocuChat</span>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <a href="library.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-indigo-600">图书馆</a>
+                    <a href="my-knowledge.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-indigo-600">我的</a>
+                    <div class="ml-4 flex items-center">
+                        <div class="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-white">
+                            <i class="fas fa-user text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 英雄区 -->
+    <div class="relative min-h-[600px] overflow-hidden">
+        <div class="absolute inset-0">
+            <img class="w-full h-full object-cover" src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80" alt="书籍阅读">
+            <div class="absolute inset-0 bg-black opacity-50"></div>
+        </div>
+        <div class="relative z-10 max-w-7xl mx-auto">
+            <div class="relative pt-10 pb-8 sm:pb-16 md:pb-20 lg:w-1/2 lg:pb-28 xl:pb-32">
+                <main class="mt-10 mx-auto px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
+                    <div class="sm:text-center lg:text-left">
+                        <h1 class="text-4xl tracking-tight font-extrabold text-white sm:text-5xl md:text-6xl">
+                            <span class="block xl:inline">每天学习一本书</span>
+                            <span class="block text-indigo-300 xl:inline">成就更好的自己</span>
+                        </h1>
+                        <p class="mt-3 text-base text-gray-200 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
+                            通过 DocuChat，获取深度解读、知识脑图、互动测试，让阅读更高效、知识更系统。
+                        </p>
+                        <div class="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
+                            <div class="rounded-md shadow">
+                                <a href="my-knowledge.html" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 md:py-4 md:text-lg md:px-10">
+                                    上传图书
+                                </a>
+                            </div>
+                            <div class="mt-3 sm:mt-0 sm:ml-3">
+                                <a href="library.html" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 md:py-4 md:text-lg md:px-10">
+                                    浏览图书馆
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- 特性介绍 -->
+    <div class="py-12 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="lg:text-center">
+                <p class="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+                    为什么选择 DocuChat？
+                </p>
+                <p class="mt-4 max-w-2xl text-xl text-gray-500 lg:mx-auto">
+                    提供全方位的图书学习体验，让阅读和知识获取更高效
+                </p>
+            </div>
+
+            <div class="mt-10">
+                <dl class="space-y-10 md:space-y-0 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-10">
+                    <div class="relative">
+                        <dt>
+                            <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <p class="ml-16 text-lg leading-6 font-medium text-gray-900">书籍解读</p>
+                        </dt>
+                        <dd class="mt-2 ml-16 text-base text-gray-500">
+                            书籍全面解读，快速了解核心观点，减少阅读时间，提高学习效率。
+                        </dd>
+                    </div>
+
+                    <div class="relative">
+                        <dt>
+                            <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+                                <i class="fas fa-sitemap"></i>
+                            </div>
+                            <p class="ml-16 text-lg leading-6 font-medium text-gray-900">知识脑图</p>
+                        </dt>
+                        <dd class="mt-2 ml-16 text-base text-gray-500">
+                            快速了解全书知识结构，建立系统化的知识体系，提高记忆和理解。
+                        </dd>
+                    </div>
+
+                    <div class="relative">
+                        <dt>
+                            <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+                                <i class="fas fa-tasks"></i>
+                            </div>
+                            <p class="ml-16 text-lg leading-6 font-medium text-gray-900">知识测试</p>
+                        </dt>
+                        <dd class="mt-2 ml-16 text-base text-gray-500">
+                            根据图书内容自动生成测试题目，检验对知识的掌握情况，强化学习成果。
+                        </dd>
+                    </div>
+
+                    <div class="relative">
+                        <dt>
+                            <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+                                <i class="fas fa-comments"></i>
+                            </div>
+                            <p class="ml-16 text-lg leading-6 font-medium text-gray-900">知识问答</p>
+                        </dt>
+                        <dd class="mt-2 ml-16 text-base text-gray-500">
+                            基于图书内容进行知识问答，解决阅读疑问，深化对书籍内容的理解。
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800">
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <div class="text-center text-white">
+                <p>&copy; 2023 DocuChat 图书分享阅读平台. 保留所有权利.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

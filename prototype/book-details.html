@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>原子习惯 - 图书详情 - DocuChat</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+   <!-- 导航栏 -->
+    <nav class="bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <a href="index.html" class="text-2xl font-bold text-indigo-600 hover:text-indigo-700">DocuChat</a>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <a href="library.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-indigo-600">图书馆</a>
+                    <a href="my-knowledge.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-indigo-600">我的</a>
+                    <div class="ml-4 flex items-center">
+                        <div class="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-white">
+                            <i class="fas fa-user text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 返回按钮 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <a href="library.html" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <i class="fas fa-arrow-left mr-2"></i> 返回图书馆
+        </a>
+    </div>
+
+    <!-- 图书基本信息 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="p-6 flex flex-col md:flex-row">
+                <div class="md:w-1/4 flex justify-center mb-6 md:mb-0">
+                    <img src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="原子习惯" class="w-48 h-64 object-cover rounded-md shadow">
+                </div>
+                <div class="md:w-3/4 md:pl-8">
+                    <h1 class="text-3xl font-bold text-gray-900">原子习惯</h1>
+                    <p class="text-lg text-gray-600 mt-2">詹姆斯·克利尔</p>
+                    <div class="mt-2 flex items-center text-sm text-gray-500">
+                        <i class="fas fa-user-friends mr-1"></i>
+                        <span>3.2万人使用</span>
+                    </div>
+                    <div class="mt-4 border-t border-gray-200 pt-4">
+                        <h2 class="text-lg font-medium text-gray-900">简介</h2>
+                        <p class="mt-2 text-gray-600">
+                            《原子习惯》是一本关于如何养成良好习惯的实用指南。作者詹姆斯·克利尔将习惯的养成分解为四个简单步骤：提示、渴望、反应和奖励，并教读者如何利用这四个步骤来养成好习惯、打破坏习惯。书中强调了微小改变的力量，提出了"复利效应"的概念，即小习惯长期坚持会带来巨大改变。通过这本书，读者可以学习到实用的策略和技巧，重新设计自己的习惯系统，实现个人成长和目标达成。
+                        </p>
+                    </div>
+                    <div class="mt-6 flex space-x-4">
+                        <button class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <i class="fas fa-comments mr-2"></i> 知识问答
+                        </button>
+                        <button class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <i class="fas fa-plus mr-2"></i> 收藏
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 内容选项卡 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8">
+                <a href="#" class="border-indigo-500 text-indigo-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" onclick="showTab('book-interpretation')">
+                    图书解读
+                </a>
+                <a href="#" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" onclick="showTab('knowledge-map')">
+                    知识脑图
+                </a>
+                <a href="#" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" onclick="showTab('knowledge-summary')">
+                    知识摘要
+                </a>
+                <a href="#" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" onclick="showTab('knowledge-test')">
+                    知识测试
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- 图书解读内容 -->
+    <div id="book-interpretation" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">图书解读</h2>
+            
+            <div class="prose max-w-none">
+                <h3 class="text-xl font-semibold text-gray-800 mt-6 mb-3">第一章：习惯的惊人力量</h3>
+                <p class="text-gray-600 mb-4">
+                    本章介绍了习惯的复利效应和微小改变的重要性。作者指出，如果你每天只进步1%，一年后你将提升37倍；相反，如果每天倒退1%，一年后你将降至几乎为零。这就是"复利效应"的力量。习惯是复利效应的主要实践方式，看似微不足道的习惯变化在长期会带来巨大的结果差异。
+                </p>
+                
+                <h3 class="text-xl font-semibold text-gray-800 mt-6 mb-3">第二章：习惯是如何形成的</h3>
+                <p class="text-gray-600 mb-4">
+                    习惯的形成遵循四个步骤：提示（Cue）、渴望（Craving）、反应（Response）和奖励（Reward）。提示触发大脑自动行为模式，渴望提供行动动力，反应是实际的习惯行为，奖励是习惯的最终目标。这四个步骤构成了"习惯回路"，了解这一过程可以帮助我们更有效地改变习惯。
+                </p>
+                
+                <h3 class="text-xl font-semibold text-gray-800 mt-6 mb-3">第三章：构建更好习惯的四大法则</h3>
+                <p class="text-gray-600 mb-4">
+                    基于习惯形成的四个步骤，作者提出了构建好习惯的四大法则：让它显而易见（提示）、让它有吸引力（渴望）、让它简单易行（反应）和让它令人满足（奖励）。这四条法则为我们提供了一个实用框架，帮助我们设计和实施好习惯。
+                </p>
+                
+                <h3 class="text-xl font-semibold text-gray-800 mt-6 mb-3">第四章：身份认同与习惯养成</h3>
+                <p class="text-gray-600 mb-4">
+                    本章探讨了身份认同在习惯养成中的核心作用。真正的习惯改变来自身份的改变，而非结果的改变。当我们说"我想成为健康的人"而非"我想减肥"时，这种身份转变会使健康习惯更容易坚持。每一个行动都是对特定身份的投票，随着这些投票的积累，我们的身份信念会得到强化。
+                </p>
+                
+                <h3 class="text-xl font-semibold text-gray-800 mt-6 mb-3">第五章：习惯跟踪与持续改进</h3>
+                <p class="text-gray-600 mb-4">
+                    习惯跟踪是保持和改进习惯的有效方法。通过记录习惯执行情况，我们可以清晰地看到进步，增强动力。作者提出了"不要打破链条"的理念，即尽量不要中断习惯的连续执行。当习惯中断时，应用"两天法则"——永远不要连续两天错过习惯执行，这有助于防止暂时的失误变成永久的失败。
+                </p>
+                
+                <h3 class="text-xl font-semibold text-gray-800 mt-6 mb-3">总结与关键洞见</h3>
+                <p class="text-gray-600 mb-4">
+                    《原子习惯》的核心信息是：巨大的改变源于微小习惯的积累；习惯形成遵循特定的心理模式；通过调整环境、身份认同和反馈系统，我们可以设计出更好的习惯系统。书中的实用策略和科学依据为读者提供了一个全面的习惯改变框架，帮助我们在生活的各个方面实现持续进步。
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 知识脑图内容 -->
+    <div id="knowledge-map" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 hidden">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">知识脑图</h2>
+            
+            <div class="flex justify-center mb-6">
+                <img src="https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80" alt="原子习惯知识脑图" class="max-w-full h-auto rounded-lg shadow-sm">
+            </div>
+            
+            <div class="mt-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">脑图使用指南</h3>
+                <p class="text-gray-600 mb-4">
+                    上图展示了《原子习惯》的核心概念结构。中心是四大法则，分别对应习惯循环的不同阶段。您可以通过点击不同的节点来展开更详细的内容，或通过搜索特定的概念来定位相关知识点。
+                </p>
+                <div class="flex justify-center mt-4">
+                    <button class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-download mr-2"></i> 下载完整脑图
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 知识摘要内容 -->
+    <div id="knowledge-summary" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 hidden">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="prose max-w-none">
+                <div class="text-lg text-gray-900 leading-relaxed mb-8">
+                    习惯的改变始于微小的行动，但能带来巨大的改变。这种改变遵循"复利效应"原理：每天进步1%，一年后你将提升37倍；反之每天倒退1%，一年后将降至接近零。养成新习惯需要遵循四个关键步骤：提示（识别触发点）、渴望（建立动力）、反应（执行行动）和奖励（获得反馈）。
+
+                    要建立一个新习惯，关键在于让它变得显而易见、有吸引力、容易执行且令人满足。环境设计比意志力更重要：通过调整环境来增加好习惯的触发点，减少坏习惯的诱因。同时，身份认同的转变是习惯养成的核心：不是"我要减肥"，而是"我是一个注重健康的人"。
+
+                    作者强调了习惯养成的持续性原则："不要打破链条"和"两天法则"帮助保持习惯的连续性。通过持续追踪和记录，我们能够清晰地看到进步，从而获得继续前进的动力。最终，这些微小但持续的改变将累积成显著的人生转变。
+                </div>
+                
+                <div class="mt-8 pt-6 border-t border-gray-100">
+                    <p class="text-sm text-gray-500">
+                        《原子习惯》 - 作者：詹姆斯·克利尔
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 知识测试内容 -->
+    <div id="knowledge-test" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 hidden">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">知识测试</h2>
+            
+            <div class="space-y-6">
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500 mb-2">问题 1/10</p>
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">根据《原子习惯》，习惯的形成包含几个关键步骤？</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center">
+                            <input id="q1-a" name="q1" type="radio" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300">
+                            <label for="q1-a" class="ml-3 block text-gray-700">
+                                A. 两个步骤：行动和奖励
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="q1-b" name="q1" type="radio" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300">
+                            <label for="q1-b" class="ml-3 block text-gray-700">
+                                B. 三个步骤：提示、行动和奖励
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="q1-c" name="q1" type="radio" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300">
+                            <label for="q1-c" class="ml-3 block text-gray-700">
+                                C. 四个步骤：提示、渴望、反应和奖励
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="q1-d" name="q1" type="radio" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300">
+                            <label for="q1-d" class="ml-3 block text-gray-700">
+                                D. 五个步骤：提示、渴望、阻力、反应和奖励
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500 mb-2">问题 2/10</p>
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">书中提到的"复利效应"是指什么？</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center">
+                            <input id="q2-a" name="q2" type="radio" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300">
+                            <label for="q2-a" class="ml-3 block text-gray-700">
+                                A. 一次性投入大量时间来实现快速进步
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="q2-b" name="q2" type="radio" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300">
+                            <label for="q2-b" class="ml-3 block text-gray-700">
+                                B. 微小的习惯改变在长期积累后会产生巨大效果
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="q2-c" name="q2" type="radio" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300">
+                            <label for="q2-c" class="ml-3 block text-gray-700">
+                                C. 严格遵循他人的成功经验可复制成功
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="q2-d" name="q2" type="radio" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300">
+                            <label for="q2-d" class="ml-3 block text-gray-700">
+                                D. 依靠外部监督来保持习惯的持续
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between">
+                    <button class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" disabled>
+                        上一题
+                    </button>
+                    <button class="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        下一题
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 控制选项卡切换 -->
+    <script>
+        function showTab(tabId) {
+            // 隐藏所有标签内容
+            document.getElementById('book-interpretation').classList.add('hidden');
+            document.getElementById('knowledge-map').classList.add('hidden');
+            document.getElementById('knowledge-summary').classList.add('hidden');
+            document.getElementById('knowledge-test').classList.add('hidden');
+            
+            // 显示选中的标签内容
+            document.getElementById(tabId).classList.remove('hidden');
+            
+            // 更新选项卡样式
+            const tabs = document.querySelectorAll('nav a');
+            tabs.forEach(tab => {
+                tab.classList.remove('border-indigo-500', 'text-indigo-600');
+                tab.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            });
+            
+            // 设置当前选中标签样式
+            event.currentTarget.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            event.currentTarget.classList.add('border-indigo-500', 'text-indigo-600');
+        }
+    </script>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 mt-12">
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <div class="text-center text-white">
+                <p>&copy; 2023 DocuChat 图书分享阅读平台. 保留所有权利.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
