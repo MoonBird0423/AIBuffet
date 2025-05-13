@@ -145,11 +145,13 @@ public class DocumentController {
 
     @GetMapping
     public ApiResponse<Page<DocFile>> getDocuments(
-            @RequestParam Long knowledgeBaseId,
+            @RequestParam(required = false) Long knowledgeBaseId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) DocFile.Category category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         try {
-            Page<DocFile> documents = documentService.getDocuments(knowledgeBaseId, page, size);
+            Page<DocFile> documents = documentService.getDocuments(knowledgeBaseId, keyword, category, page, size);
             return ApiResponse.success(documents);
         } catch (Exception e) {
             logger.error("获取文档列表失败: ", e);

@@ -224,13 +224,46 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<DocFile> getDocuments(Long knowledgeBaseId, int page, int size) {
-        logger.info("开始查询文档列表: knowledgeBaseId={}, page={}, size={}", 
-            knowledgeBaseId, page, size);
+    public Page<DocFile> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, int page, int size) {
+        logger.info("开始查询文档列表: knowledgeBaseId={}, keyword={}, category={}, page={}, size={}", 
+            knowledgeBaseId, keyword, category, page, size);
         // 清除一级缓存
         entityManager.clear();
-        // 执行查询
-        Page<DocFile> result = docFileRepository.findByKbId(knowledgeBaseId, PageRequest.of(page, size));
+        
+        Page<DocFile> result;
+        if (knowledgeBaseId != null) {
+            // 如果指定了知识库ID，则搜索该知识库下的文档
+            if (keyword != null && category != null) {
+                result = docFileRepository.findByKbIdAndFileNameContainingAndCategory(
+                    knowledgeBaseId, keyword, category.name(), PageRequest.of(page, size));
+            } else if (keyword != null) {
+                result = docFileRepository.findByKbIdAndFileNameContaining(
+                    knowledgeBaseId, keyword, PageRequest.of(page, size));
+            } else if (category != null) {
+                result = docFileRepository.findByKbIdAndCategory(
+                    knowledgeBaseId, category.name(), PageRequest.of(page, size));
+            } else {
+                result = docFileRepository.findByKbId(
+                    knowledgeBaseId, PageRequest.of(page, size));
+            }
+        } else {
+            // 如果没有指定知识库ID，则搜索所有已发布的文档
+            String publishStatusStr = DocFile.PublishStatus.PUBLISHED.name();
+            if (keyword != null && category != null) {
+                result = docFileRepository.findByFileNameContainingAndCategoryAndPublishStatus(
+                    keyword, category.name(), publishStatusStr, PageRequest.of(page, size));
+            } else if (keyword != null) {
+                result = docFileRepository.findByFileNameContainingAndPublishStatus(
+                    keyword, publishStatusStr, PageRequest.of(page, size));
+            } else if (category != null) {
+                result = docFileRepository.findByCategoryAndPublishStatus(
+                    category.name(), publishStatusStr, PageRequest.of(page, size));
+            } else {
+                result = docFileRepository.findByPublishStatus(
+                    publishStatusStr, PageRequest.of(page, size));
+            }
+        }
+        
         logger.info("文档列表查询完成: 总数={}, 总页数={}", 
             result.getTotalElements(), result.getTotalPages());
         return result;
