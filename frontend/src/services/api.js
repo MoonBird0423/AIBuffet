@@ -285,7 +285,9 @@ export const uploadChatImage = async (file) => {
 // 知识库相关API
 export const createKnowledgeBase = async (data) => {
   try {
-    const response = await apiClient.post('/knowledge-bases', data);
+    const response = await apiClient.post('/knowledge-bases', {
+      name: data.name
+    });
     return response.data;
   } catch (error) {
     console.error('Error creating knowledge base:', {
@@ -307,19 +309,29 @@ export const createKnowledgeBase = async (data) => {
   }
 };
 
-export const getPublicKnowledgeBases = async (params) => {
+export const getKnowledgeBases = async (params) => {
   try {
-    const response = await apiClient.get('/knowledge-bases/public', { params });
+    const response = await apiClient.get('/knowledge-bases', {
+      params: {
+        keyword: params.keyword,
+        page: params.page
+      }
+    });
     return response.data.data;
   } catch (error) {
-    console.error('Error fetching public knowledge bases:', error);
+    console.error('Error fetching knowledge bases:', error);
     throw error;
   }
 };
 
 export const getMyKnowledgeBases = async (params) => {
   try {
-    const response = await apiClient.get('/knowledge-bases/my', { params });
+    const response = await apiClient.get('/knowledge-bases/my', {
+      params: {
+        keyword: params.keyword,
+        page: params.page
+      }
+    });
     return response.data.data;
   } catch (error) {
     console.error('Error fetching my knowledge bases:', error);
@@ -333,16 +345,6 @@ export const getKnowledgeBase = async (id) => {
     return response.data.data;
   } catch (error) {
     console.error('Error fetching knowledge base:', error);
-    throw error;
-  }
-};
-
-export const updateKnowledgeBaseColor = async (id, colorMark) => {
-  try {
-    const response = await apiClient.patch(`/knowledge-bases/${id}/color`, { colorMark });
-    return response.data.data;
-  } catch (error) {
-    console.error('Error updating knowledge base color:', error);
     throw error;
   }
 };
@@ -364,10 +366,10 @@ export const deleteKnowledgeBase = async (id) => {
 };
 
 // 文档相关API
-export const getDocuments = async (knowledgeBaseId, page = 0, size = 20) => {
+export const getDocuments = async (page = 0, size = 20, params = {}) => {
   try {
     const response = await apiClient.get('/documents', {
-      params: { knowledgeBaseId, page, size }
+      params: { page, size, ...params }
     });
     return response.data;
   } catch (error) {
@@ -467,6 +469,91 @@ export const getDocumentChunks = async (documentId) => {
     return response.data;
   } catch (error) {
     console.error('获取文档分块失败:', error);
+    throw error;
+  }
+};
+
+// 文档分类常量
+export const DocumentCategory = {
+  SCIENCE_TECH: "科学技术",
+  EDUCATION: "教育学习",
+  LIFE_ENCYCLOPEDIA: "生活百科",
+  PERSONAL_GROWTH: "个人成长",
+  CHILDREN_EDUCATION: "儿童教育",
+  NOVEL: "小说",
+  COMPUTER: "计算机",
+  BIOGRAPHY: "人物传记",
+  FINANCE: "经济理财",
+  OTHER: "其他"
+};
+
+// 文档发布状态常量
+export const PublishStatus = {
+  UNPUBLISHED: "未发布",
+  PUBLISHED: "已发布"
+};
+
+// 更新文档信息
+export const updateDocument = async (documentId, data) => {
+  try {
+    const formData = new FormData();
+    if (data.cover) {
+      formData.append('cover', data.cover);
+    }
+    if (data.category) {
+      formData.append('category', data.category);
+    }
+    if (data.author) {
+      formData.append('author', data.author);
+    }
+    
+    const response = await apiClient.put(`/documents/${documentId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('更新文档信息失败:', {
+      error,
+      errorMessage: error.message,
+      errorResponse: error.response?.data,
+      errorStack: error.stack
+    });
+    throw error;
+  }
+};
+
+// 更新文档发布状态
+export const updateDocumentPublishStatus = async (documentId, status) => {
+  try {
+    const response = await apiClient.put(`/documents/${documentId}/publish-status`, null, {
+      params: { status }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('更新文档发布状态失败:', {
+      error,
+      errorMessage: error.message,
+      errorResponse: error.response?.data,
+      errorStack: error.stack
+    });
+    throw error;
+  }
+};
+
+// 增加文档学习人数
+export const incrementDocumentLearnerCount = async (documentId) => {
+  try {
+    const response = await apiClient.post(`/documents/${documentId}/increment-learner`);
+    return response.data;
+  } catch (error) {
+    console.error('增加文档学习人数失败:', {
+      error,
+      errorMessage: error.message,
+      errorResponse: error.response?.data,
+      errorStack: error.stack
+    });
     throw error;
   }
 };
