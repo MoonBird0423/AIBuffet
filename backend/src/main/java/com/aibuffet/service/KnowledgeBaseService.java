@@ -12,11 +12,9 @@ public interface KnowledgeBaseService {
     
     KnowledgeBaseResponse getKnowledgeBase(Long id);
     
-    Page<KnowledgeBaseResponse> findPublicKnowledgeBases(KnowledgeBaseQuery query);
+    Page<KnowledgeBaseResponse> findKnowledgeBases(KnowledgeBaseQuery query);
     
     Page<KnowledgeBaseResponse> findMyKnowledgeBases(KnowledgeBaseQuery query, Authentication authentication);
     
     void deleteKnowledgeBase(Long id, Long userId);
-    
-    KnowledgeBase updateKnowledgeBaseColor(Long id, String colorMark, Long userId);
 }

@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/knowledge-bases")
@@ -22,72 +21,49 @@ public class KnowledgeBaseController {
     
     /**
      * 创建知识库
-     * @param request 创建请求
-     * @param authentication 认证信息
-     * @return 创建的知识库
      */
     @PostMapping
     public ApiResponse<KnowledgeBase> createKnowledgeBase(
             @RequestBody CreateKnowledgeBaseRequest request,
             Authentication authentication) {
-        
         Long userId = ((User) authentication.getPrincipal()).getId();
         KnowledgeBase knowledgeBase = knowledgeBaseService.createKnowledgeBase(request, userId);
         return ApiResponse.success(knowledgeBase);
     }
 
     /**
-     * 查询公开知识库
-     * @param category 分类（可选）
-     * @param keyword 搜索关键词（可选）
-     * @param orderBy 排序方式（latest/usage/docs）
-     * @param page 页码，从0开始
-     * @return 分页结果
+     * 查询知识库列表
      */
-    @GetMapping("/public")
-    public ApiResponse<Page<KnowledgeBaseResponse>> getPublicKnowledgeBases(
-            @RequestParam(required = false) KnowledgeBase.Category category,
+    @GetMapping
+    public ApiResponse<Page<KnowledgeBaseResponse>> getKnowledgeBases(
             @RequestParam(required = false) String keyword,
-            @RequestParam(defaultValue = "latest") String orderBy,
             @RequestParam(defaultValue = "0") Integer page) {
         
         KnowledgeBaseQuery query = new KnowledgeBaseQuery();
-        query.setCategory(category);
         query.setKeyword(keyword);
-        query.setOrderBy(orderBy);
         query.setPage(page);
         
-        return ApiResponse.success(knowledgeBaseService.findPublicKnowledgeBases(query));
+        return ApiResponse.success(knowledgeBaseService.findKnowledgeBases(query));
     }
 
     /**
      * 查询我的知识库
-     * @param keyword 搜索关键词（可选）
-     * @param page 页码，从0开始
-     * @param authentication 认证信息
-     * @return 分页结果
      */
     @GetMapping("/my")
     public ApiResponse<Page<KnowledgeBaseResponse>> getMyKnowledgeBases(
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") Integer page,
             Authentication authentication) {
         
         KnowledgeBaseQuery query = new KnowledgeBaseQuery();
         query.setKeyword(keyword);
         query.setPage(page);
-        query.setOrderBy("latest"); // 固定按创建时间倒序
-        query.setVisibility(status);
         
         return ApiResponse.success(knowledgeBaseService.findMyKnowledgeBases(query, authentication));
     }
     
     /**
      * 删除知识库
-     * @param id 知识库ID
-     * @param authentication 认证信息
-     * @return 删除结果
      */
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteKnowledgeBase(@PathVariable Long id, Authentication authentication) {
@@ -98,28 +74,9 @@ public class KnowledgeBaseController {
     
     /**
      * 获取知识库详情
-     * @param id 知识库ID
-     * @return 知识库详情
      */
     @GetMapping("/{id}")
     public ApiResponse<KnowledgeBaseResponse> getKnowledgeBase(@PathVariable Long id) {
         return ApiResponse.success(knowledgeBaseService.getKnowledgeBase(id));
-    }
-    
-    /**
-     * 更新知识库标记颜色
-     * @param id 知识库ID
-     * @param request 包含colorMark的请求体
-     * @param authentication 认证信息
-     * @return 更新结果
-     */
-    @PatchMapping("/{id}/color")
-    public ApiResponse<KnowledgeBase> updateKnowledgeBaseColor(
-            @PathVariable Long id,
-            @RequestBody Map<String, String> request,
-            Authentication authentication) {
-        Long userId = ((User) authentication.getPrincipal()).getId();
-        String colorMark = request.get("colorMark");
-        return ApiResponse.success(knowledgeBaseService.updateKnowledgeBaseColor(id, colorMark, userId));
     }
 }
