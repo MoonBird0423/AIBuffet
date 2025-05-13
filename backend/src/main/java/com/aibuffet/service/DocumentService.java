@@ -39,4 +39,19 @@ public interface DocumentService {
      * 获取文档的分块列表
      */
     List<DocChunk> getDocumentChunks(Long docId, Long userId);
+
+    /**
+     * 更新文档基本信息
+     */
+    void updateDocumentInfo(Long docId, Long userId, String coverUrl, DocFile.Category category, String author);
+
+    /**
+     * 更新发布状态
+     */
+    void updatePublishStatus(Long docId, Long userId, DocFile.PublishStatus status);
+
+    /**
+     * 增加学习人数
+     */
+    void incrementLearnerCount(Long docId);
 }

@@ -29,6 +29,8 @@ import java.util.concurrent.*;
 public class DocumentController {
     private static final Logger logger = LoggerFactory.getLogger(DocumentController.class);
     
+    private static final long MAX_COVER_SIZE = 2 * 1024 * 1024; // 2MB
+    
     @Autowired
     private DocumentService documentService;
 
@@ -212,6 +214,63 @@ public class DocumentController {
             return ApiResponse.error(ErrorCode.PERMISSION_DENIED, e.getMessage());
         } catch (Exception e) {
             logger.error("获取文档分块失败，系统错误: ", e);
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR, "系统错误，请稍后重试");
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ApiResponse<Void> updateDocument(
+            @PathVariable Long id,
+            @RequestParam(required = false) MultipartFile cover,
+            @RequestParam(required = false) DocFile.Category category,
+            @RequestParam(required = false) String author,
+            @AuthenticationPrincipal User user) {
+        try {
+            String coverUrl = null;
+            if (cover != null) {
+                // 检查封面大小
+                if (cover.getSize() > MAX_COVER_SIZE) {
+                    return ApiResponse.error(ErrorCode.INVALID_REQUEST, "封面图片大小不能超过2MB");
+                }
+                // TODO: 上传封面到OSS存储并获取URL
+                // coverUrl = ossService.uploadFile(cover);
+            }
+            
+            documentService.updateDocumentInfo(id, user.getId(), coverUrl, category, author);
+            return ApiResponse.success(null);
+        } catch (ResourceNotFoundException e) {
+            return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
+        } catch (Exception e) {
+            logger.error("更新文档信息失败: ", e);
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR, "系统错误，请稍后重试");
+        }
+    }
+
+    @PutMapping("/{id}/publish-status")
+    public ApiResponse<Void> updatePublishStatus(
+            @PathVariable Long id,
+            @RequestParam DocFile.PublishStatus status,
+            @AuthenticationPrincipal User user) {
+        try {
+            documentService.updatePublishStatus(id, user.getId(), status);
+            return ApiResponse.success(null);
+        } catch (ResourceNotFoundException e) {
+            return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
+        } catch (Exception e) {
+            logger.error("更新发布状态失败: ", e);
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR, "系统错误，请稍后重试");
+        }
+    }
+
+    @PostMapping("/{id}/increment-learner")
+    public ApiResponse<Void> incrementLearner(@PathVariable Long id) {
+        try {
+            documentService.incrementLearnerCount(id);
+            return ApiResponse.success(null);
+        } catch (ResourceNotFoundException e) {
+            return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
+        } catch (Exception e) {
+            logger.error("增加学习人数失败: ", e);
             return ApiResponse.error(ErrorCode.SYSTEM_ERROR, "系统错误，请稍后重试");
         }
     }

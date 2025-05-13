@@ -394,4 +394,104 @@ public class DocumentServiceImpl implements DocumentService {
         
         return urlWithoutParams.substring(docIndex);
     }
+
+    @Override
+    @Transactional
+    public void updateDocumentInfo(Long docId, Long userId, String coverUrl, DocFile.Category category, String author) {
+        logger.info("开始更新文档信息: docId={}, userId={}, category={}, author={}", 
+            docId, userId, category, author);
+        
+        // 检查文档存在且为激活状态
+        DocFile docFile = docFileRepository.findByIdAndStatus(docId, DocFile.Status.ACTIVE)
+                .orElseThrow(() -> {
+                    logger.warn("文档不存在或已删除: docId={}", docId);
+                    return new ResourceNotFoundException("Document not found or deleted");
+                });
+
+        // 验证用户权限
+        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileId(docId)
+                .orElseThrow(() -> {
+                    logger.warn("文档未关联到任何知识库: docId={}", docId);
+                    return new ResourceNotFoundException("Document is not associated with any knowledge base");
+                });
+
+        if (!relation.getCreatedBy().equals(userId)) {
+            logger.warn("用户无权限更新该文档: docId={}, userId={}", docId, userId);
+            throw new IllegalArgumentException("No permission to update this document");
+        }
+
+        // 更新文档信息
+        boolean updated = false;
+        if (coverUrl != null) {
+            docFile.setCoverUrl(coverUrl);
+            updated = true;
+        }
+        if (category != null) {
+            docFile.setCategory(category);
+            updated = true;
+        }
+        if (author != null) {
+            docFile.setAuthor(author);
+            updated = true;
+        }
+
+        if (updated) {
+            docFileRepository.save(docFile);
+            logger.info("文档信息更新成功: docId={}", docId);
+        } else {
+            logger.info("没有需要更新的文档信息: docId={}", docId);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void updatePublishStatus(Long docId, Long userId, DocFile.PublishStatus status) {
+        logger.info("开始更新文档发布状态: docId={}, userId={}, status={}", docId, userId, status);
+        
+        // 检查文档存在且为激活状态
+        DocFile docFile = docFileRepository.findByIdAndStatus(docId, DocFile.Status.ACTIVE)
+                .orElseThrow(() -> {
+                    logger.warn("文档不存在或已删除: docId={}", docId);
+                    return new ResourceNotFoundException("Document not found or deleted");
+                });
+
+        // 验证用户权限
+        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileId(docId)
+                .orElseThrow(() -> {
+                    logger.warn("文档未关联到任何知识库: docId={}", docId);
+                    return new ResourceNotFoundException("Document is not associated with any knowledge base");
+                });
+
+        if (!relation.getCreatedBy().equals(userId)) {
+            logger.warn("用户无权限更新该文档状态: docId={}, userId={}", docId, userId);
+            throw new IllegalArgumentException("No permission to update this document status");
+        }
+
+        docFile.setPublishStatus(status);
+        docFileRepository.save(docFile);
+        logger.info("文档发布状态更新成功: docId={}, status={}", docId, status);
+    }
+
+    @Override
+    @Transactional
+    public void incrementLearnerCount(Long docId) {
+        logger.info("开始增加文档学习人数: docId={}", docId);
+        
+        // 检查文档存在且为激活状态
+        DocFile docFile = docFileRepository.findByIdAndStatus(docId, DocFile.Status.ACTIVE)
+                .orElseThrow(() -> {
+                    logger.warn("文档不存在或已删除: docId={}", docId);
+                    return new ResourceNotFoundException("Document not found or deleted");
+                });
+
+        // 检查文档是否已发布
+        if (docFile.getPublishStatus() != DocFile.PublishStatus.PUBLISHED) {
+            logger.warn("文档未发布，无法增加学习人数: docId={}", docId);
+            throw new IllegalArgumentException("Document is not published");
+        }
+
+        docFile.setLearnerCount(docFile.getLearnerCount() + 1);
+        docFileRepository.save(docFile);
+        logger.info("文档学习人数更新成功: docId={}, 当前学习人数={}", docId, docFile.getLearnerCount());
+    }
 }
