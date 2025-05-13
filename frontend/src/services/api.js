@@ -332,10 +332,36 @@ export const getMyKnowledgeBases = async (params) => {
         page: params.page
       }
     });
-    return response.data.data;
+    return response.data;
   } catch (error) {
     console.error('Error fetching my knowledge bases:', error);
     throw error;
+  }
+};
+
+export const updateKnowledgeBase = async (data) => {
+  try {
+    const response = await apiClient.put(`/knowledge-bases/${data.id}`, {
+      name: data.name
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating knowledge base:', {
+      error,
+      request: data,
+      errorMessage: error.message,
+      errorResponse: error.response?.data
+    });
+
+    if (error.response?.status === 401) {
+      throw new Error('请先登录');
+    } else if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else if (!error.response) {
+      throw new Error('网络连接错误，请检查网络后重试');
+    } else {
+      throw new Error('修改知识库失败，请重试');
+    }
   }
 };
 
