@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图书馆 - DocuChat</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <!-- 导航栏 -->
+    <nav class="bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <a href="index.html" class="text-2xl font-bold text-indigo-600 hover:text-indigo-700">DocuChat</a>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <a href="library.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-indigo-600">图书馆</a>
+                    <a href="my-knowledge.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-indigo-600">我的</a>
+                    <div class="ml-4 flex items-center">
+                        <div class="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-white">
+                            <i class="fas fa-user text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 搜索栏 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-search text-gray-400"></i>
+            </div>
+            <input type="text" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="搜索图书名称...">
+        </div>
+    </div>
+
+    <!-- 图书分类与展示 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex flex-col md:flex-row">
+            <!-- 左侧分类 -->
+            <div class="w-full md:w-1/5 mb-6 md:mb-0 md:pr-4">
+                <div class="bg-white rounded-lg shadow-sm p-4">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">图书分类</h2>
+                    <ul>
+                        <li class="mb-2">
+                            <a href="#" class="text-indigo-600 font-medium flex items-center">
+                                <span class="w-1 h-5 bg-indigo-600 mr-2 rounded-r"></span>
+                                全部
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="text-gray-600 hover:text-indigo-600 flex items-center">
+                                <span class="w-1 h-5 bg-transparent mr-2 rounded-r"></span>
+                                科学技术
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="text-gray-600 hover:text-indigo-600 flex items-center">
+                                <span class="w-1 h-5 bg-transparent mr-2 rounded-r"></span>
+                                教育学习
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="text-gray-600 hover:text-indigo-600 flex items-center">
+                                <span class="w-1 h-5 bg-transparent mr-2 rounded-r"></span>
+                                生活百科
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="text-gray-600 hover:text-indigo-600 flex items-center">
+                                <span class="w-1 h-5 bg-transparent mr-2 rounded-r"></span>
+                                个人成长
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="text-gray-600 hover:text-indigo-600 flex items-center">
+                                <span class="w-1 h-5 bg-transparent mr-2 rounded-r"></span>
+                                儿童教育
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="text-gray-600 hover:text-indigo-600 flex items-center">
+                                <span class="w-1 h-5 bg-transparent mr-2 rounded-r"></span>
+                                小说
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="text-gray-600 hover:text-indigo-600 flex items-center">
+                                <span class="w-1 h-5 bg-transparent mr-2 rounded-r"></span>
+                                计算机
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="text-gray-600 hover:text-indigo-600 flex items-center">
+                                <span class="w-1 h-5 bg-transparent mr-2 rounded-r"></span>
+                                人物传记
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="text-gray-600 hover:text-indigo-600 flex items-center">
+                                <span class="w-1 h-5 bg-transparent mr-2 rounded-r"></span>
+                                经济理财
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 右侧图书卡片 -->
+            <div class="w-full md:w-4/5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <!-- 图书卡片 1 -->
+                    <a href="book-details.html" class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
+                        <img src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="图书封面" class="w-full h-48 object-cover">
+                        <div class="p-4">
+                            <h3 class="text-lg font-medium text-gray-900">原子习惯</h3>
+                            <p class="text-sm text-gray-600">詹姆斯·克利尔</p>
+                            <div class="mt-2 flex items-center text-sm text-gray-500">
+                                <i class="fas fa-user-friends mr-1"></i>
+                                <span>3.2万人学习</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- 图书卡片 2 -->
+                    <a href="book-details.html" class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
+                        <img src="https://images.unsplash.com/photo-1589998059171-988d887df646?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="图书封面" class="w-full h-48 object-cover">
+                        <div class="p-4">
+                            <h3 class="text-lg font-medium text-gray-900">深度工作</h3>
+                            <p class="text-sm text-gray-600">卡尔·纽波特</p>
+                            <div class="mt-2 flex items-center text-sm text-gray-500">
+                                <i class="fas fa-user-friends mr-1"></i>
+                                <span>2.8万人学习</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- 图书卡片 3 -->
+                    <a href="book-details.html" class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
+                        <img src="https://images.unsplash.com/photo-1531988042231-d39a9cc12a9a?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="图书封面" class="w-full h-48 object-cover">
+                        <div class="p-4">
+                            <h3 class="text-lg font-medium text-gray-900">思考，快与慢</h3>
+                            <p class="text-sm text-gray-600">丹尼尔·卡尼曼</p>
+                            <div class="mt-2 flex items-center text-sm text-gray-500">
+                                <i class="fas fa-user-friends mr-1"></i>
+                                <span>2.1万人学习</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- 图书卡片 4 -->
+                    <a href="book-details.html" class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
+                        <img src="https://images.unsplash.com/photo-1535398089889-dd807df1dfaa?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="图书封面" class="w-full h-48 object-cover">
+                        <div class="p-4">
+                            <h3 class="text-lg font-medium text-gray-900">刻意练习</h3>
+                            <p class="text-sm text-gray-600">安德斯·艾利克森</p>
+                            <div class="mt-2 flex items-center text-sm text-gray-500">
+                                <i class="fas fa-user-friends mr-1"></i>
+                                <span>1.9万人学习</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- 图书卡片 5 -->
+                    <a href="book-details.html" class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
+                        <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="图书封面" class="w-full h-48 object-cover">
+                        <div class="p-4">
+                            <h3 class="text-lg font-medium text-gray-900">学会提问</h3>
+                            <p class="text-sm text-gray-600">尼尔·布朗</p>
+                            <div class="mt-2 flex items-center text-sm text-gray-500">
+                                <i class="fas fa-user-friends mr-1"></i>
+                                <span>1.6万人学习</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- 图书卡片 6 -->
+                    <a href="book-details.html" class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
+                        <img src="https://images.unsplash.com/photo-1541963463532-d68292c34b19?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="图书封面" class="w-full h-48 object-cover">
+                        <div class="p-4">
+                            <h3 class="text-lg font-medium text-gray-900">认知觉醒</h3>
+                            <p class="text-sm text-gray-600">周岭</p>
+                            <div class="mt-2 flex items-center text-sm text-gray-500">
+                                <i class="fas fa-user-friends mr-1"></i>
+                                <span>1.4万人学习</span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 mt-12">
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <div class="text-center text-white">
+                <p>&copy; 2023 DocuChat 图书分享阅读平台. 保留所有权利.</p>
+            </div>
+        </div>
+    </footer>
+    <!-- 下拉菜单控制脚本 -->
+    <script>
+        function toggleDropdown() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // 点击外部区域关闭下拉菜单
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('userDropdown');
+            const button = event.target.closest('button');
+            if (!button && !dropdown.classList.contains('hidden')) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
