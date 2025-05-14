@@ -1,16 +1,24 @@
 import React, { useState } from 'react';
-import { deleteDocument, retryProcessing, getDocumentChunks, updateDocumentPublishStatus } from '../../services/api';
+import { deleteDocument, getDocumentChunks, updateDocumentPublishStatus } from '../../services/api';
 import { ToastManager } from '../common/Toast';
-import { TrashIcon, DocumentIcon, ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, ViewfinderCircleIcon, ExclamationCircleIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, DocumentIcon, ChevronLeftIcon, ChevronRightIcon, ViewfinderCircleIcon, ExclamationCircleIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline';
 import Tooltip from '../common/Tooltip';
 import Popover from '../common/Popover';
 import Modal from '../common/Modal';
 import ChunkViewModal from './ChunkViewModal';
 import PublishModal from './PublishModal';
 
-const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageSize = 20, total = 0, onPageChange }) => {
+const FileList = ({ 
+  files, 
+  onRefresh,
+  isLoading, 
+  knowledgeBaseId, 
+  page = 0, 
+  pageSize = 20, 
+  total = 0, 
+  onPageChange 
+}) => {
   const [deletingId, setDeletingId] = useState(null);
-  const [processingId, setProcessingId] = useState(null);
   const [selectedFileId, setSelectedFileId] = useState(null);
   const [showChunkModal, setShowChunkModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
@@ -36,7 +44,7 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
   };
 
   const handlePublishSuccess = () => {
-    onPageChange(page);
+    onRefresh(); // 发布成功后刷新列表
     setShowPublishModal(false);
     setPublishingFileId(null);
   };
@@ -44,7 +52,7 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
   const handleUnpublishConfirm = async () => {
     try {
       await updateDocumentPublishStatus(publishingFileId, 'UNPUBLISHED');
-      onPageChange(page);
+      onRefresh(); // 取消发布成功后刷新列表
     } catch (error) {
       ToastManager.error('取消发布失败：' + (error.response?.data?.message || error.message));
     } finally {
@@ -77,19 +85,6 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
     return (classes[status] || 'text-gray-700 bg-gray-50 border border-gray-200') + ' px-2 py-1 rounded-full';
   };
 
-  const handleRetry = async (id) => {
-    setProcessingId(id);
-    try {
-      await retryProcessing(id);
-      // 刷新文件列表
-      onPageChange(page);
-    } catch (error) {
-      ToastManager.error('重试失败：' + (error.response?.data?.message || '系统错误'));
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
   const handleViewChunks = async (id) => {
     setSelectedFileId(id);
     setShowChunkModal(true);
@@ -103,7 +98,7 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
     setDeletingId(id);
     try {
       await deleteDocument(id, knowledgeBaseId);
-      onDelete(id);
+      onRefresh(); // 删除成功后刷新列表
     } catch (error) {
       const errorCode = error.response?.data?.code;
       const message = error.response?.data?.message || '删除失败';
@@ -112,7 +107,7 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
       switch (errorCode) {
         case 4001: // RESOURCE_NOT_FOUND
           ToastManager.error(message);
-          onDelete(id); // 从列表中移除不存在的文件
+          onRefresh(); // 文件不存在时刷新列表
           break;
         case 4002: // PERMISSION_DENIED
           ToastManager.error(message);
@@ -271,16 +266,6 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex items-center justify-start space-x-2">
-                    {file.processing_status === 'FAILED' && (
-                      <button
-                        onClick={() => handleRetry(file.id)}
-                        disabled={processingId === file.id}
-                        className="text-blue-600 hover:text-blue-900 inline-flex items-center space-x-1"
-                      >
-                        <ArrowPathIcon className="h-4 w-4" />
-                        <span>{processingId === file.id ? '处理中...' : '重试'}</span>
-                      </button>
-                    )}
                     {file.publishStatus === 'PUBLISHED' ? (
                       <button
                         onClick={() => handleUnpublish(file.id)}

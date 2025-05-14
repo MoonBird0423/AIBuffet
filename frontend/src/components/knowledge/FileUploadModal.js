@@ -129,18 +129,9 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
           return remainingFiles;
         });
 
-        // 刷新文件列表
+        // 刷新文件列表并关闭弹窗
         onUploadComplete();
-        
-        // 处理最终状态提示
-        if (results.length === files.length) {
-          console.log('所有文件上传成功');
-          ToastManager.success('所有文件上传成功');
-          onClose();
-        } else {
-          console.log(`部分文件上传成功: ${results.length}/${files.length}`);
-          ToastManager.success(`成功上传 ${results.length} 个文件，${errors.length} 个文件失败`);
-        }
+        onClose();
       } else {
         console.log('没有文件上传成功');
       }
