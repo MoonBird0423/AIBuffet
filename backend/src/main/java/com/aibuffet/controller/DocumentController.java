@@ -151,7 +151,10 @@ public class DocumentController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         try {
+            logger.info("DocumentController: 接收到查询请求: knowledgeBaseId={}, keyword={}, category={}, page={}, size={}", 
+                knowledgeBaseId, keyword, category, page, size);
             Page<DocFile> documents = documentService.getDocuments(knowledgeBaseId, keyword, category, page, size);
+            logger.info("DocumentController: 查询完成，返回结果数量: {}", documents.getContent().size());
             return ApiResponse.success(documents);
         } catch (Exception e) {
             logger.error("获取文档列表失败: ", e);

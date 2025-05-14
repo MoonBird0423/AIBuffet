@@ -225,47 +225,57 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional(readOnly = true)
     public Page<DocFile> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, int page, int size) {
-        logger.info("开始查询文档列表: knowledgeBaseId={}, keyword={}, category={}, page={}, size={}", 
+        logger.info("DocumentService: 开始查询文档列表: knowledgeBaseId={}, keyword={}, category={}, page={}, size={}", 
             knowledgeBaseId, keyword, category, page, size);
         // 清除一级缓存
         entityManager.clear();
         
         Page<DocFile> result;
         if (knowledgeBaseId != null) {
+            logger.info("DocumentService: 使用知识库查询分支");
             // 如果指定了知识库ID，则搜索该知识库下的文档
             if (keyword != null && category != null) {
+                logger.info("DocumentService: 执行知识库下的关键词+分类查询");
                 result = docFileRepository.findByKbIdAndFileNameContainingAndCategory(
                     knowledgeBaseId, keyword, category.name(), PageRequest.of(page, size));
             } else if (keyword != null) {
+                logger.info("DocumentService: 执行知识库下的关键词查询");
                 result = docFileRepository.findByKbIdAndFileNameContaining(
                     knowledgeBaseId, keyword, PageRequest.of(page, size));
             } else if (category != null) {
+                logger.info("DocumentService: 执行知识库下的分类查询");
                 result = docFileRepository.findByKbIdAndCategory(
                     knowledgeBaseId, category.name(), PageRequest.of(page, size));
             } else {
+                logger.info("DocumentService: 执行知识库下的全部查询");
                 result = docFileRepository.findByKbId(
                     knowledgeBaseId, PageRequest.of(page, size));
             }
         } else {
+            logger.info("DocumentService: 使用公共图书馆查询分支");
             // 如果没有指定知识库ID，则搜索所有已发布的文档
             String publishStatusStr = DocFile.PublishStatus.PUBLISHED.name();
             if (keyword != null && category != null) {
+                logger.info("DocumentService: 执行公共图书馆关键词+分类查询");
                 result = docFileRepository.findByFileNameContainingAndCategoryAndPublishStatus(
                     keyword, category.name(), publishStatusStr, PageRequest.of(page, size));
             } else if (keyword != null) {
+                logger.info("DocumentService: 执行公共图书馆关键词查询");
                 result = docFileRepository.findByFileNameContainingAndPublishStatus(
                     keyword, publishStatusStr, PageRequest.of(page, size));
             } else if (category != null) {
+                logger.info("DocumentService: 执行公共图书馆分类查询");
                 result = docFileRepository.findByCategoryAndPublishStatus(
                     category.name(), publishStatusStr, PageRequest.of(page, size));
             } else {
+                logger.info("DocumentService: 执行公共图书馆全部查询");
                 result = docFileRepository.findByPublishStatus(
                     publishStatusStr, PageRequest.of(page, size));
             }
         }
         
-        logger.info("文档列表查询完成: 总数={}, 总页数={}", 
-            result.getTotalElements(), result.getTotalPages());
+        logger.info("DocumentService: 文档列表查询完成: 总数={}, 总页数={}, 当前页数据量={}", 
+            result.getTotalElements(), result.getTotalPages(), result.getContent().size());
         return result;
     }
 
