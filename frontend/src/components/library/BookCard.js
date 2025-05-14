@@ -2,6 +2,17 @@ import React from 'react';
 import { FaUsers } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 
+function formatFileName(fileName) {
+  // 移除扩展名
+  let name = fileName.replace(/\.[^/.]+$/, "");
+  // 移除括号及其内容
+  name = name.replace(/\s*\([^)]*\)/g, "");
+  // 移除方括号及其内容
+  name = name.replace(/\s*\[[^\]]*\]/g, "");
+  // 清理多余空格
+  return name.trim();
+}
+
 function BookCard({ document }) {
   return (
     <Link
@@ -11,24 +22,17 @@ function BookCard({ document }) {
       <div className="aspect-w-3 aspect-h-2">
         <img
           src={document.coverUrl || 'https://via.placeholder.com/300x200'}
-          alt={document.name}
+          alt={document.fileName}
           className="w-full h-48 object-cover"
         />
       </div>
       <div className="p-4">
-        <h3 className="text-lg font-medium text-gray-900 truncate">{document.name}</h3>
+        <h3 className="text-lg font-medium text-gray-900 truncate">{document.fileName}</h3>
         <p className="text-sm text-gray-600 mt-1">{document.author || '未知作者'}</p>
         <div className="mt-2 flex items-center text-sm text-gray-500">
           <FaUsers className="mr-1" />
           <span>{(document.learnerCount || 0).toLocaleString()}人学习</span>
         </div>
-        {document.category && (
-          <div className="mt-2">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-              {document.category}
-            </span>
-          </div>
-        )}
       </div>
     </Link>
   );

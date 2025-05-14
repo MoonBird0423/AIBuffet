@@ -16,11 +16,17 @@ function Library() {
       try {
         setLoading(true);
         setError(null);
-        const response = await getDocuments(0, 20, {
-          keyword: searchKeyword || undefined,
-          category: selectedCategory === 'all' ? undefined : selectedCategory
-        });
-        setDocuments(response.data || []);
+        const params = {
+          keyword: searchKeyword || undefined
+        };
+        if (selectedCategory !== 'all') {
+          params.category = selectedCategory;
+        }
+        console.log('Library: 发送请求参数:', { page: 0, size: 20, ...params });
+        const response = await getDocuments(0, 20, params);
+        console.log('Library: 接收到响应:', response);
+        console.log('Library: 设置文档数据:', response.data?.content);
+        setDocuments(response.data?.content || []);
       } catch (err) {
         setError('获取图书列表失败');
         console.error('Error fetching documents:', err);
