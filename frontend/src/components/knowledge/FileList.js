@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { toast } from 'react-toastify';
-import { deleteDocument, retryProcessing, getDocumentChunks } from '../../services/api';
+import { deleteDocument, retryProcessing, getDocumentChunks, updateDocumentPublishStatus } from '../../services/api';
+import { ToastManager } from '../common/Toast';
 import { TrashIcon, DocumentIcon, ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, ViewfinderCircleIcon, ExclamationCircleIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline';
 import Tooltip from '../common/Tooltip';
 import Popover from '../common/Popover';
@@ -16,8 +16,6 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [publishingFileId, setPublishingFileId] = useState(null);
   const [showUnpublishModal, setShowUnpublishModal] = useState(false);
-  const [publishedFiles, setPublishedFiles] = useState(new Set());
-
   const truncateFileName = (fileName) => {
     if (fileName.length > 20) {
       const ext = fileName.split('.').pop();
@@ -26,7 +24,6 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
     }
     return fileName;
   };
-
 
   const handlePublish = (fileId, fileName) => {
     setPublishingFileId(fileId);
@@ -39,19 +36,21 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
   };
 
   const handlePublishSuccess = () => {
-    setPublishedFiles(prev => new Set([...prev, publishingFileId]));
+    onPageChange(page);
     setShowPublishModal(false);
     setPublishingFileId(null);
   };
 
-  const handleUnpublishConfirm = () => {
-    setPublishedFiles(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(publishingFileId);
-      return newSet;
-    });
-    setShowUnpublishModal(false);
-    setPublishingFileId(null);
+  const handleUnpublishConfirm = async () => {
+    try {
+      await updateDocumentPublishStatus(publishingFileId, 'UNPUBLISHED');
+      onPageChange(page);
+    } catch (error) {
+      ToastManager.error('取消发布失败：' + (error.response?.data?.message || error.message));
+    } finally {
+      setShowUnpublishModal(false);
+      setPublishingFileId(null);
+    }
   };
 
   const getStatusText = (status) => {
@@ -82,11 +81,10 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
     setProcessingId(id);
     try {
       await retryProcessing(id);
-      toast.success('已重新开始处理');
       // 刷新文件列表
       onPageChange(page);
     } catch (error) {
-      toast.error('重试失败：' + (error.response?.data?.message || '系统错误'));
+      ToastManager.error('重试失败：' + (error.response?.data?.message || '系统错误'));
     } finally {
       setProcessingId(null);
     }
@@ -106,7 +104,6 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
     try {
       await deleteDocument(id, knowledgeBaseId);
       onDelete(id);
-      toast.success('文档已删除');
     } catch (error) {
       const errorCode = error.response?.data?.code;
       const message = error.response?.data?.message || '删除失败';
@@ -114,14 +111,14 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
       // 处理不同错误情况
       switch (errorCode) {
         case 4001: // RESOURCE_NOT_FOUND
-          toast.warning(message);
+          ToastManager.error(message);
           onDelete(id); // 从列表中移除不存在的文件
           break;
         case 4002: // PERMISSION_DENIED
-          toast.error(message);
+          ToastManager.error(message);
           break;
         default:
-          toast.error('系统错误，请稍后重试');
+          ToastManager.error('系统错误，请稍后重试');
       }
     } finally {
       setDeletingId(null);
@@ -261,7 +258,7 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {publishedFiles.has(file.id) ? (
+                  {file.publishStatus === 'PUBLISHED' ? (
                     <button 
                       className="text-indigo-600 hover:text-indigo-900 font-medium"
                       onClick={() => {/* TODO: 实现查看发布功能 */}}
@@ -284,7 +281,7 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
                         <span>{processingId === file.id ? '处理中...' : '重试'}</span>
                       </button>
                     )}
-                    {publishedFiles.has(file.id) ? (
+                    {file.publishStatus === 'PUBLISHED' ? (
                       <button
                         onClick={() => handleUnpublish(file.id)}
                         className="text-gray-500 hover:text-gray-700"
@@ -350,6 +347,7 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
         }}
         onSuccess={handlePublishSuccess}
         fileName={files.find(f => f.id === publishingFileId)?.fileName || ''}
+        documentId={publishingFileId}
       />
 
       <Modal

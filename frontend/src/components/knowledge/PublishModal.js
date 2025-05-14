@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import Modal from '../common/Modal';
+import { updateDocumentPublishStatus } from '../../services/api';
+import { ToastManager } from '../common/Toast';
 
-function PublishModal({ isOpen, onClose, onSuccess, fileName }) {
+function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId, onError }) {
   const [currentStep, setCurrentStep] = useState(1);
   
   const steps = [
@@ -38,7 +40,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName }) {
     </div>
   );
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
       // 模拟进度更新
@@ -50,8 +52,15 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName }) {
         simulateProgress('step4');
       }
     } else {
-      onSuccess();
-      onClose();
+      try {
+        // 调用发布状态更新接口
+        await updateDocumentPublishStatus(documentId, 'PUBLISHED');
+        onSuccess();
+        onClose();
+      } catch (error) {
+        // 显示错误信息
+        ToastManager.error('更新发布状态失败：' + (error.response?.data?.message || error.message));
+      }
     }
   };
 

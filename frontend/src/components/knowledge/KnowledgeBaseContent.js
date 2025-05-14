@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import FileList from './FileList';
 import FileUploadModal from './FileUploadModal';
+import PublishModal from './PublishModal';
 import { getDocuments } from '../../services/api';
 
 function KnowledgeBaseContent({ knowledgeBase }) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [error, setError] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [files, setFiles] = useState([]);
@@ -123,10 +126,30 @@ function KnowledgeBaseContent({ knowledgeBase }) {
               total={total}
               onPageChange={setPage}
               onDelete={() => fetchFiles()}
+              onPublish={(file) => {
+                setSelectedFile(file);
+                setIsPublishModalOpen(true);
+              }}
             />
           </>
         )}
       </div>
+
+      {/* 发布弹窗 */}
+      <PublishModal
+        isOpen={isPublishModalOpen}
+        onClose={() => {
+          setIsPublishModalOpen(false);
+          setSelectedFile(null);
+        }}
+        onSuccess={() => {
+          setIsPublishModalOpen(false);
+          setSelectedFile(null);
+          fetchFiles();
+        }}
+        fileName={selectedFile?.name || ''}
+        documentId={selectedFile?.id}
+      />
 
       {/* 文件上传弹窗 */}
       <FileUploadModal
