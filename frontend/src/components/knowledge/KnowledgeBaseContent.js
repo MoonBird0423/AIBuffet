@@ -1,11 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import FileList from './FileList';
 import FileUploadModal from './FileUploadModal';
+import { getDocuments } from '../../services/api';
 
 function KnowledgeBaseContent({ knowledgeBase }) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [error, setError] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [files, setFiles] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+
+  // 获取文件列表
+  const fetchFiles = async () => {
+    if (!knowledgeBase?.id) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await getDocuments(page, 20, { knowledgeBaseId: knowledgeBase.id });
+      setFiles(response.data.content);
+      setTotal(response.data.total);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 在组件加载和依赖项变化时获取文件列表
+  useEffect(() => {
+    fetchFiles();
+  }, [knowledgeBase?.id, page]);
 
   // 重置上传成功状态
   useEffect(() => {
@@ -88,8 +114,15 @@ function KnowledgeBaseContent({ knowledgeBase }) {
               </div>
             )}
             <FileList 
+              files={files}
+              isLoading={isLoading}
               knowledgeBaseId={knowledgeBase.id}
               onError={setError}
+              page={page}
+              pageSize={20}
+              total={total}
+              onPageChange={setPage}
+              onDelete={() => fetchFiles()}
             />
           </>
         )}
@@ -106,6 +139,7 @@ function KnowledgeBaseContent({ knowledgeBase }) {
         onSuccess={() => {
           setIsUploadModalOpen(false);
           setUploadSuccess(true);
+          fetchFiles(); // 重新获取文件列表
         }}
         onError={setError}
       />

@@ -136,7 +136,7 @@ function KnowledgeBaseList({ knowledgeBases = [], selectedKnowledgeBase, onSelec
                 trigger={
                   <button 
                     onClick={() => setOpenPopoverId(openPopoverId === knowledgeBase.id ? null : knowledgeBase.id)}
-                    className="text-gray-500 hover:text-gray-600"
+                    className="p-2 w-8 h-8 rounded-full text-gray-500 hover:text-gray-600 hover:bg-gray-100"
                   >
                     <i className="fas fa-ellipsis-v"></i>
                   </button>

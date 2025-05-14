@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import { deleteDocument, retryProcessing, getDocumentChunks } from '../../services/api';
-import { TrashIcon, DocumentIcon, ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, ViewfinderCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, DocumentIcon, ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, ViewfinderCircleIcon, ExclamationCircleIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline';
 import Tooltip from '../common/Tooltip';
+import Popover from '../common/Popover';
 import ChunkViewModal from './ChunkViewModal';
 
 const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageSize = 20, total = 0, onPageChange }) => {
@@ -18,25 +19,6 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
       return `${name}...${ext}`;
     }
     return fileName;
-  };
-
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
   };
 
 
@@ -204,13 +186,7 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
                 文档名称
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                大小
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                上传时间
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                状态
+                处理状态
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 操作
@@ -238,12 +214,6 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {formatFileSize(file.fileSize)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {formatDate(file.uploadedAt)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   <div className="flex items-center">
                     <span className={getStatusClass(file.processing_status)}>
                       {getStatusText(file.processing_status)}
@@ -256,33 +226,45 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex space-x-3">
+                  <div className="flex items-center justify-start">
                     {file.processing_status === 'FAILED' && (
                       <button
                         onClick={() => handleRetry(file.id)}
                         disabled={processingId === file.id}
-                        className="text-blue-600 hover:text-blue-900 inline-flex items-center space-x-1"
+                        className="text-blue-600 hover:text-blue-900 inline-flex items-center space-x-1 mr-3"
                       >
                         <ArrowPathIcon className="h-4 w-4" />
                         <span>{processingId === file.id ? '处理中...' : '重试'}</span>
                       </button>
                     )}
-                    <button
-                      onClick={() => handleViewChunks(file.id)}
-                      className="text-green-600 hover:text-green-900 inline-flex items-center space-x-1"
-                    >
-                      <ViewfinderCircleIcon className="h-4 w-4" />
-                      <span>查看分块</span>
-                    </button>
-                    <button
-                      onClick={() => handleDelete(file.id)}
-                      disabled={deletingId === file.id}
-                      className={`text-red-600 hover:text-red-900 inline-flex items-center space-x-1
-                        ${deletingId === file.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                      <span>{deletingId === file.id ? '删除中...' : '删除'}</span>
-                    </button>
+                    <Popover
+                      trigger={
+                        <button className="text-gray-400 hover:text-gray-600">
+                          <EllipsisVerticalIcon className="h-5 w-5" />
+                        </button>
+                      }
+                      content={
+                        <div className="py-1">
+                          <button
+                            onClick={() => handleViewChunks(file.id)}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                          >
+                            <ViewfinderCircleIcon className="h-4 w-4 mr-2" />
+                            查看分块
+                          </button>
+                          <button
+                            onClick={() => handleDelete(file.id)}
+                            disabled={deletingId === file.id}
+                            className={`w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center
+                              ${deletingId === file.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            <TrashIcon className="h-4 w-4 mr-2" />
+                            <span>{deletingId === file.id ? '删除中...' : '删除'}</span>
+                          </button>
+                        </div>
+                      }
+                      position="bottom"
+                    />
                   </div>
                 </td>
               </tr>
