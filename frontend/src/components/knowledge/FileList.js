@@ -4,13 +4,19 @@ import { deleteDocument, retryProcessing, getDocumentChunks } from '../../servic
 import { TrashIcon, DocumentIcon, ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, ViewfinderCircleIcon, ExclamationCircleIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline';
 import Tooltip from '../common/Tooltip';
 import Popover from '../common/Popover';
+import Modal from '../common/Modal';
 import ChunkViewModal from './ChunkViewModal';
+import PublishModal from './PublishModal';
 
 const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageSize = 20, total = 0, onPageChange }) => {
   const [deletingId, setDeletingId] = useState(null);
   const [processingId, setProcessingId] = useState(null);
   const [selectedFileId, setSelectedFileId] = useState(null);
   const [showChunkModal, setShowChunkModal] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [publishingFileId, setPublishingFileId] = useState(null);
+  const [showUnpublishModal, setShowUnpublishModal] = useState(false);
+  const [publishedFiles, setPublishedFiles] = useState(new Set());
 
   const truncateFileName = (fileName) => {
     if (fileName.length > 20) {
@@ -21,6 +27,32 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
     return fileName;
   };
 
+
+  const handlePublish = (fileId, fileName) => {
+    setPublishingFileId(fileId);
+    setShowPublishModal(true);
+  };
+
+  const handleUnpublish = (fileId) => {
+    setPublishingFileId(fileId);
+    setShowUnpublishModal(true);
+  };
+
+  const handlePublishSuccess = () => {
+    setPublishedFiles(prev => new Set([...prev, publishingFileId]));
+    setShowPublishModal(false);
+    setPublishingFileId(null);
+  };
+
+  const handleUnpublishConfirm = () => {
+    setPublishedFiles(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(publishingFileId);
+      return newSet;
+    });
+    setShowUnpublishModal(false);
+    setPublishingFileId(null);
+  };
 
   const getStatusText = (status) => {
     const statusMap = {
@@ -189,6 +221,9 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
                 处理状态
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                发布内容
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 操作
               </th>
             </tr>
@@ -225,16 +260,43 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
                     )}
                   </div>
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {publishedFiles.has(file.id) ? (
+                    <button 
+                      className="text-indigo-600 hover:text-indigo-900 font-medium"
+                      onClick={() => {/* TODO: 实现查看发布功能 */}}
+                    >
+                      查看发布
+                    </button>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex items-center justify-start">
+                  <div className="flex items-center justify-start space-x-2">
                     {file.processing_status === 'FAILED' && (
                       <button
                         onClick={() => handleRetry(file.id)}
                         disabled={processingId === file.id}
-                        className="text-blue-600 hover:text-blue-900 inline-flex items-center space-x-1 mr-3"
+                        className="text-blue-600 hover:text-blue-900 inline-flex items-center space-x-1"
                       >
                         <ArrowPathIcon className="h-4 w-4" />
                         <span>{processingId === file.id ? '处理中...' : '重试'}</span>
+                      </button>
+                    )}
+                    {publishedFiles.has(file.id) ? (
+                      <button
+                        onClick={() => handleUnpublish(file.id)}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        取消发布
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handlePublish(file.id, file.fileName)}
+                        className="text-indigo-600 hover:text-indigo-900"
+                      >
+                        发布
                       </button>
                     )}
                     <Popover
@@ -279,6 +341,48 @@ const FileList = ({ files, onDelete, isLoading, knowledgeBaseId, page = 0, pageS
         onClose={() => setShowChunkModal(false)}
         fileId={selectedFileId}
       />
+
+      <PublishModal
+        isOpen={showPublishModal}
+        onClose={() => {
+          setShowPublishModal(false);
+          setPublishingFileId(null);
+        }}
+        onSuccess={handlePublishSuccess}
+        fileName={files.find(f => f.id === publishingFileId)?.fileName || ''}
+      />
+
+      <Modal
+        isOpen={showUnpublishModal}
+        onClose={() => {
+          setShowUnpublishModal(false);
+          setPublishingFileId(null);
+        }}
+        title="取消发布"
+        footer={
+          <>
+            <button
+              onClick={() => {
+                setShowUnpublishModal(false);
+                setPublishingFileId(null);
+              }}
+              className="mr-3 px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleUnpublishConfirm}
+              className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              确认
+            </button>
+          </>
+        }
+      >
+        <div className="p-6">
+          <p className="text-gray-500">确定要取消发布此文档吗？取消发布后，其他用户将无法查看此文档。</p>
+        </div>
+      </Modal>
     </div>
   );
 };

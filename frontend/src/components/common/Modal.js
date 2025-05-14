@@ -1,6 +1,14 @@
 import React, { useEffect } from 'react';
 
-function Modal({ isOpen, onClose, title, children, footer }) {
+function Modal({ isOpen, onClose, title, children, footer, width = 'lg' }) {
+  const widthClasses = {
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+    '5xl': 'max-w-5xl',
+  };
   useEffect(() => {
     if (isOpen) {
       // 打开模态框时禁止body滚动
@@ -26,7 +34,7 @@ function Modal({ isOpen, onClose, title, children, footer }) {
       
       {/* 模态框容器 */}
       <div className="flex min-h-screen items-center justify-center p-4 text-center">
-        <div className="relative w-full max-w-lg transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all">
+        <div className={`relative w-full ${widthClasses[width]} transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all`}>
           {/* 头部 */}
           <div className="bg-white px-4 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
