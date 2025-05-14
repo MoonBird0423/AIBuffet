@@ -1,8 +1,15 @@
 package com.aibuffet.config;
 
 import io.netty.channel.ChannelOption;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
+import io.netty.resolver.dns.DnsAddressResolverGroup;
+import io.netty.resolver.dns.DnsNameResolverBuilder;
+import io.netty.resolver.dns.DnsServerAddressStreamProvider;
+import io.netty.resolver.dns.DnsServerAddresses;
+import io.netty.resolver.dns.SequentialDnsServerAddressStreamProvider;
+import io.netty.resolver.dns.DefaultDnsCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.netty.handler.logging.LogLevel;
@@ -18,8 +25,10 @@ import reactor.netty.resources.ConnectionProvider;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import jakarta.annotation.PostConstruct;
 
 @Configuration
@@ -47,7 +56,7 @@ public class WebClientConfig {
     
     @PostConstruct
     public void init() {
-        // 设置系统DNS服务器
+        // 记录DNS配置信息
         StringBuilder dnsServers = new StringBuilder();
         for (String ns : nameservers) {
             if (dnsServers.length() > 0) {
@@ -55,13 +64,32 @@ public class WebClientConfig {
             }
             dnsServers.append(ns.split(":")[0]);
         }
-        System.setProperty("sun.net.dns.server.list", dnsServers.toString());
-        
-        // 设置DNS查询超时
-        System.setProperty("sun.net.client.defaultConnectTimeout", String.valueOf(queryTimeout * 1000));
-        System.setProperty("sun.net.client.defaultReadTimeout", String.valueOf(queryTimeout * 1000));
-        
-        logger.info("已配置DNS服务器: {}", dnsServers);
+        logger.info("DNS配置: servers={}, timeout={}s, maxQueries={}", 
+            dnsServers, queryTimeout, maxQueries);
+    }
+
+    private DnsAddressResolverGroup createDnsResolver() {
+        // 解析DNS服务器列表
+        List<InetSocketAddress> dnsServers = Arrays.stream(nameservers)
+            .map(server -> {
+                String[] parts = server.split(":");
+                return new InetSocketAddress(
+                    parts[0], 
+                    parts.length > 1 ? Integer.parseInt(parts[1]) : 53
+                );
+            })
+            .collect(Collectors.toList());
+
+        DnsNameResolverBuilder builder = new DnsNameResolverBuilder()
+            .channelType(NioDatagramChannel.class)  // 显式指定channel类型
+            .queryTimeoutMillis(queryTimeout * 1000L)
+            .maxQueriesPerResolve(maxQueries)
+            .nameServerProvider(hostname -> DnsServerAddresses.sequential(dnsServers).stream())
+            .resolveCache(new DefaultDnsCache())    // 添加DNS缓存
+            .ndots(1)
+            .recursionDesired(true);                // 启用递归查询
+
+        return new DnsAddressResolverGroup(builder);
     }
     
     @Bean
@@ -79,7 +107,12 @@ public class WebClientConfig {
         HttpClient httpClient = HttpClient.create(provider)
             // 基础连接配置
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
+            .option(ChannelOption.SO_KEEPALIVE, true)
+            .option(ChannelOption.TCP_NODELAY, true)
             .responseTimeout(Duration.ofSeconds(45))
+            
+            // 设置自定义DNS解析器
+            .resolver(createDnsResolver())
             
             // 启用wiretap以便调试
             .wiretap(this.getClass().getCanonicalName(), 

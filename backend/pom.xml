@@ -156,6 +156,13 @@
             <artifactId>dashscope-sdk-java</artifactId>
             <version>2.19.2</version>
         </dependency>
+
+        <!-- Netty All -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>4.1.101.Final</version>
+        </dependency>
 </dependencies>
     
     <build>
