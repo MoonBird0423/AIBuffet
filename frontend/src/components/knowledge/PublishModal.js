@@ -19,28 +19,20 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName }) {
 
   const renderStepIndicators = () => (
     <div className="p-4 bg-gray-50">
-      <div className="flex items-center">
-        {steps.map((step, index) => (
-          <div key={step.number} className="flex-1 relative">
-            <div className={`h-0.5 absolute left-0 top-1/2 transform -translate-y-1/2 w-full
-              ${currentStep >= step.number ? 'bg-indigo-600' : 'bg-gray-200'}`}
-            />
-            <div className={`rounded-full h-8 w-8 flex items-center justify-center relative z-10 mx-auto
-              ${currentStep >= step.number ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}`}
+      <div className="grid grid-cols-4 gap-4">
+        {steps.map((step) => (
+          <div key={step.number} className="flex-1">
+            <div 
+              className={`h-12 flex items-center rounded-md shadow-sm transition-all duration-200 ease-in-out
+                ${currentStep >= step.number ? 'bg-indigo-400' : 'bg-gray-100'}`}
             >
-              {step.number}
+              <div className={`flex items-center px-4 
+                ${currentStep >= step.number ? 'text-white' : 'text-gray-500'}`}>
+                <span className="font-medium mr-3">{step.number}</span>
+                <span className="text-sm whitespace-nowrap">{step.text}</span>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
-      <div className="flex justify-between text-sm mt-2 text-gray-500">
-        {steps.map(step => (
-          <span 
-            key={step.number}
-            className={currentStep === step.number ? 'text-indigo-600 font-medium' : ''}
-          >
-            {step.text}
-          </span>
         ))}
       </div>
     </div>
@@ -171,11 +163,11 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName }) {
   };
 
   const footer = (
-    <>
+    <div className="flex justify-end gap-2">
       {currentStep > 1 && (
         <button
           onClick={() => setCurrentStep(currentStep - 1)}
-          className="mr-3 px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           上一步
         </button>
@@ -186,7 +178,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName }) {
       >
         {currentStep === 4 ? '完成发布' : '下一步'}
       </button>
-    </>
+    </div>
   );
 
   return (
