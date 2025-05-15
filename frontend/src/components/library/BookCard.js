@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaUsers } from 'react-icons/fa';
+import { FaUsers, FaBook } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 
 function formatFileName(fileName) {
@@ -20,11 +20,17 @@ function BookCard({ document }) {
       className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300"
     >
       <div className="aspect-w-3 aspect-h-2">
-        <img
-          src={document.coverUrl || 'https://via.placeholder.com/300x200'}
-          alt={document.fileName}
-          className="w-full h-48 object-cover"
-        />
+        {document.coverUrl ? (
+          <img
+            src={document.coverUrl}
+            alt={document.fileName}
+            className="w-full h-48 object-cover"
+          />
+        ) : (
+          <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+            <FaBook className="text-gray-400 text-5xl" />
+          </div>
+        )}
       </div>
       <div className="p-4">
         <h3 className="text-lg font-medium text-gray-900 truncate">{document.fileName}</h3>

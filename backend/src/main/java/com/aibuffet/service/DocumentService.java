@@ -50,7 +50,8 @@ public interface DocumentService {
     /**
      * 更新文档基本信息
      */
-    void updateDocumentInfo(Long docId, Long userId, String coverUrl, DocFile.Category category, String author);
+    void updateDocumentInfo(Long docId, Long userId, String coverUrl, DocFile.Category category,
+            String author, String fileName, String description);
 
     /**
      * 更新发布状态

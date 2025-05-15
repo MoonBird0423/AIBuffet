@@ -28,6 +28,13 @@ public class OSSService {
     private static final String AVATAR_DIR = "avatars";
     private static final String CHAT_IMAGE_DIR = "chat-images";
     private static final String KNOWLEDGE_DOC_DIR = "knowledgebase-doc";
+    private static final String BOOK_COVER_DIR = "book-cover";
+
+    // 封面相关常量
+    private static final long BOOK_COVER_MAX_SIZE = 2 * 1024 * 1024; // 2MB
+    private static final String[] ALLOWED_COVER_TYPES = {
+        "image/jpeg", "image/png", "image/webp"
+    };
 
     // 头像相关常量
     private static final long AVATAR_MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -310,6 +317,29 @@ public class OSSService {
     public InputStream downloadFile(String fileUrl) {
         String objectKey = extractObjectNameFromUrl(fileUrl);
         return ossClient.getObject(ossConfig.getBucketName(), objectKey).getObjectContent();
+    }
+
+    /**
+     * 上传图书封面
+     */
+    public String uploadBookCover(MultipartFile file, Long userId) throws IOException {
+        logger.info("开始处理图书封面上传: 用户ID={}, 文件名={}, 文件大小={}, 文件类型={}",
+            userId, file.getOriginalFilename(), file.getSize(), file.getContentType());
+
+        if (!validateFile(file, ALLOWED_COVER_TYPES, BOOK_COVER_MAX_SIZE)) {
+            throw new IllegalArgumentException("Invalid cover image file");
+        }
+
+        String objectKey = generateObjectKey(BOOK_COVER_DIR, userId, file.getOriginalFilename());
+
+        try {
+            String url = uploadToOSS(file, objectKey, null);
+            logger.info("图书封面上传成功: {}", url);
+            return url;
+        } catch (Exception e) {
+            logger.error("图书封面上传失败: {}", e.getMessage());
+            throw e;
+        }
     }
 
     private String extractObjectNameFromUrl(String fileUrl) {

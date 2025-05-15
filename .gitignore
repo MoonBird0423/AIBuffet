@@ -26,3 +26,4 @@
 /backend/.project
 /backend/*.iml
 /backend/.idea/
+/backend/milvus/volumes/

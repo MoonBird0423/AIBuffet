@@ -69,6 +69,9 @@ public class DocFile {
     @Enumerated(EnumType.STRING)
     private PublishStatus publishStatus = PublishStatus.UNPUBLISHED;
 
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     public enum Status {
         ACTIVE, DELETED
     }

@@ -522,6 +522,17 @@ export const PublishStatus = {
 // 更新文档信息
 export const updateDocument = async (documentId, data) => {
   try {
+    // 如果传入的是FormData对象，直接使用
+    if (data instanceof FormData) {
+      const response = await apiClient.put(`/documents/${documentId}`, data, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      return response.data;
+    }
+
+    // 否则构建FormData
     const formData = new FormData();
     if (data.cover) {
       formData.append('cover', data.cover);
@@ -532,7 +543,13 @@ export const updateDocument = async (documentId, data) => {
     if (data.author) {
       formData.append('author', data.author);
     }
-    
+    if (data.fileName) {
+      formData.append('fileName', data.fileName);
+    }
+    if (data.description) {
+      formData.append('description', data.description);
+    }
+
     const response = await apiClient.put(`/documents/${documentId}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'

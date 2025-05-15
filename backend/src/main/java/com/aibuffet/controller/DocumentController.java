@@ -7,6 +7,7 @@ import com.aibuffet.model.DocFile;
 import com.aibuffet.model.DocChunk;
 import com.aibuffet.dto.UploadResult;
 import com.aibuffet.service.DocumentService;
+import com.aibuffet.service.OSSService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,9 @@ public class DocumentController {
     
     @Autowired
     private DocumentService documentService;
+
+    @Autowired
+    private OSSService ossService;
 
     @Autowired
     private EntityManager entityManager;
@@ -229,19 +233,19 @@ public class DocumentController {
             @RequestParam(required = false) MultipartFile cover,
             @RequestParam(required = false) DocFile.Category category,
             @RequestParam(required = false) String author,
+            @RequestParam(required = false) String fileName,
+            @RequestParam(required = false) String description,
             @AuthenticationPrincipal User user) {
         try {
             String coverUrl = null;
             if (cover != null) {
-                // 检查封面大小
                 if (cover.getSize() > MAX_COVER_SIZE) {
                     return ApiResponse.error(ErrorCode.INVALID_REQUEST, "封面图片大小不能超过2MB");
                 }
-                // TODO: 上传封面到OSS存储并获取URL
-                // coverUrl = ossService.uploadFile(cover);
+                coverUrl = ossService.uploadBookCover(cover, user.getId());
             }
             
-            documentService.updateDocumentInfo(id, user.getId(), coverUrl, category, author);
+            documentService.updateDocumentInfo(id, user.getId(), coverUrl, category, author, fileName, description);
             return ApiResponse.success(null);
         } catch (ResourceNotFoundException e) {
             return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());

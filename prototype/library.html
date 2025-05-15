@@ -114,81 +114,47 @@
 
             <!-- 右侧图书卡片 -->
             <div class="w-full md:w-4/5">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div class="space-y-4">
                     <!-- 图书卡片 1 -->
-                    <a href="book-details.html" class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
-                        <img src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="图书封面" class="w-full h-48 object-cover">
-                        <div class="p-4">
-                            <h3 class="text-lg font-medium text-gray-900">原子习惯</h3>
-                            <p class="text-sm text-gray-600">詹姆斯·克利尔</p>
-                            <div class="mt-2 flex items-center text-sm text-gray-500">
-                                <i class="fas fa-user-friends mr-1"></i>
-                                <span>3.2万人学习</span>
+                    <a href="book-details.html" class="block bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
+                        <div class="flex p-4">
+                            <div class="flex-shrink-0 w-48 h-48">
+                                <img src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="图书封面" class="w-full h-full object-cover rounded-md">
+                            </div>
+                            <div class="flex-grow ml-6 flex flex-col">
+                                <div class="flex items-start justify-between">
+                                    <h3 class="text-xl font-medium text-gray-900">原子习惯</h3>
+                                    <div class="flex items-center text-sm text-gray-500">
+                                        <i class="fas fa-user-friends mr-1"></i>
+                                        <span>3.2万人学习</span>
+                                    </div>
+                                </div>
+                                <p class="mt-1 text-sm text-gray-600">詹姆斯·克利尔</p>
+                                <p class="mt-4 text-gray-600 line-clamp-3">
+                                    每个习惯都有其原子特性，微小的改变和习惯能带来巨大的人生转变。本书将告诉你如何通过四个步骤来养成好习惯、戒除坏习惯，让微小的改变成就非凡的人生。
+                                </p>
                             </div>
                         </div>
                     </a>
 
                     <!-- 图书卡片 2 -->
-                    <a href="book-details.html" class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
-                        <img src="https://images.unsplash.com/photo-1589998059171-988d887df646?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="图书封面" class="w-full h-48 object-cover">
-                        <div class="p-4">
-                            <h3 class="text-lg font-medium text-gray-900">深度工作</h3>
-                            <p class="text-sm text-gray-600">卡尔·纽波特</p>
-                            <div class="mt-2 flex items-center text-sm text-gray-500">
-                                <i class="fas fa-user-friends mr-1"></i>
-                                <span>2.8万人学习</span>
+                    <a href="book-details.html" class="block bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
+                        <div class="flex p-4">
+                            <div class="flex-shrink-0 w-48 h-48">
+                                <img src="https://images.unsplash.com/photo-1589998059171-988d887df646?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="图书封面" class="w-full h-full object-cover rounded-md">
                             </div>
-                        </div>
-                    </a>
-
-                    <!-- 图书卡片 3 -->
-                    <a href="book-details.html" class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
-                        <img src="https://images.unsplash.com/photo-1531988042231-d39a9cc12a9a?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="图书封面" class="w-full h-48 object-cover">
-                        <div class="p-4">
-                            <h3 class="text-lg font-medium text-gray-900">思考，快与慢</h3>
-                            <p class="text-sm text-gray-600">丹尼尔·卡尼曼</p>
-                            <div class="mt-2 flex items-center text-sm text-gray-500">
-                                <i class="fas fa-user-friends mr-1"></i>
-                                <span>2.1万人学习</span>
-                            </div>
-                        </div>
-                    </a>
-
-                    <!-- 图书卡片 4 -->
-                    <a href="book-details.html" class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
-                        <img src="https://images.unsplash.com/photo-1535398089889-dd807df1dfaa?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="图书封面" class="w-full h-48 object-cover">
-                        <div class="p-4">
-                            <h3 class="text-lg font-medium text-gray-900">刻意练习</h3>
-                            <p class="text-sm text-gray-600">安德斯·艾利克森</p>
-                            <div class="mt-2 flex items-center text-sm text-gray-500">
-                                <i class="fas fa-user-friends mr-1"></i>
-                                <span>1.9万人学习</span>
-                            </div>
-                        </div>
-                    </a>
-
-                    <!-- 图书卡片 5 -->
-                    <a href="book-details.html" class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
-                        <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="图书封面" class="w-full h-48 object-cover">
-                        <div class="p-4">
-                            <h3 class="text-lg font-medium text-gray-900">学会提问</h3>
-                            <p class="text-sm text-gray-600">尼尔·布朗</p>
-                            <div class="mt-2 flex items-center text-sm text-gray-500">
-                                <i class="fas fa-user-friends mr-1"></i>
-                                <span>1.6万人学习</span>
-                            </div>
-                        </div>
-                    </a>
-
-                    <!-- 图书卡片 6 -->
-                    <a href="book-details.html" class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
-                        <img src="https://images.unsplash.com/photo-1541963463532-d68292c34b19?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="图书封面" class="w-full h-48 object-cover">
-                        <div class="p-4">
-                            <h3 class="text-lg font-medium text-gray-900">认知觉醒</h3>
-                            <p class="text-sm text-gray-600">周岭</p>
-                            <div class="mt-2 flex items-center text-sm text-gray-500">
-                                <i class="fas fa-user-friends mr-1"></i>
-                                <span>1.4万人学习</span>
+                            <div class="flex-grow ml-6 flex flex-col">
+                                <div class="flex items-start justify-between">
+                                    <h3 class="text-xl font-medium text-gray-900">深度工作</h3>
+                                    <div class="flex items-center text-sm text-gray-500">
+                                        <i class="fas fa-user-friends mr-1"></i>
+                                        <span>2.8万人学习</span>
+                                    </div>
+                                </div>
+                                <p class="mt-1 text-sm text-gray-600">卡尔·纽波特</p>
+                                <p class="mt-4 text-gray-600 line-clamp-3">
+                                    在这个注意力分散的时代，深度工作的能力越来越稀缺，也越来越有价值。本书将帮助你培养专注力，在工作中达到更高的效率和创造力。
+                                </p>
                             </div>
                         </div>
                     </a>

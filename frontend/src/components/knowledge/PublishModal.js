@@ -1,10 +1,20 @@
 import React, { useState } from 'react';
 import Modal from '../common/Modal';
-import { updateDocumentPublishStatus } from '../../services/api';
+import { updateDocument, updateDocumentPublishStatus } from '../../services/api';
 import { ToastManager } from '../common/Toast';
 
-function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId, onError }) {
+function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState({
+    fileName: fileName || '',
+    author: '',
+    description: '',
+    coverFile: null,
+    coverPreview: null,
+  });
+  
+  const [errors, setErrors] = useState({});
+  const [isUploading, setIsUploading] = useState(false);
   
   const steps = [
     { number: 1, text: '基本信息' },
@@ -12,12 +22,100 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId, onErro
     { number: 3, text: '生成脑图' },
     { number: 4, text: '生成测试' }
   ];
-  
+
   const [progress, setProgress] = useState({
     step2: 0,
     step3: 0,
     step4: 0
   });
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        setErrors({...errors, cover: '封面图片大小不能超过2MB'});
+        return;
+      }
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        setErrors({...errors, cover: '只支持JPG、PNG、WEBP格式的图片'});
+        return;
+      }
+      setFormData({
+        ...formData, 
+        coverFile: file,
+        coverPreview: URL.createObjectURL(file)
+      });
+      setErrors({...errors, cover: null});
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.fileName.trim()) newErrors.fileName = '请输入图书名称';
+    if (!formData.author.trim()) newErrors.author = '请输入作者';
+    if (!formData.description.trim()) newErrors.description = '请输入简介';
+    if (!formData.coverFile && !formData.coverPreview) newErrors.cover = '请上传封面';
+    return newErrors;
+  };
+
+  const simulateProgress = (step) => {
+    let currentProgress = 0;
+    const interval = setInterval(() => {
+      currentProgress += 5;
+      setProgress(prev => ({
+        ...prev,
+        [step]: Math.min(currentProgress, 100)
+      }));
+      
+      if (currentProgress >= 100) {
+        clearInterval(interval);
+      }
+    }, 100);
+  };
+
+  const handleNextStep = async () => {
+    if (currentStep === 1) {
+      const errors = validateForm();
+      if (Object.keys(errors).length > 0) {
+        setErrors(errors);
+        return;
+      }
+      
+      try {
+        setIsUploading(true);
+        const formDataObj = new FormData();
+        if (formData.coverFile) {
+          formDataObj.append('cover', formData.coverFile);
+        }
+        formDataObj.append('fileName', formData.fileName);
+        formDataObj.append('author', formData.author);
+        formDataObj.append('description', formData.description);
+        
+        await updateDocument(documentId, formDataObj);
+        setCurrentStep(currentStep + 1);
+        simulateProgress('step2');
+      } catch (error) {
+        ToastManager.error('保存失败：' + (error.response?.data?.message || error.message));
+      } finally {
+        setIsUploading(false);
+      }
+    } else if (currentStep < 4) {
+      setCurrentStep(currentStep + 1);
+      if (currentStep === 2) {
+        simulateProgress('step3');
+      } else if (currentStep === 3) {
+        simulateProgress('step4');
+      }
+    } else {
+      try {
+        await updateDocumentPublishStatus(documentId, 'PUBLISHED');
+        onSuccess();
+        onClose();
+      } catch (error) {
+        ToastManager.error('发布失败：' + (error.response?.data?.message || error.message));
+      }
+    }
+  };
 
   const renderStepIndicators = () => (
     <div className="p-4 bg-gray-50">
@@ -40,78 +138,73 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId, onErro
     </div>
   );
 
-  const handleNextStep = async () => {
-    if (currentStep < 4) {
-      setCurrentStep(currentStep + 1);
-      // 模拟进度更新
-      if (currentStep === 1) {
-        simulateProgress('step2');
-      } else if (currentStep === 2) {
-        simulateProgress('step3');
-      } else if (currentStep === 3) {
-        simulateProgress('step4');
-      }
-    } else {
-      try {
-        // 调用发布状态更新接口
-        await updateDocumentPublishStatus(documentId, 'PUBLISHED');
-        onSuccess();
-        onClose();
-      } catch (error) {
-        // 显示错误信息
-        ToastManager.error('更新发布状态失败：' + (error.response?.data?.message || error.message));
-      }
-    }
-  };
-
-  const simulateProgress = (step) => {
-    let currentProgress = 0;
-    const interval = setInterval(() => {
-      currentProgress += 5;
-      setProgress(prev => ({
-        ...prev,
-        [step]: Math.min(currentProgress, 100)
-      }));
-      
-      if (currentProgress >= 100) {
-        clearInterval(interval);
-      }
-    }, 100);
-  };
-
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
         return (
           <div className="space-y-6">
+            {/* 封面上传 */}
             <div className="flex items-center justify-center">
-              <div className="w-32 h-44 bg-gray-100 flex items-center justify-center rounded border-2 border-dashed border-gray-300">
-                <div className="text-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
-                  <p className="mt-1 text-sm text-gray-500">上传封面</p>
-                </div>
-              </div>
+              <label className="w-32 h-44 bg-gray-100 flex items-center justify-center rounded border-2 border-dashed border-gray-300 cursor-pointer hover:bg-gray-50">
+                {formData.coverPreview ? (
+                  <img
+                    src={formData.coverPreview}
+                    alt="预览"
+                    className="w-full h-full object-cover rounded"
+                  />
+                ) : (
+                  <div className="text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <p className="mt-1 text-sm text-gray-500">上传封面</p>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFileSelect}
+                />
+              </label>
             </div>
+            {errors.cover && <p className="text-red-500 text-sm text-center">{errors.cover}</p>}
             
+            {/* 图书名称 */}
             <div>
               <label className="block text-sm font-medium text-gray-700">图书名称</label>
               <input
                 type="text"
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                value={fileName}
-                readOnly
+                value={formData.fileName}
+                onChange={e => setFormData({...formData, fileName: e.target.value})}
               />
+              {errors.fileName && <p className="text-red-500 text-sm">{errors.fileName}</p>}
             </div>
             
+            {/* 作者 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">作者</label>
+              <input
+                type="text"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                value={formData.author}
+                onChange={e => setFormData({...formData, author: e.target.value})}
+              />
+              {errors.author && <p className="text-red-500 text-sm">{errors.author}</p>}
+            </div>
+            
+            {/* 简介 */}
             <div>
               <label className="block text-sm font-medium text-gray-700">简介</label>
               <textarea
                 rows={4}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                value={formData.description}
+                onChange={e => setFormData({...formData, description: e.target.value})}
                 placeholder="请输入图书简介..."
               />
+              {errors.description && <p className="text-red-500 text-sm">{errors.description}</p>}
             </div>
           </div>
         );
@@ -183,9 +276,12 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId, onErro
       )}
       <button
         onClick={handleNextStep}
-        className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        disabled={isUploading}
+        className={`px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white
+          ${isUploading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'}
+          focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
       >
-        {currentStep === 4 ? '完成发布' : '下一步'}
+        {isUploading ? '保存中...' : currentStep === 4 ? '完成发布' : '下一步'}
       </button>
     </div>
   );

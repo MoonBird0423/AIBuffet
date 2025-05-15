@@ -440,9 +440,10 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     @Transactional
-    public void updateDocumentInfo(Long docId, Long userId, String coverUrl, DocFile.Category category, String author) {
-        logger.info("开始更新文档信息: docId={}, userId={}, category={}, author={}", 
-            docId, userId, category, author);
+    public void updateDocumentInfo(Long docId, Long userId, String coverUrl, DocFile.Category category,
+            String author, String fileName, String description) {
+        logger.info("开始更新文档信息: docId={}, userId={}, category={}, author={}, fileName={}",
+            docId, userId, category, author, fileName);
         
         // 检查文档存在且为激活状态
         DocFile docFile = docFileRepository.findByIdAndStatus(docId, DocFile.Status.ACTIVE)
@@ -475,6 +476,14 @@ public class DocumentServiceImpl implements DocumentService {
         }
         if (author != null) {
             docFile.setAuthor(author);
+            updated = true;
+        }
+        if (fileName != null) {
+            docFile.setFileName(fileName);
+            updated = true;
+        }
+        if (description != null) {
+            docFile.setDescription(description);
             updated = true;
         }
 
