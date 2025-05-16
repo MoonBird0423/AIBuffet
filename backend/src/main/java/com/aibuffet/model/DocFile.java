@@ -72,6 +72,9 @@ public class DocFile {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "extracted_text", columnDefinition = "LONGTEXT")
+    private String extractedText;
+
     public enum Status {
         ACTIVE, DELETED
     }

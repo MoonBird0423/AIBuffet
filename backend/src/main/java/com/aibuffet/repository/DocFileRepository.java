@@ -15,6 +15,8 @@ import java.util.Optional;
 
 @Repository
 public interface DocFileRepository extends JpaRepository<DocFile, Long> {
+    DocFile findByFileUrl(String fileUrl);
+    
     DocFile findByMd5Hash(String md5Hash);
 
     @Lock(LockModeType.PESSIMISTIC_READ)

@@ -100,6 +100,13 @@ public class DocumentServiceImpl implements DocumentService {
                     logger.info("恢复已删除文件状态为激活: 文件ID={}", existingFile.getId());
                 }
                 
+                // 检查是否需要重新处理文本
+                if (existingFile.getExtractedText() == null && 
+                    existingFile.getProcessingStatus() != DocFile.ProcessingStatus.EXTRACTING_TEXT) {
+                    logger.info("重复文件尚未提取文本，触发处理: fileId={}", existingFile.getId());
+                    processDocumentAsync(existingFile);
+                }
+                
                 knowledgeBaseFileRepository.save(new KnowledgeBaseFile(knowledgeBaseId, existingFile.getId(), userId));
                 logger.info("重复文件关联到知识库成功: 原始文件名={}, 文件ID={}, 知识库ID={}", 
                     originalFileName, existingFile.getId(), knowledgeBaseId);

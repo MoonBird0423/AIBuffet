@@ -41,10 +41,14 @@ public class TextProcessingServiceImpl implements TextProcessingService {
         logger.info("开始提取文本内容: fileUrl={}", fileUrl);
         try (InputStream inputStream = ossService.downloadFile(fileUrl)) {
             String text = tika.parseToString(inputStream);
-            logger.debug("文本提取完成: 字符数={}", text.length());
-            return text;
+            logger.debug("文本提取完成: 原始文本长度={}", text.length());
+            
+            String processedText = preprocessFullText(text);
+            logger.debug("文本预处理完成: 处理后长度={}", processedText.length());
+            
+            return processedText;
         } catch (Exception e) {
-            logger.error("文本提取失败: {}", e.getMessage());
+            logger.error("文本提取失败: {}", e.getMessage(), e);
             throw new IOException("文本提取失败: " + e.getMessage(), e);
         }
     }
@@ -133,6 +137,24 @@ public class TextProcessingServiceImpl implements TextProcessingService {
             }
         }
         return tokenCount;
+    }
+
+    private String preprocessFullText(String text) {
+        if (text == null) {
+            return "";
+        }
+        
+        return text
+            // 规范化空格：将多个连续空格替换为单个空格
+            .replaceAll("\\s+", " ")
+            // 替换特殊空格字符
+            .replaceAll("[\\\\]+", " ")
+            // 规范化换行：将多个连续换行替换为双换行（形成段落）
+            .replaceAll("\\n{3,}", "\n\n")
+            // 移除不可打印字符（保留回车换行）
+            .replaceAll("[\\p{C}&&[^\r\n]]+", "")
+            // 去除首尾空白
+            .trim();
     }
 
     private String preprocessText(String text) {

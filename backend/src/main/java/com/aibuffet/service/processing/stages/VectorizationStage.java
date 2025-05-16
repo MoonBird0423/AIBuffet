@@ -12,6 +12,7 @@ import com.aibuffet.service.processing.ProcessingStage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
@@ -21,6 +22,7 @@ import java.util.*;
 public class VectorizationStage implements ProcessingStage {
     
     private static final int BATCH_SIZE = 5;  // 减小批处理大小，降低单批次处理的数据量
+    private static final int MAX_RETRY_COUNT = 3;  // 最大重试次数
     
     @Autowired
     private VectorService vectorService;
@@ -32,11 +34,31 @@ public class VectorizationStage implements ProcessingStage {
     private DocFileRepository docFileRepository;
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRED)
     public void process(ProcessContext context) throws ProcessingException {
         try {
             DocFile docFile = context.getDocFile();
             List<DocChunk> chunks = context.getChunks();
+            
+            // 验证输入
+            if (chunks == null || chunks.isEmpty()) {
+                // 尝试从数据库获取分块
+                chunks = docChunkRepository.findByFileIdOrderByChunkIndexAsc(docFile.getId());
+                if (chunks.isEmpty()) {
+                    throw new ProcessingException("没有找到需要处理的文本分块");
+                }
+                context.setChunks(chunks);
+            }
+            
+            // 检查是否已经完成向量化
+            boolean allCompleted = chunks.stream()
+                .allMatch(chunk -> VectorStatus.COMPLETED.equals(chunk.getVectorStatus()));
+            if (allCompleted) {
+                log.info("文档分块已全部完成向量化，跳过处理: docId={}", docFile.getId());
+                docFile.setProcessingStatus(DocFile.ProcessingStatus.COMPLETED);
+                docFileRepository.save(docFile);
+                return;
+            }
             
             // 更新文档状态并保存
             docFile.setProcessingStatus(DocFile.ProcessingStatus.VECTORIZING);
@@ -45,12 +67,40 @@ public class VectorizationStage implements ProcessingStage {
             
             // 按批次处理
             List<List<DocChunk>> batches = splitIntoBatches(chunks, BATCH_SIZE);
+            int failedBatches = 0;
+            
             for (List<DocChunk> batch : batches) {
-                processBatch(batch, docFile.getId());
+                // 检查批次是否需要处理
+                if (batch.stream().allMatch(chunk -> VectorStatus.COMPLETED.equals(chunk.getVectorStatus()))) {
+                    log.debug("跳过已完成的批次: docId={}, batchSize={}", docFile.getId(), batch.size());
+                    continue;
+                }
+                
+                // 处理带重试
+                boolean success = false;
+                int retryCount = 0;
+                while (!success && retryCount < MAX_RETRY_COUNT) {
+                    try {
+                        processBatch(batch, docFile.getId());
+                        success = true;
+                    } catch (Exception e) {
+                        retryCount++;
+                        if (retryCount >= MAX_RETRY_COUNT) {
+                            log.error("批次处理失败，达到最大重试次数: docId={}, batchSize={}, retryCount={}", 
+                                docFile.getId(), batch.size(), retryCount);
+                            failedBatches++;
+                            break;
+                        }
+                        log.warn("批次处理失败，准备重试: docId={}, batchSize={}, retryCount={}, error={}", 
+                            docFile.getId(), batch.size(), retryCount, e.getMessage());
+                        Thread.sleep(1000 * retryCount); // 增加重试间隔
+                    }
+                }
             }
             
-            // 检查是否所有分块都处理成功
-            boolean allSuccess = chunks.stream()
+            // 检查最终处理结果
+            List<DocChunk> finalChunks = docChunkRepository.findByFileIdOrderByChunkIndexAsc(docFile.getId());
+            boolean allSuccess = finalChunks.stream()
                 .allMatch(chunk -> VectorStatus.COMPLETED.equals(chunk.getVectorStatus()));
             
             // 更新文档状态
@@ -59,19 +109,28 @@ public class VectorizationStage implements ProcessingStage {
             
             docFile.setProcessingStatus(finalStatus);
             if (!allSuccess) {
-                docFile.setErrorMessage("部分分块向量化失败");
-                docFileRepository.save(docFile);  // 保存失败状态
-                throw new ProcessingException("部分分块向量化失败")
+                String errorMessage = String.format("向量化处理部分失败: 总批次=%d, 失败批次=%d", 
+                    batches.size(), failedBatches);
+                docFile.setErrorMessage(errorMessage);
+                docFileRepository.save(docFile);
+                throw new ProcessingException(errorMessage)
                     .withStage(this)
                     .withContext(context);
             }
             
-            docFileRepository.save(docFile);  // 保存完成状态
+            docFileRepository.save(docFile);
             log.info("向量化处理完成: docId={}, status={}", docFile.getId(), finalStatus);
             
         } catch (Exception e) {
             String errorMessage = "向量化处理失败: " + e.getMessage();
             log.error(errorMessage, e);
+            
+            // 更新失败状态
+            DocFile docFile = context.getDocFile();
+            docFile.setProcessingStatus(DocFile.ProcessingStatus.FAILED);
+            docFile.setErrorMessage(errorMessage);
+            docFileRepository.save(docFile);
+            
             throw new ProcessingException(errorMessage, e)
                     .withStage(this)
                     .withContext(context);
@@ -81,14 +140,16 @@ public class VectorizationStage implements ProcessingStage {
     private List<List<DocChunk>> splitIntoBatches(List<DocChunk> chunks, int batchSize) {
         List<List<DocChunk>> batches = new ArrayList<>();
         for (int i = 0; i < chunks.size(); i += batchSize) {
-            batches.add(chunks.subList(i, Math.min(chunks.size(), i + batchSize)));
+            batches.add(new ArrayList<>(chunks.subList(i, Math.min(chunks.size(), i + batchSize))));
         }
         return batches;
     }
     
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     protected void processBatch(List<DocChunk> batch, Long docId) {
         try {
+            log.debug("开始处理批次: docId={}, batchSize={}", docId, batch.size());
+            
             // 准备批量向量生成
             List<String> texts = batch.stream()
                 .map(DocChunk::getContent)
@@ -116,11 +177,14 @@ public class VectorizationStage implements ProcessingStage {
                 DocChunk chunk = batch.get(i);
                 chunk.setVectorId(vectorIds.get(i));
                 chunk.setVectorStatus(VectorStatus.COMPLETED);
+                chunk.setVectorError(null); // 清除之前的错误信息
             }
             
             docChunkRepository.saveAll(batch);
+            log.debug("批次处理完成: docId={}, batchSize={}", docId, batch.size());
             
         } catch (Exception e) {
+            log.error("批次处理失败: docId={}, batchSize={}, error={}", docId, batch.size(), e.getMessage());
             // 更新失败状态
             batch.forEach(chunk -> {
                 chunk.setVectorStatus(VectorStatus.FAILED);
