@@ -12,28 +12,38 @@ const ALLOWED_FILE_TYPES = {
   '电子书': ['.epub', '.mobi']
 };
 
-const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1GB
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_REQUEST_SIZE = 1024 * 1024 * 1024; // 1GB
 
 const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete }) => {
   const [files, setFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [fileErrors, setFileErrors] = useState({});
   const [progress, setProgress] = useState({});
+  const [totalSize, setTotalSize] = useState(0);
 
   const onDrop = useCallback((acceptedFiles) => {
+    // 计算已选文件的总大小
+    const currentTotalSize = files.reduce((sum, file) => sum + file.size, 0);
+    
     const validFiles = acceptedFiles.filter(file => {
       const extension = '.' + file.name.split('.').pop().toLowerCase();
       const isValidType = Object.values(ALLOWED_FILE_TYPES).flat().includes(extension);
       const isValidSize = file.size <= MAX_FILE_SIZE;
+      const newTotalSize = currentTotalSize + file.size;
+      const isValidTotalSize = newTotalSize <= MAX_REQUEST_SIZE;
 
       if (!isValidType) {
         ToastManager.error(`不支持的文件格式: ${file.name}`);
       }
       if (!isValidSize) {
-        ToastManager.error(`文件大小超出限制 (1GB): ${file.name} (${formatFileSize(file.size)})`);
+        ToastManager.error(`文件大小超出限制 (50MB): ${file.name} (${formatFileSize(file.size)})`);
+      }
+      if (!isValidTotalSize) {
+        ToastManager.error(`添加此文件后总大小将超出限制 (1GB)`);
       }
 
-      return isValidType && isValidSize;
+      return isValidType && isValidSize && isValidTotalSize;
     });
 
     // 清除已存在的相同文件
@@ -41,6 +51,8 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
     const newValidFiles = validFiles.filter(file => !existingFileNames.has(file.name));
 
     if (newValidFiles.length > 0) {
+      const newTotalSize = currentTotalSize + newValidFiles.reduce((sum, file) => sum + file.size, 0);
+      setTotalSize(newTotalSize);
       setFiles(prev => [...prev, ...newValidFiles]);
       // 清除新文件的错误状态
       setFileErrors(prev => {
@@ -51,13 +63,9 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
     }
   }, [files]);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    multiple: true
-  });
-
   const removeFile = (index) => {
     const file = files[index];
+    setTotalSize(prev => prev - file.size);
     setFiles(prev => prev.filter((_, i) => i !== index));
     setFileErrors(prev => {
       const newErrors = { ...prev };
@@ -65,6 +73,11 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
       return newErrors;
     });
   };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    multiple: true
+  });
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 B';
@@ -231,7 +244,11 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
             <div className="space-y-3">
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-1">文件大小限制：</p>
-                <p className="text-sm text-gray-600">单个文件大小不超过 {formatFileSize(MAX_FILE_SIZE)}</p>
+                <ul className="text-sm text-gray-600 list-disc pl-5">
+                  <li>单个文件大小不超过 {formatFileSize(MAX_FILE_SIZE)}</li>
+                  <li>总文件大小不超过 {formatFileSize(MAX_REQUEST_SIZE)}</li>
+                  <li>当前已选择：{formatFileSize(totalSize)}</li>
+                </ul>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-1">支持的文件格式：</p>
