@@ -271,6 +271,27 @@ public class DocumentController {
         }
     }
 
+    @GetMapping("/{id}")
+    public ApiResponse<DocFile> getDocument(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        try {
+            logger.info("获取文档详情请求: docId={}, userId={}", id, user.getId());
+            DocFile document = documentService.getDocument(id, user.getId());
+            logger.info("获取文档详情成功: docId={}", id);
+            return ApiResponse.success(document);
+        } catch (ResourceNotFoundException e) {
+            logger.warn("获取文档详情失败，文档不存在: docId={}, userId={}", id, user.getId());
+            return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
+        } catch (IllegalArgumentException e) {
+            logger.warn("获取文档详情失败，无权限: docId={}, userId={}", id, user.getId());
+            return ApiResponse.error(ErrorCode.PERMISSION_DENIED, e.getMessage());
+        } catch (Exception e) {
+            logger.error("获取文档详情失败，系统错误: ", e);
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR, "系统错误，请稍后重试");
+        }
+    }
+
     @PostMapping("/{id}/increment-learner")
     public ApiResponse<Void> incrementLearner(@PathVariable Long id) {
         try {

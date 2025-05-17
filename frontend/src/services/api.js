@@ -499,6 +499,22 @@ export const getDocumentChunks = async (documentId) => {
   }
 };
 
+// 获取单个文档详情
+export const getDocument = async (id) => {
+  try {
+    const response = await apiClient.get(`/documents/${id}`);
+    return response.data.data;
+  } catch (error) {
+    console.error('获取文档详情失败:', {
+      error,
+      errorMessage: error.message,
+      errorResponse: error.response?.data,
+      errorStack: error.stack
+    });
+    throw error;
+  }
+};
+
 // 文档分类常量
 export const DocumentCategory = {
   SCIENCE_TECH: "科学技术",

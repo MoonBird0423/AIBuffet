@@ -532,6 +532,38 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public DocFile getDocument(Long docId, Long userId) {
+        logger.info("开始获取文档详情: docId={}, userId={}", docId, userId);
+        
+        // 检查文档存在且为激活状态
+        DocFile docFile = docFileRepository.findByIdAndStatus(docId, DocFile.Status.ACTIVE)
+                .orElseThrow(() -> {
+                    logger.warn("文档不存在或已删除: docId={}", docId);
+                    return new ResourceNotFoundException("Document not found or deleted");
+                });
+
+        // 验证用户权限：
+        // 1. 如果文档已发布，所有用户都可以访问
+        // 2. 如果文档未发布，只有关联知识库的创建者可以访问
+        if (docFile.getPublishStatus() != DocFile.PublishStatus.PUBLISHED) {
+            KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileId(docId)
+                    .orElseThrow(() -> {
+                        logger.warn("文档未关联到任何知识库: docId={}", docId);
+                        return new ResourceNotFoundException("Document is not associated with any knowledge base");
+                    });
+
+            if (!relation.getCreatedBy().equals(userId)) {
+                logger.warn("用户无权限访问该文档: docId={}, userId={}", docId, userId);
+                throw new IllegalArgumentException("No permission to access this document");
+            }
+        }
+
+        logger.info("获取文档详情成功: docId={}", docId);
+        return docFile;
+    }
+
+    @Override
     @Transactional
     public void incrementLearnerCount(Long docId) {
         logger.info("开始增加文档学习人数: docId={}", docId);

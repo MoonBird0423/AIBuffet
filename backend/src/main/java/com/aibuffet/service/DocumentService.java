@@ -62,4 +62,15 @@ public interface DocumentService {
      * 增加学习人数
      */
     void incrementLearnerCount(Long docId);
+
+    /**
+     * 获取单个文档详情
+     * 
+     * @param docId 文档ID
+     * @param userId 用户ID，用于权限验证
+     * @return 文档详情
+     * @throws com.aibuffet.common.ResourceNotFoundException 当文档不存在时
+     * @throws IllegalArgumentException 当用户无权限访问该文档时
+     */
+    DocFile getDocument(Long docId, Long userId);
 }

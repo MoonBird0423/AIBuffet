@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../common/Modal';
-import { updateDocument, updateDocumentPublishStatus } from '../../services/api';
+import { updateDocument, updateDocumentPublishStatus, DocumentCategory, getDocument } from '../../services/api';
 import { ToastManager } from '../common/Toast';
+import Select from '../common/Select';
 
 function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -11,6 +12,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     description: '',
     coverFile: null,
     coverPreview: null,
+    category: ''
   });
   
   const [errors, setErrors] = useState({});
@@ -49,11 +51,34 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     }
   };
 
+  useEffect(() => {
+    const loadDocumentInfo = async () => {
+      try {
+        const doc = await getDocument(documentId);
+        setFormData(prev => ({
+          ...prev,
+          fileName: doc.fileName || '',
+          author: doc.author || '',
+          description: doc.description || '',
+          category: doc.category || '',
+          coverPreview: doc.coverUrl
+        }));
+      } catch (error) {
+        ToastManager.error('加载文档信息失败');
+      }
+    };
+    
+    if (documentId) {
+      loadDocumentInfo();
+    }
+  }, [documentId]);
+
   const validateForm = () => {
     const newErrors = {};
     if (!formData.fileName.trim()) newErrors.fileName = '请输入图书名称';
     if (!formData.author.trim()) newErrors.author = '请输入作者';
     if (!formData.description.trim()) newErrors.description = '请输入简介';
+    if (!formData.category) newErrors.category = '请选择分类';
     if (!formData.coverFile && !formData.coverPreview) newErrors.cover = '请上传封面';
     return newErrors;
   };
@@ -90,6 +115,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
         formDataObj.append('fileName', formData.fileName);
         formDataObj.append('author', formData.author);
         formDataObj.append('description', formData.description);
+        formDataObj.append('category', formData.category);
         
         await updateDocument(documentId, formDataObj);
         setCurrentStep(currentStep + 1);
@@ -175,7 +201,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
               <label className="block text-sm font-medium text-gray-700">图书名称</label>
               <input
                 type="text"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm custom-select"
                 value={formData.fileName}
                 onChange={e => setFormData({...formData, fileName: e.target.value})}
               />
@@ -205,6 +231,21 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
                 placeholder="请输入图书简介..."
               />
               {errors.description && <p className="text-red-500 text-sm">{errors.description}</p>}
+            </div>
+
+            {/* 分类 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">分类</label>
+              <Select
+                options={Object.entries(DocumentCategory).map(([key, value]) => ({
+                  value: key,
+                  label: value
+                }))}
+                value={formData.category}
+                onChange={value => setFormData({...formData, category: value})}
+                placeholder="请选择分类"
+                error={errors.category}
+              />
             </div>
           </div>
         );
