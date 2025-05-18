@@ -4,6 +4,20 @@ import java.util.concurrent.CompletableFuture;
 
 public interface PublishService {
     /**
+     * 生成并获取图书解读内容
+     * @param docId 文档ID
+     * @return 解读内容
+     */
+    CompletableFuture<String> generateInterpretation(Long docId);
+
+    /**
+     * 获取图书解读内容
+     * @param docId 文档ID
+     * @return 解读内容，如果不存在返回null
+     */
+    CompletableFuture<String> getInterpretation(Long docId);
+
+    /**
      * 上传文件到阿里云并获取file-id
      * @param docId 文档ID
      * @return file-id

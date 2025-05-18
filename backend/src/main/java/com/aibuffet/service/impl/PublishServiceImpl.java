@@ -2,8 +2,11 @@ package com.aibuffet.service.impl;
 
 import com.aibuffet.model.DocFile;
 import com.aibuffet.model.Model;
+import com.aibuffet.model.DocInterpretation;
 import com.aibuffet.repository.DocFileRepository;
 import com.aibuffet.repository.ModelRepository;
+import com.aibuffet.repository.DocInterpretationRepository;
+import org.springframework.beans.factory.annotation.Value;
 import com.aibuffet.service.PublishService;
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
@@ -26,6 +29,13 @@ import java.util.function.Supplier;
 public class PublishServiceImpl implements PublishService {
     private final DocFileRepository docFileRepository;
     private final ModelRepository modelRepository;
+    private final DocInterpretationRepository docInterpretationRepository;
+
+    @Value("${book.interpretation.system-prompt}")
+    private String interpretationSystemPrompt;
+
+    @Value("${book.interpretation.user-prompt}")
+    private String interpretationUserPrompt;
 
     private OpenAIClient createClient(Model model) {
         return OpenAIOkHttpClient.builder()
@@ -42,10 +52,16 @@ public class PublishServiceImpl implements PublishService {
                     .orElseThrow(() -> new RuntimeException("未找到发布用途的模型"));
             
             // 2. 获取文档内容
-            DocFile docFile = docFileRepository.findById(docId)
-                    .orElseThrow(() -> new RuntimeException("文档不存在"));
+        DocFile docFile = docFileRepository.findById(docId)
+                .orElseThrow(() -> new RuntimeException("文档不存在"));
 
-            String content = docFile.getExtractedText();
+        // 检查是否已存在openai_file_id
+        if (docFile.getOpenaiFileId() != null && !docFile.getOpenaiFileId().isEmpty()) {
+            log.info("文档已存在OpenAI文件ID，直接返回: {}", docFile.getOpenaiFileId());
+            return docFile.getOpenaiFileId();
+        }
+
+        String content = docFile.getExtractedText();
             if (content == null || content.isEmpty()) {
                 throw new RuntimeException("文档内容为空");
             }
@@ -69,6 +85,11 @@ public class PublishServiceImpl implements PublishService {
                     FileObject fileObject = client.files().create(fileParams);
                     String fileId = fileObject.id();
                     log.info("文件上传成功，获取到file-id: {}", fileId);
+                    
+                    // 保存fileId到数据库
+                    docFile.setOpenaiFileId(fileId);
+                    docFileRepository.save(docFile);
+                    
                     return fileId;
                 } finally {
                     // 6. 删除临时文件
@@ -132,6 +153,59 @@ public class PublishServiceImpl implements PublishService {
                 log.error(errorMsg, e);
                 throw new RuntimeException(errorMsg, e);
             }
+        });
+    }
+
+    @Override
+    public CompletableFuture<String> generateInterpretation(Long docId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // 1. 先检查是否已经存在解读内容
+                DocInterpretation existingInterpretation = docInterpretationRepository.findByDocId(docId)
+                        .orElse(null);
+                if (existingInterpretation != null && existingInterpretation.getContent() != null) {
+                    log.info("已存在解读内容，直接返回，docId: {}", docId);
+                    return existingInterpretation.getContent();
+                }
+
+                // 2. 上传文件获取fileId
+                log.info("开始为文档生成解读，docId: {}", docId);
+                String fileId = uploadFileAndGetFileId(docId).get();
+
+                try {
+                    // 3. 调用AI生成解读内容
+                    String content = generateContent(fileId, interpretationSystemPrompt, interpretationUserPrompt).get();
+
+                    // 4. 保存解读内容
+                    DocInterpretation interpretation = new DocInterpretation();
+                    interpretation.setDocId(docId);
+                    interpretation.setContent(content);
+                    docInterpretationRepository.save(interpretation);
+                    log.info("解读内容已保存，docId: {}", docId);
+
+                    return content;
+                } finally {
+                    // 5. 删除上传的文件
+                    try {
+                        deleteFile(fileId).get();
+                    } catch (Exception e) {
+                        log.warn("删除文件失败: {}", e.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                String errorMsg = String.format("生成解读失败：docId=%s, error=%s", docId, e.getMessage());
+                log.error(errorMsg, e);
+                throw new RuntimeException(errorMsg, e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<String> getInterpretation(Long docId) {
+        return CompletableFuture.supplyAsync(() -> {
+            DocInterpretation interpretation = docInterpretationRepository.findByDocId(docId)
+                    .orElse(null);
+            return interpretation != null ? interpretation.getContent() : null;
         });
     }
 

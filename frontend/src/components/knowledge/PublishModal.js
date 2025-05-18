@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../common/Modal';
-import { updateDocument, updateDocumentPublishStatus, DocumentCategory, getDocument } from '../../services/api';
+import { updateDocument, updateDocumentPublishStatus, DocumentCategory, getDocument, generateInterpretation, getInterpretation } from '../../services/api';
+import ProgressBar from '../common/ProgressBar';
+import markdownit from 'markdown-it';
+
+const md = markdownit();
 import { ToastManager } from '../common/Toast';
 import Select from '../common/Select';
 
@@ -30,6 +34,9 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     step3: 0,
     step4: 0
   });
+
+  const [interpretation, setInterpretation] = useState('');
+  const [interpretationLoading, setInterpretationLoading] = useState(false);
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
@@ -83,6 +90,54 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     return newErrors;
   };
 
+  // 轮询解读内容
+  const pollInterpretation = async () => {
+    try {
+      const response = await getInterpretation(documentId);
+      if (response.data) {
+        setInterpretation(response.data);
+        setProgress(prev => ({ ...prev, step2: 100 }));
+        setInterpretationLoading(false);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('获取解读失败:', error);
+      return false;
+    }
+  };
+
+  // 生成解读内容
+  const startInterpretation = async () => {
+    if (interpretationLoading || interpretation) return;
+    
+    setInterpretationLoading(true);
+    setProgress(prev => ({ ...prev, step2: 0 }));
+
+    try {
+      // 启动生成
+      await generateInterpretation(documentId);
+
+      // 开始轮询进度
+      const pollInterval = setInterval(async () => {
+        const hasContent = await pollInterpretation();
+        if (hasContent) {
+          clearInterval(pollInterval);
+        } else {
+          // 更新进度条
+          setProgress(prev => ({
+            ...prev,
+            step2: Math.min(prev.step2 + 5, 95)
+          }));
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('生成解读失败:', error);
+      setInterpretationLoading(false);
+      ToastManager.error('生成解读失败，请重试');
+    }
+  };
+
   const simulateProgress = (step) => {
     let currentProgress = 0;
     const interval = setInterval(() => {
@@ -119,7 +174,8 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
         
         await updateDocument(documentId, formDataObj);
         setCurrentStep(currentStep + 1);
-        simulateProgress('step2');
+        // 进入第二步时自动开始生成解读
+        startInterpretation();
       } catch (error) {
         ToastManager.error('保存失败：' + (error.response?.data?.message || error.message));
       } finally {
@@ -272,34 +328,34 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
 
         return (
           <div className="space-y-6">
-            <div className="text-center">
-              <h4 className="text-lg font-medium text-gray-900 mb-2">正在{stepConfig.title}</h4>
-              <p className="text-gray-500">系统正在处理中，请稍候...</p>
-            </div>
-            
-            <div className="bg-gray-50 rounded-md p-4">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={stepConfig.icon} />
-                  </svg>
+          {currentStep === 2 ? (
+            <div>
+              {interpretationLoading ? (
+                <ProgressBar
+                  progress={progress.step2}
+                  title="生成解读中"
+                  description="系统正在生成解读内容，请稍候..."
+                  icon="M13 10V3L4 14h7v7l9-11h-7z"
+                />
+              ) : (
+                <div className="prose max-w-none">
+                  <div 
+                    className="bg-white rounded-lg p-6 shadow-sm border border-gray-200" 
+                    dangerouslySetInnerHTML={{ 
+                      __html: md.render(interpretation || '解读内容生成失败，请重试') 
+                    }}
+                  />
                 </div>
-                <div className="ml-3 w-full">
-                  <h5 className="text-sm font-medium text-gray-900">处理进度</h5>
-                  <div className="mt-1 relative pt-1">
-                    <div className="overflow-hidden h-2 text-xs flex rounded bg-gray-200">
-                      <div
-                        style={{ width: `${progress[stepConfig.progressKey]}%` }}
-                        className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-indigo-500"
-                      />
-                    </div>
-                    <div className="text-right text-xs text-gray-500 mt-1">
-                      {progress[stepConfig.progressKey]}%
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
+          ) : (
+            <ProgressBar
+              progress={progress[stepConfig.progressKey]}
+              title={`正在${stepConfig.title}`}
+              description="系统正在处理中，请稍候..."
+              icon={stepConfig.icon}
+            />
+          )}
           </div>
         );
     }

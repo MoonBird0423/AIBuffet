@@ -617,4 +617,25 @@ export const incrementDocumentLearnerCount = async (documentId) => {
   }
 };
 
+// 解读相关API
+export const generateInterpretation = async (docId) => {
+  try {
+    const response = await apiClient.post(`/publish/docs/${docId}/interpretation/generate`);
+    return response.data;
+  } catch (error) {
+    console.error('生成解读内容失败:', error);
+    throw error;
+  }
+};
+
+export const getInterpretation = async (docId) => {
+  try {
+    const response = await apiClient.get(`/publish/docs/${docId}/interpretation`);
+    return response.data;
+  } catch (error) {
+    console.error('获取解读内容失败:', error);
+    throw error;
+  }
+};
+
 export default apiClient;
