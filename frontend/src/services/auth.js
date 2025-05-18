@@ -5,7 +5,7 @@ const authApi = {
   generateCaptcha: async () => {
     try {
       const response = await apiClient.get('/auth/captcha/generate');
-      return response.data;
+      return response.data.data;
     } catch (error) {
       console.error('Generate captcha error:', error.response || error);
       throw new Error(error.response?.data?.message || '获取图形验证码失败');
@@ -19,7 +19,7 @@ const authApi = {
         captchaId,
         captchaCode
       });
-      return response.data;
+      return response.data.data;
     } catch (error) {
       console.error('Validate captcha error:', error.response || error);
       throw new Error(error.response?.data?.message || '验证码验证失败');
@@ -35,7 +35,7 @@ const authApi = {
         captchaId,
         captchaCode
       });
-      return response.data;
+      return response.data.data;
     } catch (error) {
       console.error('Send verification code error:', error.response || error);
       throw new Error(error.response?.data?.message || '发送验证码失败');

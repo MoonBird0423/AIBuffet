@@ -48,15 +48,9 @@ function CaptchaModal({ isOpen, onClose, onSuccess }) {
           captchaCode: value
         });
         
-        if (response.code === 200) {
-          // 验证成功后，立即通知父组件并关闭弹窗
-          onSuccess({ captchaId, captchaCode: value });
-          onClose();
-          return; // 立即返回，不再继续处理
-        }
-        
-        // 验证失败显示错误信息
-        setError(response.message || '验证码错误，请重新输入');
+        // 如果没有抛出错误，说明验证成功
+        onSuccess({ captchaId, captchaCode: value });
+        onClose();
       } catch (error) {
         setError(error.message || '验证失败，请重新输入');
       } finally {
