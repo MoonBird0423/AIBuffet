@@ -12,6 +12,8 @@ import org.springframework.stereotype.Repository;
 import jakarta.persistence.LockModeType;
 
 import java.util.Optional;
+import org.springframework.data.jpa.repository.Modifying;
+import jakarta.transaction.Transactional;
 
 @Repository
 public interface DocFileRepository extends JpaRepository<DocFile, Long> {
@@ -146,4 +148,14 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
         """, 
         nativeQuery = true)
     Page<DocFile> findByPublishStatus(String publishStatus, Pageable pageable);
+    
+    @Modifying
+    @Transactional
+    @Query("UPDATE DocFile d SET d.processingStatus = :status WHERE d.id = :id")
+    void updateProcessingStatus(Long id, DocFile.ProcessingStatus status);
+    
+    @Modifying
+    @Transactional
+    @Query("UPDATE DocFile d SET d.processingStatus = :status, d.errorMessage = :errorMessage WHERE d.id = :id")
+    void updateProcessingStatusAndError(Long id, DocFile.ProcessingStatus status, String errorMessage);
 }

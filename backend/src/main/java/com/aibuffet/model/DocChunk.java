@@ -67,12 +67,14 @@ public class DocChunk {
     private LocalDateTime createdAt;
     
     @Column(name = "vector_status", length = 20)
+    @Builder.Default
     private String vectorStatus = VectorStatus.PENDING;
     
     @Column(name = "vector_error", columnDefinition = "TEXT")
     private String vectorError;
     
     @Column(name = "retry_count")
+    @Builder.Default
     private Integer retryCount = 0;
     
     @ManyToOne(fetch = FetchType.LAZY)

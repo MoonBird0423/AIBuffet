@@ -58,6 +58,12 @@ public class ChunkingStage implements ProcessingStage {
             if (!existingChunks.isEmpty()) {
                 log.info("发现已有分块，跳过处理: docId={}, chunkCount={}", docFile.getId(), existingChunks.size());
                 context.setChunks(existingChunks);
+                
+                // 更新文档状态为向量化阶段
+                docFile.setProcessingStatus(DocFile.ProcessingStatus.VECTORIZING);
+                docFileRepository.save(docFile);
+                log.info("文档状态已更新为向量化阶段: docId={}", docFile.getId());
+                
                 return;
             }
             

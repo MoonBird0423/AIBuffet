@@ -41,21 +41,9 @@ public class TextExtractionStage implements ProcessingStage {
                 context.setExtractedText(docFile.getExtractedText());
                 return;
             }
-
-            // 检查是否有相同md5_hash的文件已提取过文本
-            DocFile existingFile = docFileRepository.findByMd5Hash(docFile.getMd5Hash());
-            if (existingFile != null && existingFile.getExtractedText() != null && !existingFile.getId().equals(docFile.getId())) {
-                log.info("发现相同文件已提取文本，复用文本内容: sourceId={}, targetId={}, textLength={}", 
-                    existingFile.getId(), docFile.getId(), existingFile.getExtractedText().length());
-                docFile.setExtractedText(existingFile.getExtractedText());
-                docFile = docFileRepository.save(docFile);
-                context.setExtractedText(docFile.getExtractedText());
-                return;
-            }
             
             // 更新文档状态为文本提取中
-            docFile.setProcessingStatus(DocFile.ProcessingStatus.EXTRACTING_TEXT);
-            docFileRepository.save(docFile);
+            docFileRepository.updateProcessingStatus(docFile.getId(), DocFile.ProcessingStatus.EXTRACTING_TEXT);
             
             // 提取文本
             String extractedText = textProcessingService.extractText(docFile.getFileUrl());
@@ -90,9 +78,7 @@ public class TextExtractionStage implements ProcessingStage {
         log.error(errorMessage, e);
         
         DocFile docFile = context.getDocFile();
-        docFile.setProcessingStatus(DocFile.ProcessingStatus.FAILED);
-        docFile.setErrorMessage(errorMessage);
-        docFileRepository.save(docFile);
+        docFileRepository.updateProcessingStatusAndError(docFile.getId(), DocFile.ProcessingStatus.FAILED, errorMessage);
         
         throw new ProcessingException(errorMessage, e)
             .withStage(this)
