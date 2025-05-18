@@ -75,6 +75,9 @@ public class DocFile {
     @Column(name = "extracted_text", columnDefinition = "LONGTEXT")
     private String extractedText;
 
+    @Column(name = "openai_file_id")
+    private String openaiFileId;
+
     public enum Status {
         ACTIVE, DELETED
     }
