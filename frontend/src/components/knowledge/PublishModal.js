@@ -1,14 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Modal from '../common/Modal';
 import { updateDocument, updateDocumentPublishStatus, DocumentCategory, getDocument, generateInterpretation, getInterpretation } from '../../services/api';
 import ProgressBar from '../common/ProgressBar';
-import markdownit from 'markdown-it';
-
-const md = markdownit();
+import MarkdownIt from 'markdown-it';
 import { ToastManager } from '../common/Toast';
 import Select from '../common/Select';
 
 function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
+  // 初始化markdown-it实例，配置安全选项
+  const md = useMemo(() => {
+    return new MarkdownIt({
+      html: false,    // 禁用HTML标签
+      breaks: true,   // 转换换行符为<br>
+      linkify: true,  // 自动转换URL为链接
+      typographer: true, // 启用语言中性的替换和引号
+    });
+  }, []);
+
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     fileName: fileName || '',
@@ -58,27 +66,43 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     }
   };
 
+  // 监听弹窗打开状态，重置所有状态
   useEffect(() => {
-    const loadDocumentInfo = async () => {
-      try {
-        const doc = await getDocument(documentId);
-        setFormData(prev => ({
-          ...prev,
-          fileName: doc.fileName || '',
-          author: doc.author || '',
-          description: doc.description || '',
-          category: doc.category || '',
-          coverPreview: doc.coverUrl
-        }));
-      } catch (error) {
-        ToastManager.error('加载文档信息失败');
+    if (isOpen) {
+      // 重置所有状态
+      setCurrentStep(1);
+      setProgress({
+        step2: 0,
+        step3: 0,
+        step4: 0
+      });
+      setInterpretation('');
+      setInterpretationLoading(false);
+      setErrors({});
+      setIsUploading(false);
+      
+      // 重新加载文档信息
+      const loadDocumentInfo = async () => {
+        try {
+          const doc = await getDocument(documentId);
+          setFormData({
+            fileName: doc.fileName || '',
+            author: doc.author || '',
+            description: doc.description || '',
+            category: doc.category || '',
+            coverFile: null,
+            coverPreview: doc.coverUrl
+          });
+        } catch (error) {
+          ToastManager.error('加载文档信息失败');
+        }
+      };
+      
+      if (documentId) {
+        loadDocumentInfo();
       }
-    };
-    
-    if (documentId) {
-      loadDocumentInfo();
     }
-  }, [documentId]);
+  }, [isOpen, documentId]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -338,9 +362,11 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
                   icon="M13 10V3L4 14h7v7l9-11h-7z"
                 />
               ) : (
-                <div className="prose max-w-none">
+                <div 
+                  className="bg-white rounded-lg p-6 shadow-sm border border-gray-200" 
+                >
                   <div 
-                    className="bg-white rounded-lg p-6 shadow-sm border border-gray-200" 
+                    className="markdown-content"
                     dangerouslySetInnerHTML={{ 
                       __html: md.render(interpretation || '解读内容生成失败，请重试') 
                     }}
@@ -373,9 +399,9 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
       )}
       <button
         onClick={handleNextStep}
-        disabled={isUploading}
+        disabled={isUploading || (currentStep === 2 && progress.step2 !== 100)}
         className={`px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white
-          ${isUploading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'}
+          ${isUploading || (currentStep === 2 && progress.step2 !== 100) ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'}
           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
       >
         {isUploading ? '保存中...' : currentStep === 4 ? '完成发布' : '下一步'}

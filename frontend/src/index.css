@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 导入markdown样式 */
+@import './styles/markdown.css';
+
 /* 自定义样式 */
 @layer base {
   html {

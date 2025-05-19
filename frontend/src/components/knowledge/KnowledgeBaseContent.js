@@ -117,6 +117,7 @@ function KnowledgeBaseContent({ knowledgeBase }) {
             onPageChange={setPage}
             onRefresh={fetchFiles}
             onPublish={(file) => {
+              // 每次点击发布时都是新的发布流程
               setSelectedFile(file);
               setIsPublishModalOpen(true);
             }}
@@ -125,20 +126,23 @@ function KnowledgeBaseContent({ knowledgeBase }) {
       </div>
 
       {/* 发布弹窗 */}
-      <PublishModal
-        isOpen={isPublishModalOpen}
-        onClose={() => {
-          setIsPublishModalOpen(false);
-          setSelectedFile(null);
-        }}
+      {selectedFile && (
+        <PublishModal
+          isOpen={isPublishModalOpen}
+          onClose={() => {
+            // 关闭时清空状态，确保下次打开时重新开始
+            setIsPublishModalOpen(false);
+            setSelectedFile(null);
+          }}
           onSuccess={() => {
             setIsPublishModalOpen(false);
             setSelectedFile(null);
             fetchFiles(); // 发布成功后刷新
           }}
-        fileName={selectedFile?.name || ''}
-        documentId={selectedFile?.id}
-      />
+          fileName={selectedFile.name}
+          documentId={selectedFile.id}
+        />
+      )}
 
       {/* 文件上传弹窗 */}
       <FileUploadModal
