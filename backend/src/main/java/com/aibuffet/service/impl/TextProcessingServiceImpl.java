@@ -5,11 +5,17 @@ import com.aibuffet.model.TextChunk;
 import com.aibuffet.service.OSSService;
 import com.aibuffet.service.TextProcessingService;
 import org.apache.tika.Tika;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.parser.AutoDetectParser;
+import org.apache.tika.parser.Parser;
+import org.apache.tika.sax.BodyContentHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.apache.tika.parser.ParseContext;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -39,12 +45,26 @@ public class TextProcessingServiceImpl implements TextProcessingService {
     @Override
     public String extractText(String fileUrl) throws IOException {
         logger.info("开始提取文本内容: fileUrl={}", fileUrl);
-        try (InputStream inputStream = ossService.downloadFile(fileUrl)) {
-            String text = tika.parseToString(inputStream);
-            logger.debug("文本提取完成: 原始文本长度={}", text.length());
+        try (InputStream inputStream = new BufferedInputStream(ossService.downloadFile(fileUrl))) {
+            // 使用Tika的增量解析器
+            Parser parser = new AutoDetectParser();
+            BodyContentHandler handler = new BodyContentHandler(-1); // -1表示无限制
+            Metadata metadata = new Metadata();
+            ParseContext context = new ParseContext();
+            
+            logger.debug("开始解析文档...");
+            parser.parse(inputStream, handler, metadata, context);
+            
+            String text = handler.toString();
+            logger.debug("文本提取完成: 原始文本长度={}, 文档类型={}", 
+                text.length(), metadata.get("Content-Type"));
             
             String processedText = preprocessFullText(text);
             logger.debug("文本预处理完成: 处理后长度={}", processedText.length());
+            
+            if (processedText.isEmpty()) {
+                throw new IOException("提取的文本内容为空");
+            }
             
             return processedText;
         } catch (Exception e) {

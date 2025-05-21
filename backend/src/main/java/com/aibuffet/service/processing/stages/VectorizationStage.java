@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 import java.util.*;
 
@@ -21,8 +22,10 @@ import java.util.*;
 @Component
 public class VectorizationStage implements ProcessingStage {
     
-    private static final int BATCH_SIZE = 5;  // 减小批处理大小，降低单批次处理的数据量
-    private static final int MAX_RETRY_COUNT = 3;  // 最大重试次数
+    private static final int BATCH_SIZE = 3;  // 减小批处理大小，降低单批次处理的数据量
+    private static final int MAX_RETRY_COUNT = 5;  // 增加最大重试次数
+    private static final long RETRY_DELAY_MS = 2000; // 重试延迟时间
+    private static final long BATCH_PAUSE_MS = 100; // 批次间暂停时间
     
     @Autowired
     private VectorService vectorService;
@@ -34,7 +37,7 @@ public class VectorizationStage implements ProcessingStage {
     private DocFileRepository docFileRepository;
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRED)
+    @Transactional(propagation = Propagation.REQUIRED, timeout = 180)
     public void process(ProcessContext context) throws ProcessingException {
         try {
             DocFile docFile = context.getDocFile();
@@ -68,8 +71,13 @@ public class VectorizationStage implements ProcessingStage {
             // 按批次处理
             List<List<DocChunk>> batches = splitIntoBatches(chunks, BATCH_SIZE);
             int failedBatches = 0;
+            int completedBatches = 0;
+            int totalBatches = batches.size();
             
             for (List<DocChunk> batch : batches) {
+                double progress = (completedBatches * 100.0) / totalBatches;
+                log.info("向量化进度: docId={}, 完成度={:.2f}%, ({}/{})", 
+                    docFile.getId(), progress, completedBatches, totalBatches);
                 // 检查批次是否需要处理
                 if (batch.stream().allMatch(chunk -> VectorStatus.COMPLETED.equals(chunk.getVectorStatus()))) {
                     log.debug("跳过已完成的批次: docId={}, batchSize={}", docFile.getId(), batch.size());
@@ -83,6 +91,11 @@ public class VectorizationStage implements ProcessingStage {
                     try {
                         processBatch(batch, docFile.getId());
                         success = true;
+                        completedBatches++;
+                        
+                        // 批次间暂停，让出资源
+                        Thread.sleep(BATCH_PAUSE_MS);
+                        System.gc(); // 建议进行垃圾回收
                     } catch (Exception e) {
                         retryCount++;
                         if (retryCount >= MAX_RETRY_COUNT) {
@@ -145,10 +158,13 @@ public class VectorizationStage implements ProcessingStage {
         return batches;
     }
     
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRES_NEW,
+                  isolation = Isolation.READ_COMMITTED,
+                  timeout = 180)
     protected void processBatch(List<DocChunk> batch, Long docId) {
         try {
-            log.debug("开始处理批次: docId={}, batchSize={}", docId, batch.size());
+            log.info("开始处理批次: docId={}, batchSize={}, 内存使用: {}MB", 
+                docId, batch.size(), Runtime.getRuntime().totalMemory() / (1024 * 1024));
             
             // 准备批量向量生成
             List<String> texts = batch.stream()
