@@ -22,10 +22,10 @@ import java.util.*;
 @Component
 public class VectorizationStage implements ProcessingStage {
     
-    private static final int BATCH_SIZE = 3;  // 减小批处理大小，降低单批次处理的数据量
-    private static final int MAX_RETRY_COUNT = 5;  // 增加最大重试次数
+    private static final int BATCH_SIZE = 10;  // 设置批处理大小为API限制的最大值
+    private static final int MAX_RETRY_COUNT = 5;  // 最大重试次数
     private static final long RETRY_DELAY_MS = 2000; // 重试延迟时间
-    private static final long BATCH_PAUSE_MS = 100; // 批次间暂停时间
+    private static final long BATCH_PAUSE_MS = 50; // 降低批次间暂停时间
     
     @Autowired
     private VectorService vectorService;
@@ -37,7 +37,6 @@ public class VectorizationStage implements ProcessingStage {
     private DocFileRepository docFileRepository;
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRED, timeout = 180)
     public void process(ProcessContext context) throws ProcessingException {
         try {
             DocFile docFile = context.getDocFile();
@@ -93,9 +92,8 @@ public class VectorizationStage implements ProcessingStage {
                         success = true;
                         completedBatches++;
                         
-                        // 批次间暂停，让出资源
+                        // 批次间暂停
                         Thread.sleep(BATCH_PAUSE_MS);
-                        System.gc(); // 建议进行垃圾回收
                     } catch (Exception e) {
                         retryCount++;
                         if (retryCount >= MAX_RETRY_COUNT) {
@@ -160,7 +158,7 @@ public class VectorizationStage implements ProcessingStage {
     
     @Transactional(propagation = Propagation.REQUIRES_NEW,
                   isolation = Isolation.READ_COMMITTED,
-                  timeout = 180)
+                  timeout = 300)
     protected void processBatch(List<DocChunk> batch, Long docId) {
         try {
             log.info("开始处理批次: docId={}, batchSize={}, 内存使用: {}MB", 
