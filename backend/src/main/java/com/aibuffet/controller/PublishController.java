@@ -32,4 +32,44 @@ public class PublishController {
             return ApiResponse.error(ErrorCode.SYSTEM_ERROR);
         }
     }
+
+    @GetMapping("/docs/{docId}/mindmap")
+    public ApiResponse<String> getMindmap(@PathVariable Long docId) {
+        try {
+            String content = publishService.getMindmap(docId).get();
+            return ApiResponse.success(content);
+        } catch (Exception e) {
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR);
+        }
+    }
+
+    @PostMapping("/docs/{docId}/mindmap/generate")
+    public ApiResponse<Void> generateMindmap(@PathVariable Long docId) {
+        try {
+            publishService.generateMindmap(docId);
+            return ApiResponse.success();
+        } catch (Exception e) {
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR);
+        }
+    }
+
+    @GetMapping("/docs/{docId}/quiz")
+    public ApiResponse<String> getQuiz(@PathVariable Long docId) {
+        try {
+            String content = publishService.getQuiz(docId).get();
+            return ApiResponse.success(content);
+        } catch (Exception e) {
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR);
+        }
+    }
+
+    @PostMapping("/docs/{docId}/quiz/generate")
+    public ApiResponse<Void> generateQuiz(@PathVariable Long docId) {
+        try {
+            publishService.generateQuiz(docId);
+            return ApiResponse.success();
+        } catch (Exception e) {
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR);
+        }
+    }
 }
