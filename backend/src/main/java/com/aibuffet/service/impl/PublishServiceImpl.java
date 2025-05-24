@@ -1,11 +1,15 @@
 package com.aibuffet.service.impl;
 
 import com.aibuffet.model.DocFile;
-import com.aibuffet.model.Model;
 import com.aibuffet.model.DocInterpretation;
+import com.aibuffet.model.DocMindmap;
+import com.aibuffet.model.DocQuiz;
+import com.aibuffet.model.Model;
 import com.aibuffet.repository.DocFileRepository;
-import com.aibuffet.repository.ModelRepository;
 import com.aibuffet.repository.DocInterpretationRepository;
+import com.aibuffet.repository.DocMindmapRepository;
+import com.aibuffet.repository.DocQuizRepository;
+import com.aibuffet.repository.ModelRepository;
 import org.springframework.beans.factory.annotation.Value;
 import com.aibuffet.service.PublishService;
 import com.openai.client.OpenAIClient;
@@ -30,12 +34,17 @@ public class PublishServiceImpl implements PublishService {
     private final DocFileRepository docFileRepository;
     private final ModelRepository modelRepository;
     private final DocInterpretationRepository docInterpretationRepository;
-
-    @Value("${book.interpretation.system-prompt}")
-    private String interpretationSystemPrompt;
+    private final DocMindmapRepository docMindmapRepository;
+    private final DocQuizRepository docQuizRepository;
 
     @Value("${book.interpretation.user-prompt}")
     private String interpretationUserPrompt;
+
+    @Value("${book.mindmap.user-prompt}")
+    private String mindmapUserPrompt;
+
+    @Value("${book.quiz.user-prompt}")
+    private String quizUserPrompt;
 
     private OpenAIClient createClient(Model model) {
         return OpenAIOkHttpClient.builder()
@@ -108,9 +117,9 @@ public class PublishServiceImpl implements PublishService {
     }
 
     @Override
-    public CompletableFuture<String> generateContent(String fileId, String systemPrompt, String userPrompt) {
+    public CompletableFuture<String> generateContent(String fileId, String userPrompt) {
         return CompletableFuture.supplyAsync((Supplier<String>) () -> {
-            log.info("开始生成内容，fileId: {}, systemPrompt: {}, userPrompt: {}", fileId, systemPrompt, userPrompt);
+            log.info("开始生成内容，fileId: {}, userPrompt: {}", fileId, userPrompt);
             
             // 1. 获取发布用途的模型信息
             Model model = modelRepository.findByPurposeExact("发布")
@@ -126,7 +135,6 @@ public class PublishServiceImpl implements PublishService {
                 log.debug("正在构建聊天请求参数...");
                 ChatCompletionCreateParams chatParams = ChatCompletionCreateParams.builder()
                         .addSystemMessage("You are a helpful assistant.")
-                        .addSystemMessage(systemPrompt)
                         .addSystemMessage("fileid://" + fileId)
                         .addUserMessage(userPrompt)
                         .model(model.getName())
@@ -172,31 +180,110 @@ public class PublishServiceImpl implements PublishService {
                 log.info("开始为文档生成解读，docId: {}", docId);
                 String fileId = uploadFileAndGetFileId(docId).get();
 
-                try {
-                    // 3. 调用AI生成解读内容
-                    String content = generateContent(fileId, interpretationSystemPrompt, interpretationUserPrompt).get();
+                // 3. 调用AI生成解读内容
+                String content = generateContent(fileId, interpretationUserPrompt).get();
 
-                    // 4. 保存解读内容
-                    DocInterpretation interpretation = new DocInterpretation();
-                    interpretation.setDocId(docId);
-                    interpretation.setContent(content);
-                    docInterpretationRepository.save(interpretation);
-                    log.info("解读内容已保存，docId: {}", docId);
+                // 4. 保存解读内容
+                DocInterpretation interpretation = new DocInterpretation();
+                interpretation.setDocId(docId);
+                interpretation.setContent(content);
+                docInterpretationRepository.save(interpretation);
+                log.info("解读内容已保存，docId: {}", docId);
 
-                    return content;
-                } finally {
-                    // 5. 删除上传的文件
-                    try {
-                        deleteFile(fileId).get();
-                    } catch (Exception e) {
-                        log.warn("删除文件失败: {}", e.getMessage());
-                    }
-                }
+                return content;
             } catch (Exception e) {
                 String errorMsg = String.format("生成解读失败：docId=%s, error=%s", docId, e.getMessage());
                 log.error(errorMsg, e);
                 throw new RuntimeException(errorMsg, e);
             }
+        });
+    }
+
+    @Override
+    public CompletableFuture<String> generateMindmap(Long docId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // 1. 检查是否已存在脑图内容
+                DocMindmap existingMindmap = docMindmapRepository.findByDocId(docId)
+                        .orElse(null);
+                if (existingMindmap != null && existingMindmap.getContent() != null) {
+                    log.info("已存在脑图内容，直接返回，docId: {}", docId);
+                    return existingMindmap.getContent();
+                }
+
+                // 2. 上传文件获取fileId
+                log.info("开始为文档生成脑图，docId: {}", docId);
+                String fileId = uploadFileAndGetFileId(docId).get();
+
+                // 3. 调用AI生成脑图内容
+                String content = generateContent(fileId, mindmapUserPrompt).get();
+
+                // 4. 保存脑图内容
+                DocMindmap mindmap = new DocMindmap();
+                mindmap.setDocId(docId);
+                mindmap.setContent(content);
+                docMindmapRepository.save(mindmap);
+                log.info("脑图内容已保存，docId: {}", docId);
+
+                return content;
+            } catch (Exception e) {
+                String errorMsg = String.format("生成脑图失败：docId=%s, error=%s", docId, e.getMessage());
+                log.error(errorMsg, e);
+                throw new RuntimeException(errorMsg, e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<String> generateQuiz(Long docId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // 1. 检查是否已存在测试题内容
+                DocQuiz existingQuiz = docQuizRepository.findByDocId(docId)
+                        .orElse(null);
+                if (existingQuiz != null && existingQuiz.getQuestions() != null) {
+                    log.info("已存在测试题内容，直接返回，docId: {}", docId);
+                    return existingQuiz.getQuestions();
+                }
+
+                // 2. 上传文件获取fileId
+                log.info("开始为文档生成测试题，docId: {}", docId);
+                String fileId = uploadFileAndGetFileId(docId).get();
+
+                // 3. 调用AI生成测试题内容
+                String content = generateContent(fileId, quizUserPrompt).get();
+
+                // 4. 保存测试题内容
+                DocQuiz quiz = new DocQuiz();
+                quiz.setDocId(docId);
+                quiz.setQuestions(content);
+                docQuizRepository.save(quiz);
+                log.info("测试题内容已保存，docId: {}", docId);
+
+                return content;
+            } catch (Exception e) {
+                String errorMsg = String.format("生成测试题失败：docId=%s, error=%s", docId, e.getMessage());
+                log.error(errorMsg, e);
+                throw new RuntimeException(errorMsg, e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<String> getMindmap(Long docId) {
+        return CompletableFuture.supplyAsync(() -> {
+            DocMindmap mindmap = docMindmapRepository.findByDocId(docId)
+                    .orElse(null);
+            return mindmap != null ? mindmap.getContent() : null;
+        });
+    }
+
+    @Override
+    public CompletableFuture<String> getQuiz(Long docId) {
+        return CompletableFuture.supplyAsync(() -> {
+            DocQuiz quiz = docQuizRepository.findByDocId(docId)
+                    .orElse(null);
+            return quiz != null ? quiz.getQuestions() : null;
         });
     }
 

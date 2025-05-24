@@ -5,10 +5,8 @@ import { XMarkIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { uploadDocuments } from '../../services/api';
 
 const ALLOWED_FILE_TYPES = {
-  'Office 文档': ['.docx', '.xlsx', '.pptx', '.doc', '.xls', '.ppt'],
-  'PDF 文档': ['.pdf'],
-  '纯文本': ['.txt', '.csv', '.json', '.xml', '.html'],
-  '电子邮件': ['.eml', '.msg'],
+  '文档': ['.txt', '.docx', '.pdf', '.md'],
+  '表格': ['.xlsx', '.csv'],
   '电子书': ['.epub', '.mobi']
 };
 
@@ -241,26 +239,20 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
 
           <div className="bg-gray-50 rounded-lg p-4">
             <h3 className="font-medium mb-2">上传说明：</h3>
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-1">文件大小限制：</p>
-                <ul className="text-sm text-gray-600 list-disc pl-5">
-                  <li>单个文件大小不超过 {formatFileSize(MAX_FILE_SIZE)}</li>
-                  <li>总文件大小不超过 {formatFileSize(MAX_REQUEST_SIZE)}</li>
-                  <li>当前已选择：{formatFileSize(totalSize)}</li>
-                </ul>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-1">支持的文件格式：</p>
-                <div className="space-y-1">
-                  {Object.entries(ALLOWED_FILE_TYPES).map(([type, extensions]) => (
-                    <p key={type} className="text-sm text-gray-600">
-                      <span className="font-medium">{type}：</span>
-                      {extensions.join(', ')}
-                    </p>
-                  ))}
-                </div>
-              </div>
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">
+                1、文件大小：单个文件≤{formatFileSize(MAX_FILE_SIZE)}，单次上传≤{formatFileSize(MAX_REQUEST_SIZE)}
+              </p>
+              <p className="text-sm text-gray-600">
+                2、文件格式：
+                {Object.values(ALLOWED_FILE_TYPES)
+                  .flat()
+                  .map(ext => `-${ext}`)
+                  .join('')}
+              </p>
+              <p className="text-sm text-gray-600">
+                当前已选择：{formatFileSize(totalSize)}
+              </p>
             </div>
           </div>
         </div>

@@ -18,6 +18,34 @@ public interface PublishService {
     CompletableFuture<String> getInterpretation(Long docId);
 
     /**
+     * 生成并获取图书脑图内容
+     * @param docId 文档ID
+     * @return 脑图内容
+     */
+    CompletableFuture<String> generateMindmap(Long docId);
+
+    /**
+     * 获取图书脑图内容
+     * @param docId 文档ID
+     * @return 脑图内容，如果不存在返回null
+     */
+    CompletableFuture<String> getMindmap(Long docId);
+
+    /**
+     * 生成并获取图书测试题内容
+     * @param docId 文档ID
+     * @return 测试题内容
+     */
+    CompletableFuture<String> generateQuiz(Long docId);
+
+    /**
+     * 获取图书测试题内容
+     * @param docId 文档ID
+     * @return 测试题内容，如果不存在返回null
+     */
+    CompletableFuture<String> getQuiz(Long docId);
+
+    /**
      * 上传文件到阿里云并获取file-id
      * @param docId 文档ID
      * @return file-id
@@ -27,11 +55,10 @@ public interface PublishService {
     /**
      * 调用AI模型生成内容
      * @param fileId 文件ID
-     * @param systemPrompt 系统提示词
      * @param userPrompt 用户提示词
      * @return AI生成的内容
      */
-    CompletableFuture<String> generateContent(String fileId, String systemPrompt, String userPrompt);
+    CompletableFuture<String> generateContent(String fileId, String userPrompt);
 
     /**
      * 删除阿里云上传的文件
