@@ -1,6 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Modal from '../common/Modal';
-import { updateDocument, updateDocumentPublishStatus, DocumentCategory, getDocument, generateInterpretation, getInterpretation } from '../../services/api';
+import { 
+  updateDocument, 
+  updateDocumentPublishStatus, 
+  DocumentCategory, 
+  getDocument, 
+  generateInterpretation, 
+  getInterpretation,
+  generateMindmap,
+  getMindmap,
+  generateQuiz,
+  getQuiz
+} from '../../services/api';
+import MindmapViewer from './MindmapViewer';
+import QuizViewer from './QuizViewer';
 import ProgressBar from '../common/ProgressBar';
 import MarkdownIt from 'markdown-it';
 import { ToastManager } from '../common/Toast';
@@ -45,6 +58,10 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
 
   const [interpretation, setInterpretation] = useState('');
   const [interpretationLoading, setInterpretationLoading] = useState(false);
+  const [mindmap, setMindmap] = useState('');
+  const [mindmapLoading, setMindmapLoading] = useState(false);
+  const [quiz, setQuiz] = useState('');
+  const [quizLoading, setQuizLoading] = useState(false);
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
@@ -78,6 +95,10 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
       });
       setInterpretation('');
       setInterpretationLoading(false);
+      setMindmap('');
+      setMindmapLoading(false);
+      setQuiz('');
+      setQuizLoading(false);
       setErrors({});
       setIsUploading(false);
       
@@ -114,23 +135,6 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     return newErrors;
   };
 
-  // 轮询解读内容
-  const pollInterpretation = async () => {
-    try {
-      const response = await getInterpretation(documentId);
-      if (response.data) {
-        setInterpretation(response.data);
-        setProgress(prev => ({ ...prev, step2: 100 }));
-        setInterpretationLoading(false);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('获取解读失败:', error);
-      return false;
-    }
-  };
-
   // 生成解读内容
   const startInterpretation = async () => {
     if (interpretationLoading || interpretation) return;
@@ -162,19 +166,112 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     }
   };
 
-  const simulateProgress = (step) => {
-    let currentProgress = 0;
-    const interval = setInterval(() => {
-      currentProgress += 5;
-      setProgress(prev => ({
-        ...prev,
-        [step]: Math.min(currentProgress, 100)
-      }));
-      
-      if (currentProgress >= 100) {
-        clearInterval(interval);
+  // 轮询解读内容
+  const pollInterpretation = async () => {
+    try {
+      const response = await getInterpretation(documentId);
+      if (response.data) {
+        setInterpretation(response.data);
+        setProgress(prev => ({ ...prev, step2: 100 }));
+        setInterpretationLoading(false);
+        return true;
       }
-    }, 100);
+      return false;
+    } catch (error) {
+      console.error('获取解读失败:', error);
+      return false;
+    }
+  };
+
+  // 轮询脑图内容
+  const pollMindmap = async () => {
+    try {
+      const response = await getMindmap(documentId);
+      if (response.data) {
+        console.log('获取到脑图数据:', response.data);
+        setMindmap(response.data);
+        setProgress(prev => ({ ...prev, step3: 100 }));
+        setMindmapLoading(false);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('获取脑图失败:', error);
+      return false;
+    }
+  };
+
+  // 轮询测试题内容
+  const pollQuiz = async () => {
+    try {
+      const response = await getQuiz(documentId);
+      if (response.data) {
+        setQuiz(response.data);
+        setProgress(prev => ({ ...prev, step4: 100 }));
+        setQuizLoading(false);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('获取测试题失败:', error);
+      return false;
+    }
+  };
+
+  // 生成脑图内容
+  const startMindmap = async () => {
+    if (mindmapLoading || mindmap) return;
+    
+    setMindmapLoading(true);
+    setProgress(prev => ({ ...prev, step3: 0 }));
+
+    try {
+      await generateMindmap(documentId);
+
+      const pollInterval = setInterval(async () => {
+        const hasContent = await pollMindmap();
+        if (hasContent) {
+          clearInterval(pollInterval);
+        } else {
+          setProgress(prev => ({
+            ...prev,
+            step3: Math.min(prev.step3 + 5, 95)
+          }));
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('生成脑图失败:', error);
+      setMindmapLoading(false);
+      ToastManager.error('生成脑图失败，请重试');
+    }
+  };
+
+  // 生成测试题内容
+  const startQuiz = async () => {
+    if (quizLoading || quiz) return;
+    
+    setQuizLoading(true);
+    setProgress(prev => ({ ...prev, step4: 0 }));
+
+    try {
+      await generateQuiz(documentId);
+
+      const pollInterval = setInterval(async () => {
+        const hasContent = await pollQuiz();
+        if (hasContent) {
+          clearInterval(pollInterval);
+        } else {
+          setProgress(prev => ({
+            ...prev,
+            step4: Math.min(prev.step4 + 5, 95)
+          }));
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('生成测试题失败:', error);
+      setQuizLoading(false);
+      ToastManager.error('生成测试题失败，请重试');
+    }
   };
 
   const handleNextStep = async () => {
@@ -208,9 +305,9 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     } else if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
       if (currentStep === 2) {
-        simulateProgress('step3');
-      } else if (currentStep === 3) {
-        simulateProgress('step4');
+      startMindmap();
+    } else if (currentStep === 3) {
+      startQuiz();
       }
     } else {
       try {
@@ -330,58 +427,57 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
           </div>
         );
       case 2:
-      case 3:
-      case 4:
-        const stepConfig = {
-          2: {
-            title: '生成解读',
-            icon: 'M13 10V3L4 14h7v7l9-11h-7z',
-            progressKey: 'step2'
-          },
-          3: {
-            title: '生成脑图',
-            icon: 'M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7',
-            progressKey: 'step3'
-          },
-          4: {
-            title: '生成测试',
-            icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
-            progressKey: 'step4'
-          }
-        }[currentStep];
-
         return (
           <div className="space-y-6">
-          {currentStep === 2 ? (
-            <div>
-              {interpretationLoading ? (
-                <ProgressBar
-                  progress={progress.step2}
-                  title="生成解读中"
-                  description="系统正在生成解读内容，请稍候..."
-                  icon="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              ) : (
+            {interpretationLoading ? (
+              <ProgressBar
+                progress={progress.step2}
+                title="生成解读中"
+                description="系统正在生成解读内容，请稍候..."
+                icon="M13 10V3L4 14h7v7l9-11h-7z"
+              />
+            ) : (
+              <div 
+                className="bg-white rounded-lg p-6 shadow-sm border border-gray-200" 
+              >
                 <div 
-                  className="bg-white rounded-lg p-6 shadow-sm border border-gray-200" 
-                >
-                  <div 
-                    className="markdown-content"
-                    dangerouslySetInnerHTML={{ 
-                      __html: md.render(interpretation || '解读内容生成失败，请重试') 
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          ) : (
-            <ProgressBar
-              progress={progress[stepConfig.progressKey]}
-              title={`正在${stepConfig.title}`}
-              description="系统正在处理中，请稍候..."
-              icon={stepConfig.icon}
-            />
-          )}
+                  className="markdown-content"
+                  dangerouslySetInnerHTML={{ 
+                    __html: md.render(interpretation || '解读内容生成失败，请重试') 
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        );
+      case 3:
+        return (
+          <div className="space-y-6">
+            {mindmapLoading ? (
+              <ProgressBar
+                progress={progress.step3}
+                title="生成脑图中"
+                description="系统正在生成脑图内容，请稍候..."
+                icon="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+              />
+            ) : (
+              <MindmapViewer content={mindmap} />
+            )}
+          </div>
+        );
+      case 4:
+        return (
+          <div className="space-y-6">
+            {quizLoading ? (
+              <ProgressBar
+                progress={progress.step4}
+                title="生成测试题中"
+                description="系统正在生成测试题内容，请稍候..."
+                icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+              />
+            ) : (
+              <QuizViewer questions={quiz} />
+            )}
           </div>
         );
     }

@@ -1,0 +1,148 @@
+.markmap-wrapper {
+  background: #fff;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.markmap {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* SVG基础样式 */
+.markmap svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 节点通用样式 */
+.markmap g[data-depth] circle {
+  stroke-width: 2px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+/* 有子节点的节点样式 */
+.markmap g[data-depth][data-children] circle {
+  cursor: pointer;
+}
+
+/* 展开/折叠状态样式 */
+.markmap g[data-depth][data-children] circle {
+  transition: fill 0.3s ease;
+}
+
+.markmap g[data-depth] text {
+  fill: #333;
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+/* 连接线通用样式 */
+.markmap path {
+  fill: none;
+  stroke: #666;
+  stroke-width: 2px;
+  transition: all 0.3s ease;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: none;
+  opacity: 1;
+}
+
+/* 特定连接线样式 */
+.markmap g > path {
+  stroke-dasharray: none;
+  stroke-width: 2px;
+  opacity: 1;
+}
+
+/* 底部连接线样式 */
+.markmap g > path[data-depth] {
+  stroke-dasharray: none;
+  opacity: 1;
+}
+
+/* 鼠标悬停效果 */
+.markmap g[data-depth]:hover > circle {
+  stroke-width: 3px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.markmap g[data-depth]:hover > text {
+  font-weight: 600;
+  fill: #000;
+}
+
+.markmap g[data-depth]:hover > path {
+  stroke-width: 3px;
+  opacity: 1;
+}
+
+/* 不同层级节点和连接线的颜色 */
+.markmap g[data-depth="0"] circle {
+  stroke: #2196f3;
+}
+
+.markmap g[data-depth="0"] > path {
+  stroke: #2196f3;
+}
+
+.markmap g[data-depth="1"] circle {
+  stroke: #4caf50;
+}
+
+.markmap g[data-depth="1"] > path {
+  stroke: #4caf50;
+}
+
+.markmap g[data-depth="2"] circle {
+  stroke: #ff9800;
+}
+
+.markmap g[data-depth="2"] > path {
+  stroke: #ff9800;
+}
+
+.markmap g[data-depth="3"] circle {
+  stroke: #e91e63;
+}
+
+.markmap g[data-depth="3"] > path {
+  stroke: #e91e63;
+}
+
+.markmap g[data-depth="4"] circle {
+  stroke: #9c27b0;
+}
+
+.markmap g[data-depth="4"] > path {
+  stroke: #9c27b0;
+}
+
+.markmap g[data-depth="5"] circle {
+  stroke: #00bcd4;
+}
+
+.markmap g[data-depth="5"] > path {
+  stroke: #00bcd4;
+}
+
+/* 连接线动画 */
+.markmap g > path {
+  animation: dash 0.5s linear forwards;
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}

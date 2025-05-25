@@ -5,6 +5,9 @@ import com.aibuffet.model.DocInterpretation;
 import com.aibuffet.model.DocMindmap;
 import com.aibuffet.model.DocQuiz;
 import com.aibuffet.model.Model;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.aibuffet.repository.DocFileRepository;
 import com.aibuffet.repository.DocInterpretationRepository;
 import com.aibuffet.repository.DocMindmapRepository;
@@ -36,6 +39,7 @@ public class PublishServiceImpl implements PublishService {
     private final DocInterpretationRepository docInterpretationRepository;
     private final DocMindmapRepository docMindmapRepository;
     private final DocQuizRepository docQuizRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${book.interpretation.user-prompt}")
     private String interpretationUserPrompt;
@@ -199,6 +203,14 @@ public class PublishServiceImpl implements PublishService {
         });
     }
 
+    private String wrapContentToJson(String content, String type) throws JsonProcessingException {
+        ObjectNode jsonContent = objectMapper.createObjectNode();
+        jsonContent.put("content", content);
+        jsonContent.put("type", type);
+        jsonContent.put("version", "1.0");
+        return objectMapper.writeValueAsString(jsonContent);
+    }
+
     @Override
     public CompletableFuture<String> generateMindmap(Long docId) {
         return CompletableFuture.supplyAsync(() -> {
@@ -217,8 +229,9 @@ public class PublishServiceImpl implements PublishService {
 
                 // 3. 调用AI生成脑图内容
                 String content = generateContent(fileId, mindmapUserPrompt).get();
+                log.debug("AI生成的脑图内容: {}", content);
 
-                // 4. 保存脑图内容
+                // 4. 直接保存为markdown格式
                 DocMindmap mindmap = new DocMindmap();
                 mindmap.setDocId(docId);
                 mindmap.setContent(content);
@@ -253,14 +266,15 @@ public class PublishServiceImpl implements PublishService {
                 // 3. 调用AI生成测试题内容
                 String content = generateContent(fileId, quizUserPrompt).get();
 
-                // 4. 保存测试题内容
+                // 4. 转换为JSON格式并保存
+                String jsonContent = wrapContentToJson(content, "quiz");
                 DocQuiz quiz = new DocQuiz();
                 quiz.setDocId(docId);
-                quiz.setQuestions(content);
+                quiz.setQuestions(jsonContent);
                 docQuizRepository.save(quiz);
                 log.info("测试题内容已保存，docId: {}", docId);
 
-                return content;
+                return jsonContent;
             } catch (Exception e) {
                 String errorMsg = String.format("生成测试题失败：docId=%s, error=%s", docId, e.getMessage());
                 log.error(errorMsg, e);

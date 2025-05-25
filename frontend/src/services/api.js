@@ -638,4 +638,46 @@ export const getInterpretation = async (docId) => {
   }
 };
 
+// 脑图相关API
+export const generateMindmap = async (docId) => {
+  try {
+    const response = await apiClient.post(`/publish/docs/${docId}/mindmap/generate`);
+    return response.data;
+  } catch (error) {
+    console.error('生成脑图失败:', error);
+    throw error;
+  }
+};
+
+export const getMindmap = async (docId) => {
+  try {
+    const response = await apiClient.get(`/publish/docs/${docId}/mindmap`);
+    return response.data;
+  } catch (error) {
+    console.error('获取脑图失败:', error);
+    throw error;
+  }
+};
+
+// 测试题相关API
+export const generateQuiz = async (docId) => {
+  try {
+    const response = await apiClient.post(`/publish/docs/${docId}/quiz/generate`);
+    return response.data;
+  } catch (error) {
+    console.error('生成测试题失败:', error);
+    throw error;
+  }
+};
+
+export const getQuiz = async (docId) => {
+  try {
+    const response = await apiClient.get(`/publish/docs/${docId}/quiz`);
+    return response.data;
+  } catch (error) {
+    console.error('获取测试题失败:', error);
+    throw error;
+  }
+};
+
 export default apiClient;

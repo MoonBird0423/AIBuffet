@@ -15,7 +15,7 @@ public class DocMindmap {
     @Column(name = "doc_id", nullable = false)
     private Long docId;
 
-    @Column(name = "content", columnDefinition = "json")
+    @Column(name = "content", columnDefinition = "text")
     private String content;
 
     @Column(name = "created_at")
