@@ -44,8 +44,7 @@ const MindmapViewer = memo(({ content }) => {
       
       const transformer = new Transformer();
       const { root: transformedRoot } = transformer.transform(markdownContent);
-      transformedRootRef.current = transformedRoot;
-
+      
       // 初始化时展开所有节点
       const expandAll = (node) => {
         if (node.children) {
@@ -79,7 +78,7 @@ const MindmapViewer = memo(({ content }) => {
         spacingVertical: 16,
         autoFit: false, // 禁用自动缩放
         fitRatio: 0.95,
-        initialExpandLevel: -1, // 设置为-1表示完全展开
+        initialExpandLevel: 3, // 设置为-1表示完全展开
         // 添加节点样式
         nodeStyle: (node) => {
           const colors = [
@@ -96,7 +95,7 @@ const MindmapViewer = memo(({ content }) => {
           return {
             stroke: color,
             strokeWidth: '2px',
-            fill: node.children ? (node.state?.collapsed ? color : '#fff') : '#fff',
+            fill: node.children ? (node.state?.collapsed ? '#f0f0f0' : '#fff') : '#fff',
             rx: 5,
             ry: 5
           };
@@ -121,24 +120,17 @@ const MindmapViewer = memo(({ content }) => {
           }
         },
         // 添加连接线配置
-        linkShape: 'diagonal',
-        curveRadius: 10,
+        curveRadius: 5,
         renderOptions: {
-          linkMiddleArc: true,
-          linkVerticalOffset: 5
-        }
+          linkMiddleArc: true, // 启用中心弧线连接
+          linkVerticalOffset: 8, // 添加一些垂直偏移使连接线更自然
+          linkShape: 'diagonal', // 使用对角线形状的连接线
+          linkWidth: 2 // 保持连接线宽度一致
+        },
+        spacingVertical: 24 // 增加垂直间距以适应新的连接线样式
       }, transformedRoot);
 
       markmapRef.current = mm;
-
-      // 自定义展开/折叠行为
-      mm.hooks.transformHooks.push(node => {
-        if (node.children) {
-          node.state = node.state || {};
-          node.state.collapsed = node.state.collapsed || false;
-        }
-        return node;
-      });
 
       // 使用ResizeObserver监听容器尺寸变化
       const resizeObserver = new ResizeObserver(() => {

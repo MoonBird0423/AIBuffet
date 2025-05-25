@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../common/Modal';
 import { 
   updateDocument, 
@@ -14,22 +14,12 @@ import {
 } from '../../services/api';
 import MindmapViewer from './MindmapViewer';
 import QuizViewer from './QuizViewer';
+import InterpretationViewer from './InterpretationViewer';
 import ProgressBar from '../common/ProgressBar';
-import MarkdownIt from 'markdown-it';
 import { ToastManager } from '../common/Toast';
 import Select from '../common/Select';
 
 function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
-  // 初始化markdown-it实例，配置安全选项
-  const md = useMemo(() => {
-    return new MarkdownIt({
-      html: false,    // 禁用HTML标签
-      breaks: true,   // 转换换行符为<br>
-      linkify: true,  // 自动转换URL为链接
-      typographer: true, // 启用语言中性的替换和引号
-    });
-  }, []);
-
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     fileName: fileName || '',
@@ -437,16 +427,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
                 icon="M13 10V3L4 14h7v7l9-11h-7z"
               />
             ) : (
-              <div 
-                className="bg-white rounded-lg p-6 shadow-sm border border-gray-200" 
-              >
-                <div 
-                  className="markdown-content"
-                  dangerouslySetInnerHTML={{ 
-                    __html: md.render(interpretation || '解读内容生成失败，请重试') 
-                  }}
-                />
-              </div>
+              <InterpretationViewer content={interpretation} />
             )}
           </div>
         );
@@ -495,9 +476,9 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
       )}
       <button
         onClick={handleNextStep}
-        disabled={isUploading || (currentStep === 2 && progress.step2 !== 100)}
+        disabled={isUploading}
         className={`px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white
-          ${isUploading || (currentStep === 2 && progress.step2 !== 100) ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'}
+          ${isUploading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'}
           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
       >
         {isUploading ? '保存中...' : currentStep === 4 ? '完成发布' : '下一步'}

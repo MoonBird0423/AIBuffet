@@ -52,21 +52,24 @@
   transition: all 0.3s ease;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: none;
-  opacity: 1;
+  stroke-dasharray: none !important;
+  opacity: 1 !important;
 }
 
 /* 特定连接线样式 */
 .markmap g > path {
-  stroke-dasharray: none;
+  stroke-dasharray: none !important;
   stroke-width: 2px;
-  opacity: 1;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 /* 底部连接线样式 */
 .markmap g > path[data-depth] {
-  stroke-dasharray: none;
-  opacity: 1;
+  stroke-dasharray: none !important;
+  opacity: 1 !important;
+  display: block !important;
+  visibility: visible !important;
 }
 
 /* 鼠标悬停效果 */
