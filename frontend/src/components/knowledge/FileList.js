@@ -82,7 +82,7 @@ const FileList = ({
       'COMPLETED': 'text-green-700 bg-green-50 border border-green-200',
       'FAILED': 'text-red-700 bg-red-50 border border-red-200'
     };
-    return (classes[status] || 'text-gray-700 bg-gray-50 border border-gray-200') + ' px-2 py-1 rounded-full';
+    return (classes[status] || 'text-gray-700 bg-gray-50 border border-gray-200') + ' inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium';
   };
 
   const handleViewChunks = async (id) => {
@@ -213,7 +213,7 @@ const FileList = ({
                 处理状态
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                发布内容
+                发布状态
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 操作
@@ -240,7 +240,7 @@ const FileList = ({
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <div className="flex items-center">
                     <span className={getStatusClass(file.processing_status)}>
                       {getStatusText(file.processing_status)}
@@ -252,17 +252,14 @@ const FileList = ({
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {file.publishStatus === 'PUBLISHED' ? (
-                    <button 
-                      className="text-indigo-600 hover:text-indigo-900 font-medium"
-                      onClick={() => {/* TODO: 实现查看发布功能 */}}
-                    >
-                      查看发布
-                    </button>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                    ${file.publishStatus === 'PUBLISHED' 
+                      ? 'text-indigo-600 bg-indigo-50 border border-indigo-200' 
+                      : 'text-gray-500 bg-gray-50 border border-gray-200'}`}
+                  >
+                    {file.publishStatus === 'PUBLISHED' ? '已发布' : '未发布'}
+                  </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex items-center justify-start space-x-2">

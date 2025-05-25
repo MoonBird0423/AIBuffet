@@ -5,12 +5,12 @@ import '../../styles/markmap.css';
 
 const parseAndConvertToMarkdown = (data) => {
   try {
-    console.log('传入的数据:', data); // 添加日志
+    //console.log('传入的数据:', data);
     // 提取content字段（包含脑图数据）
     const content = data?.content || data;
     // 确保content是字符串
     if (typeof content === 'string') {
-      console.log('处理后的markdown内容:', content);
+      //console.log('处理后的markdown内容:', content);
       return content;
     }
     throw new Error('Invalid content format: content must be a string');
@@ -40,7 +40,7 @@ const MindmapViewer = memo(({ content }) => {
       svg.setAttribute('height', height);
 
       const markdownContent = parseAndConvertToMarkdown(content);
-      console.log('准备渲染的markdown内容:', markdownContent);
+      //console.log('准备渲染的markdown内容:', markdownContent);
       
       const transformer = new Transformer();
       const { root: transformedRoot } = transformer.transform(markdownContent);

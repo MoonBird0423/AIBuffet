@@ -1,21 +1,28 @@
 import React from 'react';
+import MarkdownIt from 'markdown-it';
+
+const md = new MarkdownIt();
 
 function QuizViewer({ questions }) {
-  const parseQuestions = () => {
+  const renderQuestions = () => {
     try {
-      const jsonContent = JSON.parse(questions);
-      return jsonContent.content;
+      return md.render(questions || '');
     } catch (error) {
-      console.error('解析测试题内容失败:', error);
-      return questions; // 降级处理：如果解析失败则显示原始内容
+      console.error('渲染测试题内容失败:', error);
+      return questions || ''; // 降级处理：如果渲染失败则显示原始内容
     }
   };
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div 
         className="markdown-content"
-        dangerouslySetInnerHTML={{ __html: parseQuestions() }} 
+        style={{
+          maxHeight: '60vh',
+          overflowY: 'auto',
+          padding: '24px 0 24px 24px'
+        }}
+        dangerouslySetInnerHTML={{ __html: renderQuestions() }} 
       />
     </div>
   );

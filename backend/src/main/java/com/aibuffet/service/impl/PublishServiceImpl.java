@@ -202,15 +202,7 @@ public class PublishServiceImpl implements PublishService {
             }
         });
     }
-
-    private String wrapContentToJson(String content, String type) throws JsonProcessingException {
-        ObjectNode jsonContent = objectMapper.createObjectNode();
-        jsonContent.put("content", content);
-        jsonContent.put("type", type);
-        jsonContent.put("version", "1.0");
-        return objectMapper.writeValueAsString(jsonContent);
-    }
-
+    
     @Override
     public CompletableFuture<String> generateMindmap(Long docId) {
         return CompletableFuture.supplyAsync(() -> {
@@ -263,18 +255,15 @@ public class PublishServiceImpl implements PublishService {
                 log.info("开始为文档生成测试题，docId: {}", docId);
                 String fileId = uploadFileAndGetFileId(docId).get();
 
-                // 3. 调用AI生成测试题内容
+                // 3. 调用AI生成测试题内容并保存
                 String content = generateContent(fileId, quizUserPrompt).get();
-
-                // 4. 转换为JSON格式并保存
-                String jsonContent = wrapContentToJson(content, "quiz");
                 DocQuiz quiz = new DocQuiz();
                 quiz.setDocId(docId);
-                quiz.setQuestions(jsonContent);
+                quiz.setQuestions(content);
                 docQuizRepository.save(quiz);
                 log.info("测试题内容已保存，docId: {}", docId);
 
-                return jsonContent;
+                return content;
             } catch (Exception e) {
                 String errorMsg = String.format("生成测试题失败：docId=%s, error=%s", docId, e.getMessage());
                 log.error(errorMsg, e);

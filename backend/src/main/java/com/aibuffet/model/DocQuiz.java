@@ -15,7 +15,7 @@ public class DocQuiz {
     @Column(name = "doc_id", nullable = false)
     private Long docId;
 
-    @Column(name = "questions", columnDefinition = "json")
+    @Column(name = "questions", columnDefinition = "text")
     private String questions;
 
     @Column(name = "created_at")
