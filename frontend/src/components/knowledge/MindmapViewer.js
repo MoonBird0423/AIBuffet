@@ -20,7 +20,7 @@ const parseAndConvertToMarkdown = (data) => {
   }
 };
 
-const MindmapViewer = memo(({ content }) => {
+const MindmapViewer = memo(({ content, height = '600px' }) => {
   const svgRef = useRef();
   const markmapRef = useRef();
   const containerRef = useRef();
@@ -151,7 +151,7 @@ const MindmapViewer = memo(({ content }) => {
     <div 
       ref={containerRef}
       className="markmap-wrapper bg-white rounded-lg p-6 shadow-sm border border-gray-200" 
-      style={{ height: '600px', width: '100%' }}
+      style={{ height: height, width: '100%' }}
     >
       <svg 
         ref={svgRef}

@@ -30,11 +30,21 @@
         </div>
     </nav>
 
-    <!-- 返回按钮 -->
+    <!-- 返回按钮和操作按钮 -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-        <a href="library.html" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            <i class="fas fa-arrow-left mr-2"></i> 返回图书馆
-        </a>
+        <div class="flex justify-between items-center">
+            <a href="library.html" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-arrow-left mr-2"></i> 返回图书馆
+            </a>
+            <div class="flex space-x-4">
+                <button class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-comments mr-2"></i> 知识问答
+                </button>
+                <button class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-plus mr-2"></i> 收藏
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- 图书基本信息 -->
@@ -52,18 +62,9 @@
                         <span>3.2万人使用</span>
                     </div>
                     <div class="mt-4 border-t border-gray-200 pt-4">
-                        <h2 class="text-lg font-medium text-gray-900">简介</h2>
-                        <p class="mt-2 text-gray-600">
+                        <p class="text-gray-600">
                             《原子习惯》是一本关于如何养成良好习惯的实用指南。作者詹姆斯·克利尔将习惯的养成分解为四个简单步骤：提示、渴望、反应和奖励，并教读者如何利用这四个步骤来养成好习惯、打破坏习惯。书中强调了微小改变的力量，提出了"复利效应"的概念，即小习惯长期坚持会带来巨大改变。通过这本书，读者可以学习到实用的策略和技巧，重新设计自己的习惯系统，实现个人成长和目标达成。
                         </p>
-                    </div>
-                    <div class="mt-6 flex space-x-4">
-                        <button class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            <i class="fas fa-comments mr-2"></i> 知识问答
-                        </button>
-                        <button class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            <i class="fas fa-plus mr-2"></i> 收藏
-                        </button>
                     </div>
                 </div>
             </div>

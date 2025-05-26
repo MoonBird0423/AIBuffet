@@ -3,7 +3,7 @@ import MarkdownIt from 'markdown-it';
 
 const md = new MarkdownIt();
 
-function QuizViewer({ questions }) {
+function QuizViewer({ questions, useMaxHeight = true }) {
   const renderQuestions = () => {
     try {
       return md.render(questions || '');
@@ -18,7 +18,7 @@ function QuizViewer({ questions }) {
       <div 
         className="markdown-content"
         style={{
-          maxHeight: '60vh',
+          ...(useMaxHeight ? { maxHeight: '60vh' } : {}),
           overflowY: 'auto',
           padding: '24px 0 24px 24px'
         }}

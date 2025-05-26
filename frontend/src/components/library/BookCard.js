@@ -16,7 +16,7 @@ function formatFileName(fileName) {
 function BookCard({ document }) {
   return (
     <Link
-      to={`/documents/${document.id}`}
+      to={`/book/${document.id}`}
       className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300"
     >
       <div className="aspect-w-3 aspect-h-2">

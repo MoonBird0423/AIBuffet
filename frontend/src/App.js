@@ -5,6 +5,7 @@ import Library from './pages/Library';
 import MyKnowledge from './pages/MyKnowledge';
 import Chat from './pages/Chat';
 import Login from './pages/Login';
+import BookDetails from './pages/BookDetails';
 import MainLayout from './components/layout/MainLayout';
 import ToastContainer from './components/common/Toast';
 import { AuthProvider } from './contexts/AuthContext';
@@ -24,6 +25,7 @@ function App() {
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/library" element={<Library />} />
+            <Route path="/book/:id" element={<BookDetails />} />
             <Route path="/my-knowledge" element={<MyKnowledge />} />
             <Route path="/login" element={<Login />} />
           </Route>

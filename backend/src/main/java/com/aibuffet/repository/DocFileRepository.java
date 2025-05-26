@@ -153,6 +153,11 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
     @Transactional
     @Query("UPDATE DocFile d SET d.processingStatus = :status WHERE d.id = :id")
     void updateProcessingStatus(Long id, DocFile.ProcessingStatus status);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE DocFile d SET d.learnerCount = d.learnerCount + 1 WHERE d.id = :id AND d.status = 'ACTIVE' AND d.publishStatus = 'PUBLISHED'")
+    int incrementLearnerCount(Long id);
     
     @Modifying
     @Transactional

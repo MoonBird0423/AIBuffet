@@ -568,21 +568,29 @@ public class DocumentServiceImpl implements DocumentService {
     public void incrementLearnerCount(Long docId) {
         logger.info("开始增加文档学习人数: docId={}", docId);
         
-        // 检查文档存在且为激活状态
-        DocFile docFile = docFileRepository.findByIdAndStatus(docId, DocFile.Status.ACTIVE)
-                .orElseThrow(() -> {
-                    logger.warn("文档不存在或已删除: docId={}", docId);
-                    return new ResourceNotFoundException("Document not found or deleted");
-                });
+        // 使用原子操作更新学习人数
+        int updatedRows = docFileRepository.incrementLearnerCount(docId);
+        
+        // 检查更新结果
+        if (updatedRows == 0) {
+            // 如果更新失败，检查文档是否存在且状态正确
+            DocFile docFile = docFileRepository.findById(docId)
+                    .orElseThrow(() -> {
+                        logger.warn("文档不存在: docId={}", docId);
+                        return new ResourceNotFoundException("Document not found");
+                    });
 
-        // 检查文档是否已发布
-        if (docFile.getPublishStatus() != DocFile.PublishStatus.PUBLISHED) {
-            logger.warn("文档未发布，无法增加学习人数: docId={}", docId);
-            throw new IllegalArgumentException("Document is not published");
+            if (docFile.getStatus() != DocFile.Status.ACTIVE) {
+                logger.warn("文档已删除: docId={}", docId);
+                throw new ResourceNotFoundException("Document is deleted");
+            }
+
+            if (docFile.getPublishStatus() != DocFile.PublishStatus.PUBLISHED) {
+                logger.warn("文档未发布: docId={}", docId);
+                throw new IllegalArgumentException("Document is not published");
+            }
         }
-
-        docFile.setLearnerCount(docFile.getLearnerCount() + 1);
-        docFileRepository.save(docFile);
-        logger.info("文档学习人数更新成功: docId={}, 当前学习人数={}", docId, docFile.getLearnerCount());
+        
+        logger.info("文档学习人数更新成功: docId={}", docId);
     }
 }
