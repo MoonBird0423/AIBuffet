@@ -125,33 +125,66 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
     <div className={`bg-white border border-gray-200 rounded-lg p-4 shadow-sm ${className}`}>
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
       
-      <div className="flex items-center space-x-4">
-        {/* 播放/暂停按钮 */}
-        <button
-          onClick={togglePlay}
-          disabled={isLoading}
-          className="flex items-center justify-center w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full transition-colors disabled:bg-gray-400"
-        >
-          {isLoading ? (
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-          ) : isPlaying ? (
-            <i className="fas fa-pause"></i>
-          ) : (
-            <i className="fas fa-play ml-1"></i>
-          )}
-        </button>
-
-        {/* 进度条区域 */}
-        <div className="flex-1">
-          {/* 时间显示 */}
-          <div className="flex justify-between text-sm text-gray-500 mb-1">
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
+      <div className="space-y-3">
+        {/* 第一行：音量控制 + 播放按钮 + 倍速控制 */}
+        <div className="flex items-center justify-center space-x-6">
+          {/* 音量控制 */}
+          <div className="flex items-center space-x-2">
+            <i className="fas fa-volume-down text-gray-400"></i>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={volume}
+              onChange={handleVolumeChange}
+              className="w-16 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            />
           </div>
+
+          {/* 播放/暂停按钮 */}
+          <button
+            onClick={togglePlay}
+            disabled={isLoading}
+            className="flex items-center justify-center w-8 h-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full transition-colors disabled:bg-gray-400"
+          >
+            {isLoading ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            ) : isPlaying ? (
+              <i className="fas fa-pause text-sm"></i>
+            ) : (
+              <i className="fas fa-play ml-0.5 text-sm"></i>
+            )}
+          </button>
+
+          {/* 播放速度控制 */}
+          <div className="flex items-center space-x-2">
+            <i className="fas fa-tachometer-alt text-gray-400"></i>
+            <select
+              value={playbackRate}
+              onChange={handlePlaybackRateChange}
+              className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="0.5">0.5x</option>
+              <option value="0.75">0.75x</option>
+              <option value="1">1x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2x</option>
+            </select>
+          </div>
+        </div>
+
+        {/* 第二行：时间 + 进度条 + 时间 */}
+        <div className="flex items-center space-x-3">
+          {/* 当前时间 */}
+          <span className="text-sm text-gray-500 min-w-[40px]">
+            {formatTime(currentTime)}
+          </span>
           
           {/* 进度条 */}
           <div
-            className="w-full h-2 bg-gray-200 rounded-full cursor-pointer"
+            className="flex-1 h-2 bg-gray-200 rounded-full cursor-pointer"
             onClick={handleProgressClick}
           >
             <div
@@ -159,37 +192,11 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
               style={{ width: `${progressPercentage}%` }}
             ></div>
           </div>
-        </div>
 
-        {/* 音量控制 */}
-        <div className="flex items-center space-x-2">
-          <i className="fas fa-volume-down text-gray-400"></i>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={volume}
-            onChange={handleVolumeChange}
-            className="w-16 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-          />
-        </div>
-
-        {/* 播放速度控制 */}
-        <div className="flex items-center space-x-2">
-          <i className="fas fa-tachometer-alt text-gray-400"></i>
-          <select
-            value={playbackRate}
-            onChange={handlePlaybackRateChange}
-            className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="0.5">0.5x</option>
-            <option value="0.75">0.75x</option>
-            <option value="1">1x</option>
-            <option value="1.25">1.25x</option>
-            <option value="1.5">1.5x</option>
-            <option value="2">2x</option>
-          </select>
+          {/* 总时间 */}
+          <span className="text-sm text-gray-500 min-w-[40px]">
+            {formatTime(duration)}
+          </span>
         </div>
       </div>
     </div>
