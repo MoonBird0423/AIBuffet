@@ -680,4 +680,35 @@ export const getQuiz = async (docId) => {
   }
 };
 
+// 音频相关API
+export const synthesizeAudio = async (docId) => {
+  try {
+    const response = await apiClient.post(`/documents/${docId}/audio/synthesize`);
+    return response.data;
+  } catch (error) {
+    console.error('音频合成失败:', error);
+    throw error;
+  }
+};
+
+export const getAudioUrl = async (docId) => {
+  try {
+    const response = await apiClient.get(`/documents/${docId}/audio`);
+    return response.data;
+  } catch (error) {
+    console.error('获取音频URL失败:', error);
+    throw error;
+  }
+};
+
+export const getAudioStatus = async (docId) => {
+  try {
+    const response = await apiClient.get(`/documents/${docId}/audio/status`);
+    return response.data;
+  } catch (error) {
+    console.error('检查音频状态失败:', error);
+    throw error;
+  }
+};
+
 export default apiClient;

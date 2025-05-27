@@ -21,6 +21,9 @@ public class DocInterpretation {
     @Column(columnDefinition = "longtext")
     private String content;
 
+    @Column(name = "audio_url", length = 500)
+    private String audioUrl;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

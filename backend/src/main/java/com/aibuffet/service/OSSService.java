@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -29,6 +30,7 @@ public class OSSService {
     private static final String CHAT_IMAGE_DIR = "chat-images";
     private static final String KNOWLEDGE_DOC_DIR = "knowledgebase-doc";
     private static final String BOOK_COVER_DIR = "book-cover";
+    private static final String INTERPRETATION_AUDIO_DIR = "interpretation_audio";
 
     // 封面相关常量
     private static final long BOOK_COVER_MAX_SIZE = 2 * 1024 * 1024; // 2MB
@@ -339,6 +341,60 @@ public class OSSService {
         } catch (Exception e) {
             logger.error("图书封面上传失败: {}", e.getMessage());
             throw e;
+        }
+    }
+
+    /**
+     * 上传解读音频文件到OSS
+     * @param audioBytes 音频文件字节数组
+     * @param fileName 文件名
+     * @param userId 用户ID
+     * @param docId 文档ID
+     * @return OSS文件URL
+     */
+    public String uploadInterpretationAudio(byte[] audioBytes, String fileName, Long userId, Long docId) throws IOException {
+        try {
+            logger.info("开始上传解读音频文件: 用户ID={}, 文档ID={}, 文件名={}, 大小={} bytes", 
+                userId, docId, fileName, audioBytes.length);
+
+            // 生成固定的音频文件路径：interpretation_audio/userId/docId.wav
+            String objectKey = String.format("%s/%d/%d.wav", INTERPRETATION_AUDIO_DIR, userId, docId);
+            
+            // 创建对象元数据
+            ObjectMetadata metadata = new ObjectMetadata();
+            metadata.setContentType("audio/wav");
+            metadata.setContentLength(audioBytes.length);
+            
+            // 上传文件
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(audioBytes);
+            PutObjectRequest putObjectRequest = new PutObjectRequest(
+                ossConfig.getBucketName(),
+                objectKey,
+                inputStream,
+                metadata
+            );
+            
+            ossClient.putObject(putObjectRequest);
+            
+            // 生成访问URL
+            Date expiration = Date.from(
+                LocalDateTime.now().plusYears(10)
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+            );
+            URL url = ossClient.generatePresignedUrl(
+                ossConfig.getBucketName(),
+                objectKey,
+                expiration
+            );
+            
+            String audioUrl = url.toString();
+            logger.info("解读音频文件上传成功: {}", audioUrl);
+            return audioUrl;
+            
+        } catch (Exception e) {
+            logger.error("上传解读音频文件失败: {}", e.getMessage(), e);
+            throw new IOException("音频文件上传失败: " + e.getMessage(), e);
         }
     }
 
