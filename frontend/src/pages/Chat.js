@@ -26,6 +26,8 @@ function Chat() {
   const [error, setError] = useState(null);
   const [inputFocusKey, setInputFocusKey] = useState(0);
   const [loadingRetryCount, setLoadingRetryCount] = useState(0);
+  const [questionTarget, setQuestionTarget] = useState(null); // {type: 'book'|'knowledge', id: string, name: string}
+  const [showNoTargetHint, setShowNoTargetHint] = useState(false);
   
   const sidebarRef = useRef(null);
   const abortControllerRef = useRef(null);
@@ -63,6 +65,34 @@ function Chat() {
       setError('获取模型信息失败');
     }
   }, []);
+
+  // URL参数解析逻辑 - 处理图书和知识库参数
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const bookId = params.get('bookId');
+    const bookName = params.get('bookName');
+    const knowledgeBaseId = params.get('knowledgeBaseId');
+    const knowledgeBaseName = params.get('knowledgeBaseName');
+    
+    if (bookId && bookName) {
+      setQuestionTarget({ 
+        type: 'book', 
+        id: bookId, 
+        name: decodeURIComponent(bookName) 
+      });
+      setShowNoTargetHint(false);
+    } else if (knowledgeBaseId && knowledgeBaseName) {
+      setQuestionTarget({ 
+        type: 'knowledge', 
+        id: knowledgeBaseId, 
+        name: decodeURIComponent(knowledgeBaseName) 
+      });
+      setShowNoTargetHint(false);
+    } else {
+      setQuestionTarget(null);
+      setShowNoTargetHint(true);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -462,6 +492,12 @@ function Chat() {
     setShowPromptTemplates(!showPromptTemplates);
   };
 
+  // 删除提问对象标签
+  const handleRemoveTarget = () => {
+    setQuestionTarget(null);
+    setShowNoTargetHint(true);
+  };
+
   useEffect(() => {
     return () => {
       cancelCurrentRequest();
@@ -487,10 +523,9 @@ function Chat() {
       />
       <div className="flex-1 flex flex-col">
         <ChatHeader
-          selectedModel={selectedModel}
-          emoji={modelEmoji}
-          purpose={modelPurpose}
-          chatName={currentSession?.chatName}
+          questionTarget={questionTarget}
+          onRemoveTarget={handleRemoveTarget}
+          showNoTargetHint={showNoTargetHint}
         />
         {error && (
           <div className="bg-red-50 p-4">

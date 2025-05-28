@@ -58,7 +58,13 @@ function BookInfo({ bookData }) {
           </div>
           
           <div className="mt-6 flex flex-wrap gap-4">
-            <button className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <button 
+              onClick={() => {
+                const chatUrl = `/chat?bookId=${bookData.id}&bookName=${encodeURIComponent(bookData.fileName)}`;
+                window.open(chatUrl, '_blank');
+              }}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
               <i className="fas fa-comments mr-2"></i>
               知识问答
             </button>

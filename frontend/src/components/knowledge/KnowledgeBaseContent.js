@@ -38,7 +38,7 @@ function KnowledgeBaseContent({ knowledgeBase }) {
 
   // 处理知识库问答按钮点击
   const handleChatClick = () => {
-    const chatUrl = `/chat?knowledgeBaseId=${knowledgeBase.id}`;
+    const chatUrl = `/chat?knowledgeBaseId=${knowledgeBase.id}&knowledgeBaseName=${encodeURIComponent(knowledgeBase.name)}`;
     window.open(chatUrl, '_blank');
   };
 
