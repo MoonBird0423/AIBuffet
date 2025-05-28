@@ -1,5 +1,7 @@
 package com.aibuffet.controller;
 
+import com.aibuffet.dto.CreateChatRequest;
+import com.aibuffet.dto.QuestionTargetRequest;
 import com.aibuffet.model.ChatSession;
 import com.aibuffet.model.User;
 import com.aibuffet.service.ChatService;
@@ -59,13 +61,20 @@ public class ChatController {
     @PostMapping
     public ResponseEntity<ChatSession> createChatSession(
             Authentication authentication,
-            @RequestBody Map<String, String> request) {
+            @RequestBody CreateChatRequest request) {
         Long userId = getUserId(authentication);
-        String firstMessage = request.get("message");
+        String firstMessage = request.getMessage();
         if (firstMessage == null || firstMessage.trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-            ChatSession session = chatService.createChatSession(userId, firstMessage);
+        
+        ChatSession session = chatService.createChatSession(
+            userId, 
+            firstMessage,
+            request.getQuestionTargetType(),
+            request.getQuestionTargetId(),
+            request.getQuestionTargetName()
+        );
         return ResponseEntity.ok(session);
     }
 
@@ -95,6 +104,41 @@ public class ChatController {
         Long userId = getUserId(authentication);
         chatService.deleteChatSession(userId, sessionId);
         return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{sessionId}/question-target")
+    public ResponseEntity<ChatSession> updateQuestionTarget(
+            Authentication authentication,
+            @PathVariable String sessionId,
+            @RequestBody QuestionTargetRequest request) {
+        Long userId = getUserId(authentication);
+        try {
+            ChatSession updated = chatService.updateQuestionTarget(
+                userId, 
+                sessionId, 
+                request.getQuestionTargetType(),
+                request.getQuestionTargetId(),
+                request.getQuestionTargetName()
+            );
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            logger.error("Error updating question target: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{sessionId}/question-target")
+    public ResponseEntity<ChatSession> clearQuestionTarget(
+            Authentication authentication,
+            @PathVariable String sessionId) {
+        Long userId = getUserId(authentication);
+        try {
+            ChatSession updated = chatService.clearQuestionTarget(userId, sessionId);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            logger.error("Error clearing question target: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PostMapping("/upload-image")

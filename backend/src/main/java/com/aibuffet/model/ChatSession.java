@@ -31,6 +31,15 @@ public class ChatSession {
     @Column(nullable = false)
     private Boolean isDeleted = false;
 
+    @Column(length = 20)
+    private String questionTargetType;  // 'book' 或 'knowledge'
+
+    @Column(length = 50)
+    private String questionTargetId;    // 图书ID或知识库ID
+
+    @Column(length = 255)
+    private String questionTargetName;  // 图书名称或知识库名称
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

@@ -4,7 +4,7 @@ import ChatHeader from '../components/chat/ChatHeader';
 import ChatMessages from '../components/chat/ChatMessages';
 import ChatInput from '../components/chat/ChatInput';
 import ChatSidebar from '../components/chat/ChatSidebar';
-import { getChatSession, createChatSession, updateChatSession, queryModels, invokeModel, uploadChatImage } from '../services/api';
+import { getChatSession, createChatSession, updateChatSession, queryModels, invokeModel, uploadChatImage, clearQuestionTarget } from '../services/api';
 import { FILE_TYPES, formatFileSize } from '../utils/fileUtils';
 import { ToastManager } from '../components/common/Toast';
 
@@ -123,6 +123,16 @@ function Chat() {
         setCurrentSessionId(sessionId);
         setCurrentSession(session);
         const messages = JSON.parse(session.messages);
+        
+        // 从session中恢复questionTarget
+        if (session.questionTargetType) {
+          setQuestionTarget({
+            type: session.questionTargetType,
+            id: session.questionTargetId,
+            name: session.questionTargetName
+          });
+          setShowNoTargetHint(false);
+        }
         
         // 只在非流式输出状态时更新消息
         const isStreaming = processingMap.get(sessionId);
@@ -299,7 +309,7 @@ function Chat() {
       // 先创建新会话（如果需要）
       if (!activeSessionId) {
         try {
-          const newSession = await createChatSession(content);
+          const newSession = await createChatSession(content, questionTarget);
           activeSessionId = newSession.sessionId;
           setCurrentSessionId(activeSessionId);
           setCurrentSession(newSession);
@@ -493,7 +503,15 @@ function Chat() {
   };
 
   // 删除提问对象标签
-  const handleRemoveTarget = () => {
+  const handleRemoveTarget = async () => {
+    if (currentSessionId) {
+      try {
+        await clearQuestionTarget(currentSessionId);
+      } catch (error) {
+        console.error('Clear question target error:', error);
+        // 即使API调用失败，也继续更新前端状态
+      }
+    }
     setQuestionTarget(null);
     setShowNoTargetHint(true);
   };

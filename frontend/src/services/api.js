@@ -123,9 +123,20 @@ export const getChatSession = async (sessionId) => {
   }
 };
 
-export const createChatSession = async (message) => {
+export const createChatSession = async (message, questionTarget = null) => {
   try {
-    const response = await apiClient.post('/chats', { message });
+    const requestBody = { 
+      message: message
+    };
+    
+    // 如果有提问对象，添加到请求中
+    if (questionTarget) {
+      requestBody.questionTargetType = questionTarget.type;
+      requestBody.questionTargetId = questionTarget.id;
+      requestBody.questionTargetName = questionTarget.name;
+    }
+    
+    const response = await apiClient.post('/chats', requestBody);
     return response.data;
   } catch (error) {
     console.error('Error creating chat session:', error);
@@ -148,6 +159,32 @@ export const deleteChatSession = async (sessionId) => {
     await apiClient.delete(`/chats/${sessionId}`);
   } catch (error) {
     console.error('Error deleting chat session:', error);
+    throw error;
+  }
+};
+
+// 更新提问对象
+export const updateQuestionTarget = async (sessionId, questionTarget) => {
+  try {
+    const response = await apiClient.put(`/chats/${sessionId}/question-target`, {
+      questionTargetType: questionTarget.type,
+      questionTargetId: questionTarget.id,
+      questionTargetName: questionTarget.name
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating question target:', error);
+    throw error;
+  }
+};
+
+// 清除提问对象
+export const clearQuestionTarget = async (sessionId) => {
+  try {
+    const response = await apiClient.delete(`/chats/${sessionId}/question-target`);
+    return response.data;
+  } catch (error) {
+    console.error('Error clearing question target:', error);
     throw error;
   }
 };

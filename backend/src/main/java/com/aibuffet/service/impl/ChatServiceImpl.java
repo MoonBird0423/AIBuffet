@@ -37,6 +37,13 @@ public class ChatServiceImpl implements ChatService {
     @Override
     @Transactional
     public ChatSession createChatSession(Long userId, String firstMessage) {
+        return createChatSession(userId, firstMessage, null, null, null);
+    }
+
+    @Override
+    @Transactional
+    public ChatSession createChatSession(Long userId, String firstMessage, 
+            String questionTargetType, String questionTargetId, String questionTargetName) {
         logger.info("Creating new chat session for user: {} with first message: {}", userId, firstMessage);
         
         ChatSession chatSession = new ChatSession();
@@ -44,6 +51,11 @@ public class ChatServiceImpl implements ChatService {
         chatSession.setUserId(userId);
         chatSession.setFirstMessage(firstMessage);
         chatSession.setChatName(firstMessage.length() > 50 ? firstMessage.substring(0, 47) + "..." : firstMessage);
+
+        // 设置提问对象信息
+        chatSession.setQuestionTargetType(questionTargetType);
+        chatSession.setQuestionTargetId(questionTargetId);
+        chatSession.setQuestionTargetName(questionTargetName);
 
         // 初始化消息数组
         String initialMessages = String.format(
@@ -55,8 +67,50 @@ public class ChatServiceImpl implements ChatService {
         chatSession.setIsDeleted(false);
         
         ChatSession saved = chatSessionRepository.save(chatSession);
-        logger.info("Created chat session with ID: {}", saved.getSessionId());
+        logger.info("Created chat session with ID: {} and question target: {}/{}", 
+            saved.getSessionId(), questionTargetType, questionTargetName);
         return saved;
+    }
+
+    @Override
+    @Transactional
+    public ChatSession updateQuestionTarget(Long userId, String sessionId, 
+            String questionTargetType, String questionTargetId, String questionTargetName) {
+        logger.info("Updating question target for session {} user: {}", sessionId, userId);
+        
+        ChatSession chatSession = chatSessionRepository.findByUserIdAndSessionId(userId, sessionId);
+        if (chatSession == null) {
+            logger.error("Chat session {} not found for user {}", sessionId, userId);
+            throw new RuntimeException("Chat session not found");
+        }
+        
+        chatSession.setQuestionTargetType(questionTargetType);
+        chatSession.setQuestionTargetId(questionTargetId);
+        chatSession.setQuestionTargetName(questionTargetName);
+        
+        ChatSession updated = chatSessionRepository.save(chatSession);
+        logger.info("Updated question target for session: {} to {}/{}", sessionId, questionTargetType, questionTargetName);
+        return updated;
+    }
+
+    @Override
+    @Transactional
+    public ChatSession clearQuestionTarget(Long userId, String sessionId) {
+        logger.info("Clearing question target for session {} user: {}", sessionId, userId);
+        
+        ChatSession chatSession = chatSessionRepository.findByUserIdAndSessionId(userId, sessionId);
+        if (chatSession == null) {
+            logger.error("Chat session {} not found for user {}", sessionId, userId);
+            throw new RuntimeException("Chat session not found");
+        }
+        
+        chatSession.setQuestionTargetType(null);
+        chatSession.setQuestionTargetId(null);
+        chatSession.setQuestionTargetName(null);
+        
+        ChatSession updated = chatSessionRepository.save(chatSession);
+        logger.info("Cleared question target for session: {}", sessionId);
+        return updated;
     }
 
     @Override

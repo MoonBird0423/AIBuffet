@@ -31,6 +31,38 @@ public interface ChatService {
     ChatSession createChatSession(Long userId, String firstMessage);
 
     /**
+     * 创建新对话（带提问对象信息）
+     * @param userId 用户ID
+     * @param firstMessage 第一条消息内容
+     * @param questionTargetType 提问对象类型
+     * @param questionTargetId 提问对象ID
+     * @param questionTargetName 提问对象名称
+     * @return 创建的对话信息
+     */
+    ChatSession createChatSession(Long userId, String firstMessage, 
+        String questionTargetType, String questionTargetId, String questionTargetName);
+
+    /**
+     * 更新对话的提问对象
+     * @param userId 用户ID
+     * @param sessionId 对话ID
+     * @param questionTargetType 提问对象类型
+     * @param questionTargetId 提问对象ID
+     * @param questionTargetName 提问对象名称
+     * @return 更新后的对话信息
+     */
+    ChatSession updateQuestionTarget(Long userId, String sessionId, 
+        String questionTargetType, String questionTargetId, String questionTargetName);
+
+    /**
+     * 清除对话的提问对象
+     * @param userId 用户ID
+     * @param sessionId 对话ID
+     * @return 更新后的对话信息
+     */
+    ChatSession clearQuestionTarget(Long userId, String sessionId);
+
+    /**
      * 更新对话内容
      * @param userId 用户ID
      * @param sessionId 对话ID
