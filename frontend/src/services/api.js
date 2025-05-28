@@ -190,7 +190,7 @@ export const clearQuestionTarget = async (sessionId) => {
 };
 
 // 模型调用相关API
-export const invokeModel = ({ messages, model, onMessage, onError, onFinish, signal }) => {
+export const invokeModel = ({ messages, onMessage, onError, onFinish, signal }) => {
   // 获取认证信息
   const authUser = localStorage.getItem('auth_user');
   let token = '';
@@ -205,7 +205,6 @@ export const invokeModel = ({ messages, model, onMessage, onError, onFinish, sig
 
   const requestBody = {
     messages,
-    model,
     stream: true,
     temperature: 0.7,
   };

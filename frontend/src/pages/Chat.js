@@ -1,23 +1,19 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ChatHeader from '../components/chat/ChatHeader';
 import ChatMessages from '../components/chat/ChatMessages';
 import ChatInput from '../components/chat/ChatInput';
 import ChatSidebar from '../components/chat/ChatSidebar';
-import { getChatSession, createChatSession, updateChatSession, queryModels, invokeModel, uploadChatImage, clearQuestionTarget } from '../services/api';
+import { getChatSession, createChatSession, updateChatSession, invokeModel, uploadChatImage, clearQuestionTarget } from '../services/api';
 import { FILE_TYPES, formatFileSize } from '../utils/fileUtils';
 import { ToastManager } from '../components/common/Toast';
 
 function Chat() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [selectedModel, setSelectedModel] = useState(null);
-  const [currentModel, setCurrentModel] = useState(null);
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [currentUserMessage, setCurrentUserMessage] = useState(null);
   const [uploadStates, setUploadStates] = useState(new Map());
-  const [modelEmoji, setModelEmoji] = useState('');
-  const [modelPurpose, setModelPurpose] = useState('');
   const [messagesMap, setMessagesMap] = useState(new Map());
   const [processingMap, setProcessingMap] = useState(new Map());
   const [partialResponseMap, setPartialResponseMap] = useState(new Map());
@@ -53,18 +49,6 @@ function Chat() {
     }
   }, [location, navigate]);
 
-  const fetchModelDetails = useCallback(async (modelName) => {
-    if (!modelName) return;
-    try {
-      const response = await queryModels({ name: modelName });
-      if (response && response.length > 0) {
-        const model = response[0];
-        setCurrentModel(model);
-      }
-    } catch (error) {
-      setError('获取模型信息失败');
-    }
-  }, []);
 
   // URL参数解析逻辑 - 处理图书和知识库参数
   useEffect(() => {
@@ -94,19 +78,6 @@ function Chat() {
     }
   }, [location.search]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const modelName = params.get('model');
-    const emoji = params.get('emoji');
-    const purpose = params.get('purpose');
-
-    if (modelName) {
-      setSelectedModel(modelName);
-      setModelEmoji(emoji || '');
-      setModelPurpose(purpose || '');
-      fetchModelDetails(modelName);
-    }
-  }, [location, fetchModelDetails]);
 
   useEffect(() => {
     const loadSession = async () => {
@@ -395,7 +366,6 @@ function Chat() {
       // 开始流式调用
       invokeModel({
         messages: newMessages,
-        model: selectedModel || 'deepseek-chat',
         onMessage: (data) => {
           // 从SSE响应中提取content
           const content = data.choices?.[0]?.delta?.content || '';
@@ -568,7 +538,6 @@ function Chat() {
           onSend={handleSendMessage}
           showPromptTemplates={showPromptTemplates}
           onTogglePromptTemplates={togglePromptTemplates}
-          supportedTypes={currentModel?.supportedInputTypes || []}
         />
       </div>
     </div>

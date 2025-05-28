@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -22,6 +24,9 @@ public class ChatCompletionController {
 
     @Autowired
     private ChatCompletionService chatCompletionService;
+    
+    @Value("${ai.chat.default.model}")
+    private String defaultModel;
 
     @PostMapping(path = "/completions", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatCompletion(
@@ -40,8 +45,18 @@ public class ChatCompletionController {
             List<Map<String, Object>> messages = (List<Map<String, Object>>) request.get("messages");
             String modelName = (String) request.get("model");
 
-            if (messages == null || messages.isEmpty() || modelName == null) {
-                throw new IllegalArgumentException("Missing required parameters: messages or model");
+            if (messages == null || messages.isEmpty()) {
+                throw new IllegalArgumentException("Missing required parameter: messages");
+            }
+
+            // 如果未提供模型名称，使用默认模型
+            if (!StringUtils.hasText(modelName)) {
+                modelName = defaultModel;
+                logger.info("No model specified, using default model: {}", modelName);
+            }
+
+            if (!StringUtils.hasText(modelName)) {
+                throw new IllegalArgumentException("No model specified and no default model configured");
             }
 
             // 创建SSE发射器
