@@ -71,31 +71,59 @@ public class SearchServiceImpl implements SearchService {
     @Override
     @Transactional(readOnly = true)
     public List<SearchResult> search(SearchRequest request) {
-        logger.info("开始执行检索: query={}, kbIds={}", request.getQuery(), request.getKnowledgeBaseIds());
+        logger.info("开始执行检索: query={}, kbIds={}, kbId={}, docId={}", 
+                   request.getQuery(), request.getKnowledgeBaseIds(), 
+                   request.getKnowledgeBaseId(), request.getDocumentId());
 
         try {
-            // 1. 获取文件ID列表
-            List<Long> fileIds = getKnowledgeBaseFileIds(request.getKnowledgeBaseIds());
+            // 1. 验证请求有效性
+            if (!request.isValid()) {
+                throw new IllegalArgumentException("请求参数无效：必须且只能传入知识库ID列表、单个知识库ID或文档ID中的一个");
+            }
+
+            // 2. 获取文件ID列表
+            List<Long> fileIds = getFileIds(request);
             if (fileIds.isEmpty()) {
                 logger.info("未找到相关文件");
                 return Collections.emptyList();
             }
 
-            // 2. 预处理查询文本
+            // 3. 预处理查询文本
             String processedQuery = request.getQuery().trim().replaceAll("\\s+", " ");
 
-            // 3. 生成查询向量
+            // 4. 生成查询向量
             float[] queryVector = vectorService.generateVector(processedQuery, vectorConfig.getEmbeddingDimensions());
 
-            // 4. 执行向量检索
+            // 5. 执行向量检索
             List<SearchResult> results = searchVectors(queryVector, fileIds, request);
 
-            // 5. 结果后处理
+            // 6. 结果后处理
             return postProcessResults(results);
 
         } catch (Exception e) {
             logger.error("检索执行失败: {}", e.getMessage(), e);
             throw new RuntimeException("检索执行失败: " + e.getMessage(), e);
+        }
+    }
+
+    private List<Long> getFileIds(SearchRequest request) {
+        SearchRequest.SearchType searchType = request.getSearchType();
+        
+        switch (searchType) {
+            case DOCUMENT:
+                // 直接返回单个文档ID
+                return Collections.singletonList(request.getDocumentId());
+                
+            case KNOWLEDGE_BASE:
+                // 查询单个知识库下的所有文件ID
+                return getKnowledgeBaseFileIds(Collections.singletonList(request.getKnowledgeBaseId()));
+                
+            case LEGACY:
+                // 原有的多知识库搜索逻辑
+                return getKnowledgeBaseFileIds(request.getKnowledgeBaseIds());
+                
+            default:
+                return Collections.emptyList();
         }
     }
 
@@ -262,5 +290,33 @@ public class SearchServiceImpl implements SearchService {
         Integer accessibleCount = namedParameterJdbcTemplate.queryForObject(sql, parameters, Integer.class);
         
         return accessibleCount != null && accessibleCount == knowledgeBaseIds.size();
+    }
+
+    @Override
+    public boolean validateKnowledgeBasePermission(Long knowledgeBaseId, Long userId) {
+        String sql = "SELECT COUNT(1) FROM knowledge_bases kb " +
+                    "WHERE kb.id = :kbId " +
+                    "AND kb.created_by = :userId";
+        
+        MapSqlParameterSource parameters = new MapSqlParameterSource();
+        parameters.addValue("kbId", knowledgeBaseId);
+        parameters.addValue("userId", userId);
+        
+        Integer count = namedParameterJdbcTemplate.queryForObject(sql, parameters, Integer.class);
+        return count != null && count > 0;
+    }
+
+    @Override
+    public boolean validateDocumentPermission(Long documentId, Long userId) {
+        String sql = "SELECT COUNT(1) FROM doc_files df " +
+                    "WHERE df.id = :documentId " +
+                    "AND (df.publish_status = 'PUBLISHED' OR df.uploaded_by = :userId)";
+        
+        MapSqlParameterSource parameters = new MapSqlParameterSource();
+        parameters.addValue("documentId", documentId);
+        parameters.addValue("userId", userId);
+        
+        Integer count = namedParameterJdbcTemplate.queryForObject(sql, parameters, Integer.class);
+        return count != null && count > 0;
     }
 }

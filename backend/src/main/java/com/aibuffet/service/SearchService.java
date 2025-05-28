@@ -21,4 +21,22 @@ public interface SearchService {
      * @return true如果用户有权限访问所有指定的知识库
      */
     boolean validateSearchPermission(List<Long> knowledgeBaseIds, Long userId);
+
+    /**
+     * 验证用户是否有权限检索指定的知识库
+     *
+     * @param knowledgeBaseId 知识库ID
+     * @param userId 用户ID
+     * @return true如果用户有权限访问指定的知识库
+     */
+    boolean validateKnowledgeBasePermission(Long knowledgeBaseId, Long userId);
+
+    /**
+     * 验证用户是否有权限检索指定的文档
+     *
+     * @param documentId 文档ID
+     * @param userId 用户ID
+     * @return true如果用户有权限访问指定的文档
+     */
+    boolean validateDocumentPermission(Long documentId, Long userId);
 }

@@ -717,4 +717,36 @@ export const getAudioStatus = async (docId) => {
   }
 };
 
+// 知识库搜索
+export const searchKnowledgeBase = async (knowledgeBaseId, query, limit = 10, threshold = 0.7) => {
+  try {
+    const response = await apiClient.post('/search', {
+      query: query,
+      knowledgeBaseId: knowledgeBaseId,
+      limit: limit,
+      similarityThreshold: threshold
+    });
+    return response.data;
+  } catch (error) {
+    console.error('知识库搜索失败:', error);
+    throw error;
+  }
+};
+
+// 文档搜索
+export const searchDocument = async (documentId, query, limit = 10, threshold = 0.7) => {
+  try {
+    const response = await apiClient.post('/search', {
+      query: query,
+      documentId: documentId,
+      limit: limit,
+      similarityThreshold: threshold
+    });
+    return response.data;
+  } catch (error) {
+    console.error('文档搜索失败:', error);
+    throw error;
+  }
+};
+
 export default apiClient;
