@@ -4,8 +4,7 @@ import ChatHeader from '../components/chat/ChatHeader';
 import ChatMessages from '../components/chat/ChatMessages';
 import ChatInput from '../components/chat/ChatInput';
 import ChatSidebar from '../components/chat/ChatSidebar';
-import { getChatSession, createChatSession, updateChatSession, invokeModel, uploadChatImage, clearQuestionTarget } from '../services/api';
-import { FILE_TYPES, formatFileSize } from '../utils/fileUtils';
+import { getChatSession, createChatSession, updateChatSession, invokeModel, clearQuestionTarget } from '../services/api';
 import { ToastManager } from '../components/common/Toast';
 
 function Chat() {
@@ -13,7 +12,6 @@ function Chat() {
   const navigate = useNavigate();
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [currentUserMessage, setCurrentUserMessage] = useState(null);
-  const [uploadStates, setUploadStates] = useState(new Map());
   const [messagesMap, setMessagesMap] = useState(new Map());
   const [processingMap, setProcessingMap] = useState(new Map());
   const [partialResponseMap, setPartialResponseMap] = useState(new Map());
@@ -49,7 +47,6 @@ function Chat() {
     }
   }, [location, navigate]);
 
-
   // URL参数解析逻辑 - 处理图书和知识库参数
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -77,7 +74,6 @@ function Chat() {
       setShowNoTargetHint(true);
     }
   }, [location.search]);
-
 
   useEffect(() => {
     const loadSession = async () => {
@@ -184,91 +180,17 @@ function Chat() {
     });
   };
 
-  const uploadFile = async (file) => {
-    try {
-      // 文件验证
-      if (!FILE_TYPES.IMAGE.mimeTypes.includes(file.type)) {
-        ToastManager.error('不支持的文件格式，仅支持jpg/jpeg/png/gif/webp格式');
-        throw new Error('不支持的文件格式');
-      }
-      if (file.size > FILE_TYPES.IMAGE.maxSize) {
-        ToastManager.error(`文件大小超出限制：${formatFileSize(file.size)} > ${formatFileSize(FILE_TYPES.IMAGE.maxSize)}`);
-        throw new Error('文件大小超出限制');
-      }
-
-      const response = await uploadChatImage(file);
-      return response.url;
-    } catch (error) {
-      console.error('File upload error:', error);
-      throw error;
-    }
-  };
-
-  const handleSendMessage = async (content, files) => {
-    if (!content.trim() && (!files || !files.length)) return;
+  const handleSendMessage = async (content) => {
+    if (!content.trim()) return;
     
     // 取消之前的请求（如果有）
     cancelCurrentRequest();
 
     // 构建用户消息
     let userMessage = {
-      role: 'user'
+      role: 'user',
+      content: content.trim()
     };
-
-    // 处理文件上传
-    if (files && files.length > 0) {
-      const messageContent = [];
-      
-      // 添加文本内容
-      if (content.trim()) {
-        messageContent.push({
-          type: 'text',
-          text: content.trim()
-        });
-      }
-
-      try {
-        // 更新所有文件的状态为uploading
-        const newUploadStates = new Map();
-        files.forEach(file => {
-          newUploadStates.set(file.name, { status: 'uploading', progress: 0 });
-        });
-        setUploadStates(newUploadStates);
-
-        // 上传所有文件
-        const uploadPromises = files.map(async (file) => {
-          try {
-            const url = await uploadFile(file);
-            setUploadStates(prev => {
-              const newStates = new Map(prev);
-              newStates.set(file.name, { status: 'success', progress: 100 });
-              return newStates;
-            });
-            return {
-              type: 'image_url',
-              image_url: { url }
-            };
-          } catch (error) {
-            setUploadStates(prev => {
-              const newStates = new Map(prev);
-              newStates.set(file.name, { status: 'error', progress: 0 });
-              return newStates;
-            });
-            throw error;
-          }
-        });
-
-        const uploadedFiles = await Promise.all(uploadPromises);
-        messageContent.push(...uploadedFiles);
-      } catch (error) {
-        setError('文件上传失败，请重试');
-        return;
-      }
-
-      userMessage.content = messageContent;
-    } else {
-      userMessage.content = content.trim();
-    }
 
     // 保存当前用户消息
     setCurrentUserMessage(userMessage);
@@ -531,7 +453,6 @@ function Chat() {
           messages={messagesMap.get(currentSessionId) || []}
           partialResponse={currentSessionId ? partialResponseMap.get(currentSessionId) || '' : ''}
           messageStatus={currentSessionId ? (processingMap.get(currentSessionId) ? 'streaming' : 'completed') : 'completed'}
-          uploadStates={uploadStates}
         />
         <ChatInput
           key={inputFocusKey}

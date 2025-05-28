@@ -288,36 +288,6 @@ export const queryModels = async (params) => {
   }
 };
 
-// 上传聊天图片
-export const uploadChatImage = async (file) => {
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await apiClient.post('/chats/upload-image', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      timeout: 600000, // 10分钟超时
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity,
-      onUploadProgress: (progressEvent) => {
-        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-      }
-    });
-    
-    return response.data;
-  } catch (error) {
-    console.error('图片上传失败:', {
-      error,
-      errorMessage: error.message,
-      errorResponse: error.response?.data,
-      errorStack: error.stack
-    });
-    throw error;
-  }
-};
-
 // 知识库相关API
 export const createKnowledgeBase = async (data) => {
   try {

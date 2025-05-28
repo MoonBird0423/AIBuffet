@@ -1,19 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import PromptTemplates from './PromptTemplates';
-import FileUploadButton from './FileUploadButton';
-import FilePreviewGrid from './FilePreviewGrid';
 import { ToastManager } from '../common/Toast';
-import { 
-  validateFileType, 
-  validateFileSize, 
-  FILE_CONSTRAINTS 
-} from '../../utils/fileUtils';
 
-function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates, supportedTypes = [] }) {
+function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates }) {
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState([]);
   const textareaRef = useRef(null);
 
   // 组件挂载时自动聚焦
@@ -25,13 +17,12 @@ function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates, suppo
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if ((!message.trim() && !selectedFiles.length) || isSubmitting) return;
+    if (!message.trim() || isSubmitting) return;
 
     try {
       setIsSubmitting(true);
-      await onSend(message, selectedFiles);
+      await onSend(message);
       setMessage('');
-      setSelectedFiles([]);
       // 发送消息后自动聚焦
       setTimeout(() => {
         textareaRef.current?.focus();
@@ -57,52 +48,6 @@ function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates, suppo
     setTimeout(() => {
       textareaRef.current?.focus();
     }, 0);
-  };
-
-  const handleFileSelect = async (e, type) => {
-    const files = Array.from(e.target.files);
-    
-    // 检查文件总数限制
-    if (selectedFiles.length + files.length > FILE_CONSTRAINTS.maxCount) {
-      ToastManager.warning(`最多只能上传${FILE_CONSTRAINTS.maxCount}个文件`);
-      return;
-    }
-    
-    // 验证文件
-    const invalidFiles = files.filter(
-      file => !validateFileType(file, type) || !validateFileSize(file, type)
-    );
-
-    if (invalidFiles.length > 0) {
-      const invalidFile = invalidFiles[0];
-      if (!validateFileType(invalidFile, type)) {
-        ToastManager.error(`不支持的文件类型：${invalidFile.name}`);
-      } else {
-        ToastManager.error(`文件大小超出限制：${invalidFile.name}`);
-      }
-      return;
-    }
-
-    // 检查是否已有其他类型的文件
-    if (selectedFiles.length > 0) {
-      const currentFileType = selectedFiles[0].type;
-      const newFileType = files[0].type;
-      
-      // 如果选择了不同类型的文件，显示确认对话框
-      if (currentFileType !== newFileType) {
-        const confirmed = window.confirm('选择新类型文件将会清空之前的选择，是否继续？');
-        if (confirmed) {
-          setSelectedFiles(files);
-        }
-        return;
-      }
-    }
-
-    setSelectedFiles(prev => [...prev, ...files]);
-  };
-
-  const handleFileRemove = (index) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -137,35 +82,15 @@ function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates, suppo
               disabled={isSubmitting}
             />
           </div>
-
-          {/* 文件预览区 */}
-          {selectedFiles.length > 0 && (
-            <FilePreviewGrid 
-              files={selectedFiles} 
-              onRemove={handleFileRemove}
-            />
-          )}
           
           {/* 底部工具栏 */}
-          <div className="flex items-center justify-between">
-            {/* 文件上传按钮组 */}
-            <div className="flex space-x-2">
-              {supportedTypes.map(type => (
-                <FileUploadButton
-                  key={type}
-                  type={type}
-                  onChange={(e) => handleFileSelect(e, type)}
-                  disabled={isSubmitting || selectedFiles.length >= FILE_CONSTRAINTS.maxCount}
-                />
-              ))}
-            </div>
-
+          <div className="flex items-center justify-end">
             {/* 发送按钮 */}
             <button 
               type="submit"
-              disabled={(!message.trim() && !selectedFiles.length) || isSubmitting}
+              disabled={!message.trim() || isSubmitting}
               className={`p-2 rounded-full ${
-                (message.trim() || selectedFiles.length) && !isSubmitting
+                message.trim() && !isSubmitting
                   ? 'bg-blue-500 hover:bg-blue-600 text-white' 
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
@@ -187,10 +112,7 @@ function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates, suppo
 ChatInput.propTypes = {
   onSend: PropTypes.func.isRequired,
   showPromptTemplates: PropTypes.bool.isRequired,
-  onTogglePromptTemplates: PropTypes.func.isRequired,
-  supportedTypes: PropTypes.arrayOf(
-    PropTypes.oneOf(['IMAGE', 'VIDEO', 'AUDIO', 'FILE'])
-  )
+  onTogglePromptTemplates: PropTypes.func.isRequired
 };
 
 export default ChatInput;

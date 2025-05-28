@@ -20,7 +20,7 @@ const MessageStatus = {
   ERROR: 'error'
 };
 
-function ChatMessages({ messages, partialResponse, error, messageStatus, uploadStates }) {
+function ChatMessages({ messages, partialResponse, error, messageStatus }) {
   const messagesEndRef = useRef(null);
   
   // 初始化markdown-it实例，配置安全选项
