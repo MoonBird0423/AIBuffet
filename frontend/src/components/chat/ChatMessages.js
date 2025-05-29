@@ -1,7 +1,9 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import MarkdownIt from 'markdown-it';
 import { ToastManager } from '../common/Toast';
 import ChatGuidance from './ChatGuidance';
+import ReferenceModal from './ReferenceModal';
+import { getReferenceChunks } from '../../services/api';
 import {
   AiOutlineLoading3Quarters,
   AiOutlineWarning,
@@ -10,7 +12,8 @@ import {
   AiOutlineApple,
   AiOutlineBulb,
   AiOutlineExperiment,
-  AiOutlineStar
+  AiOutlineStar,
+  AiOutlineFileText
 } from 'react-icons/ai';
 
 // 消息状态枚举
@@ -23,6 +26,11 @@ const MessageStatus = {
 
 function ChatMessages({ messages, partialResponse, error, messageStatus, questionTarget, onTargetSelect }) {
   const messagesEndRef = useRef(null);
+  const [referenceModal, setReferenceModal] = useState({
+    isOpen: false,
+    references: [],
+    loading: false
+  });
   
   // 初始化markdown-it实例，配置安全选项
   const md = useMemo(() => {
@@ -49,6 +57,41 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
         ToastManager.error(error);
       }
     }, [error]);
+
+  // 处理查看参考内容
+  const handleViewReferences = async (references) => {
+    setReferenceModal({
+      isOpen: true,
+      references: [],
+      loading: true
+    });
+
+    try {
+      const details = await getReferenceChunks(references);
+      setReferenceModal({
+        isOpen: true,
+        references: details,
+        loading: false
+      });
+    } catch (error) {
+      console.error('获取参考内容失败:', error);
+      ToastManager.error('获取参考内容失败');
+      setReferenceModal({
+        isOpen: false,
+        references: [],
+        loading: false
+      });
+    }
+  };
+
+  // 关闭参考内容弹窗
+  const handleCloseReferenceModal = () => {
+    setReferenceModal({
+      isOpen: false,
+      references: [],
+      loading: false
+    });
+  };
 
   const getMessageIcon = (role, model, status) => {
     if (role === 'user') {
@@ -230,145 +273,176 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
     return <p>无法显示的内容</p>;
   };
 
+  // 渲染参考按钮
+  const renderReferenceButton = (message) => {
+    // 检查消息是否有参考信息
+    if (message.role !== 'assistant' || !message.references || message.references.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="mt-3 pt-3 border-t border-gray-200">
+        <button
+          onClick={() => handleViewReferences(message.references)}
+          className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+        >
+          <AiOutlineFileText className="text-lg" />
+          <span>查看参考内容 ({message.references.length}个)</span>
+        </button>
+      </div>
+    );
+  };
+
   // 如果没有消息且没有提问对象，显示引导界面
   if (messages.length === 0 && !questionTarget) {
     return <ChatGuidance onTargetSelect={onTargetSelect} />;
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar">
-      <style>
-        {`
-          .markdown-content {
-            line-height: 1.6;
-          }
-          .markdown-content h1 {
-            font-size: 1.5em;
-            font-weight: bold;
-            margin: 1em 0;
-          }
-          .markdown-content h2 {
-            font-size: 1.3em;
-            font-weight: bold;
-            margin: 0.8em 0;
-          }
-          .markdown-content h3, h4, h5, h6 {
-            font-size: 1.1em;
-            font-weight: bold;
-            margin: 0.6em 0;
-          }
-          .markdown-content p {
-            margin: 0.5em 0;
-          }
-          .markdown-content ul, .markdown-content ol {
-            margin: 0.5em 0;
-            padding-left: 2em;
-          }
-          .markdown-content ul {
-            list-style-type: disc;
-          }
-          .markdown-content ol {
-            list-style-type: decimal;
-          }
-          .markdown-content blockquote {
-            border-left: 4px solid #e5e7eb;
-            padding-left: 1em;
-            margin: 1em 0;
-            color: #6b7280;
-          }
-          .markdown-content code {
-            background-color: #f3f4f6;
-            padding: 0.2em 0.4em;
-            border-radius: 3px;
-            font-family: monospace;
-          }
-          .markdown-content pre {
-            background-color: #f3f4f6;
-            padding: 1em;
-            border-radius: 6px;
-            overflow-x: auto;
-            margin: 1em 0;
-          }
-          .markdown-content pre code {
-            background-color: transparent;
-            padding: 0;
-          }
-          .markdown-content a {
-            color: #3b82f6;
-            text-decoration: underline;
-          }
-          .markdown-content img {
-            max-width: 100%;
-            height: auto;
-            margin: 1em 0;
-          }
-          .markdown-content table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 1em 0;
-          }
-          .markdown-content th, .markdown-content td {
-            border: 1px solid #e5e7eb;
-            padding: 0.5em;
-            text-align: left;
-          }
-          .markdown-content th {
-            background-color: #f3f4f6;
-          }
-        `}
-      </style>
-      {messages.map((message, index) => {
-        
-        // 确定消息状态
-        const isLastMessage = index === messages.length - 1;
-        const isLastAssistantMessage = message.role === 'assistant' &&
-          index === messages.findLastIndex(msg => msg.role === 'assistant');
-        const showPartialResponse = isLastAssistantMessage && partialResponse;
-        const currentStatus = error ? MessageStatus.ERROR :
-                             showPartialResponse ? MessageStatus.STREAMING :
-                             MessageStatus.COMPLETED;
+    <>
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar">
+        <style>
+          {`
+            .markdown-content {
+              line-height: 1.6;
+            }
+            .markdown-content h1 {
+              font-size: 1.5em;
+              font-weight: bold;
+              margin: 1em 0;
+            }
+            .markdown-content h2 {
+              font-size: 1.3em;
+              font-weight: bold;
+              margin: 0.8em 0;
+            }
+            .markdown-content h3, h4, h5, h6 {
+              font-size: 1.1em;
+              font-weight: bold;
+              margin: 0.6em 0;
+            }
+            .markdown-content p {
+              margin: 0.5em 0;
+            }
+            .markdown-content ul, .markdown-content ol {
+              margin: 0.5em 0;
+              padding-left: 2em;
+            }
+            .markdown-content ul {
+              list-style-type: disc;
+            }
+            .markdown-content ol {
+              list-style-type: decimal;
+            }
+            .markdown-content blockquote {
+              border-left: 4px solid #e5e7eb;
+              padding-left: 1em;
+              margin: 1em 0;
+              color: #6b7280;
+            }
+            .markdown-content code {
+              background-color: #f3f4f6;
+              padding: 0.2em 0.4em;
+              border-radius: 3px;
+              font-family: monospace;
+            }
+            .markdown-content pre {
+              background-color: #f3f4f6;
+              padding: 1em;
+              border-radius: 6px;
+              overflow-x: auto;
+              margin: 1em 0;
+            }
+            .markdown-content pre code {
+              background-color: transparent;
+              padding: 0;
+            }
+            .markdown-content a {
+              color: #3b82f6;
+              text-decoration: underline;
+            }
+            .markdown-content img {
+              max-width: 100%;
+              height: auto;
+              margin: 1em 0;
+            }
+            .markdown-content table {
+              border-collapse: collapse;
+              width: 100%;
+              margin: 1em 0;
+            }
+            .markdown-content th, .markdown-content td {
+              border: 1px solid #e5e7eb;
+              padding: 0.5em;
+              text-align: left;
+            }
+            .markdown-content th {
+              background-color: #f3f4f6;
+            }
+          `}
+        </style>
+        {messages.map((message, index) => {
+          
+          // 确定消息状态
+          const isLastMessage = index === messages.length - 1;
+          const isLastAssistantMessage = message.role === 'assistant' &&
+            index === messages.findLastIndex(msg => msg.role === 'assistant');
+          const showPartialResponse = isLastAssistantMessage && partialResponse;
+          const currentStatus = error ? MessageStatus.ERROR :
+                               showPartialResponse ? MessageStatus.STREAMING :
+                               MessageStatus.COMPLETED;
 
-        if (message.role === 'system') {
+          if (message.role === 'system') {
+            return (
+              <div key={index} className="bg-blue-50 rounded-lg p-4 text-sm text-center text-blue-700">
+                {renderContent(message.content, false, MessageStatus.COMPLETED)}
+              </div>
+            );
+          }
+
+          const isUser = message.role === 'user';
           return (
-            <div key={index} className="bg-blue-50 rounded-lg p-4 text-sm text-center text-blue-700">
-              {renderContent(message.content, false, MessageStatus.COMPLETED)}
-            </div>
+            <React.Fragment key={index}>
+              <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className="flex-shrink-0">
+                  {isUser ? getMessageIcon('user') : getMessageIcon('assistant', message.model, currentStatus)}
+                </div>
+                <div
+                  className={`rounded-lg p-4 max-w-3xl ${
+                    isUser 
+                      ? 'bg-blue-500 text-white ml-auto'
+                      : 'bg-gray-100 text-gray-800 mr-auto'
+                  }`}
+                >
+                  <div className={isUser ? 'text-white' : ''}>
+                    {showPartialResponse
+                      ? renderContent(partialResponse, true, currentStatus)
+                      : renderContent(message.content, false, currentStatus)}
+                  </div>
+                  {/* 显示参考内容按钮 */}
+                  {!isUser && renderReferenceButton(message)}
+                </div>
+              </div>
+              {currentStatus === MessageStatus.ERROR && (
+                <div className="flex items-start mt-2">
+                  <div className="ml-11 text-sm text-red-600">
+                    输出中断 - {error}
+                  </div>
+                </div>
+              )}
+            </React.Fragment>
           );
-        }
+        })}
+        <div ref={messagesEndRef} />
+      </div>
 
-        const isUser = message.role === 'user';
-        return (
-          <React.Fragment key={index}>
-            <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-              <div className="flex-shrink-0">
-                {isUser ? getMessageIcon('user') : getMessageIcon('assistant', message.model, currentStatus)}
-              </div>
-              <div
-                className={`rounded-lg p-4 max-w-3xl ${
-                  isUser 
-                    ? 'bg-blue-500 text-white ml-auto'
-                    : 'bg-gray-100 text-gray-800 mr-auto'
-                }`}
-              >
-                <div className={isUser ? 'text-white' : ''}>
-                  {showPartialResponse
-                    ? renderContent(partialResponse, true, currentStatus)
-                    : renderContent(message.content, false, currentStatus)}
-                </div>
-              </div>
-            </div>
-            {currentStatus === MessageStatus.ERROR && (
-              <div className="flex items-start mt-2">
-                <div className="ml-11 text-sm text-red-600">
-                  输出中断 - {error}
-                </div>
-              </div>
-            )}
-          </React.Fragment>
-        );
-      })}
-      <div ref={messagesEndRef} />
-    </div>
+      {/* 参考内容弹窗 */}
+      <ReferenceModal
+        isOpen={referenceModal.isOpen}
+        onClose={handleCloseReferenceModal}
+        references={referenceModal.loading ? [] : referenceModal.references}
+      />
+    </>
   );
 }
 

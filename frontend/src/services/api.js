@@ -760,4 +760,17 @@ export const getRecentQuestionTargets = async (limit = 10) => {
   }
 };
 
+// 获取参考内容详情
+export const getReferenceChunks = async (references) => {
+  try {
+    const response = await apiClient.post('/chats/reference-chunks', {
+      references: references
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error getting reference chunks:', error);
+    throw error;
+  }
+};
+
 export default apiClient;

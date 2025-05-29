@@ -193,6 +193,15 @@ function Chat() {
     };
 
     // 保存当前用户消息
+    // 如果有提问对象，添加到消息中
+    if (questionTarget) {
+      userMessage.questionTarget = {
+        type: questionTarget.type,
+        id: questionTarget.id,
+        name: questionTarget.name
+      };
+    }
+
     setCurrentUserMessage(userMessage);
 
     let activeSessionId = sessionId;

@@ -147,11 +147,11 @@ public class SearchServiceImpl implements SearchService {
             // 构造查询向量数据
             FloatVec vectorData = new FloatVec(queryVector);
 
-            // 构建过滤条件
-            String expr = String.format("file_id in [%s]",
-                fileIds.stream()
-                    .map(String::valueOf)
-                    .collect(Collectors.joining(",")));
+            // 构建文件ID的LIKE查询
+            List<String> conditions = fileIds.stream()
+                .map(id -> String.format("metadata LIKE \"%%\\\"fileId\\\":%d%%\"", id))
+                .collect(Collectors.toList());
+            String expr = String.join(" OR ", conditions);
 
             // 构建搜索参数
             Map<String, Object> searchParams = new HashMap<>();
@@ -159,13 +159,13 @@ public class SearchServiceImpl implements SearchService {
             searchParams.put("params", "{\"nprobe\": 10}");
             searchParams.put("hints", "iterative_filter");
 
-            // 执行搜索
+            // 执行搜索 - 只请求必要的字段
             SearchReq searchReq = SearchReq.builder()
                 .collectionName(collectionName)
                 .data(Collections.singletonList(vectorData))
                 .topK(request.getLimit())
                 .filter(expr)
-                .outputFields(Arrays.asList("id", "metadata", "content"))
+                .outputFields(Arrays.asList("id", "metadata"))  // 移除content字段，因为它存储在MySQL中
                 .searchParams(searchParams)
                 .build();
 
@@ -179,27 +179,33 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private List<SearchResult> parseSearchResults(SearchResp searchResp) {
+        logger.debug("开始解析搜索结果");
         List<SearchResult> results = new ArrayList<>();
         
         List<List<SearchResp.SearchResult>> searchResults = searchResp.getSearchResults();
         if (searchResults.isEmpty()) {
+            logger.info("搜索结果为空");
             return results;
         }
 
         // 只处理第一个查询向量的结果
         List<SearchResp.SearchResult> firstQueryResults = searchResults.get(0);
+        logger.debug("处理第一个查询向量的{}个结果", firstQueryResults.size());
         
         for (SearchResp.SearchResult result : firstQueryResults) {
             try {
                 Map<String, Object> entity = result.getEntity();
                 long chunkId = ((Number) entity.get("id")).longValue();
+                logger.debug("处理结果 chunkId: {}", chunkId);
                 
-                // 查询chunk和file信息
+                // 从MySQL查询chunk和file信息
                 DocChunk chunk = chunkRepository.findById(chunkId)
                     .orElseThrow(() -> new RuntimeException("找不到对应的文本块: " + chunkId));
+                logger.debug("已找到文本块: chunkId={}, fileId={}", chunk.getId(), chunk.getFileId());
                     
                 DocFile file = fileRepository.findById(chunk.getFileId())
                     .orElseThrow(() -> new RuntimeException("找不到对应的文件: " + chunk.getFileId()));
+                logger.debug("已找到文件: fileId={}, fileName={}", file.getId(), file.getFileName());
                 
                 // 构建搜索结果
                 SearchResult searchResult = new SearchResult();

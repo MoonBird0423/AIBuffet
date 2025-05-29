@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Repository
 public interface DocChunkRepository extends JpaRepository<DocChunk, Long> {
@@ -49,4 +50,7 @@ public interface DocChunkRepository extends JpaRepository<DocChunk, Long> {
         AND c.vectorStatus NOT IN ('COMPLETED', 'FAILED')
     """)
     boolean areAllChunksProcessed(Long fileId);
+    
+    // 查找特定文件和块索引的文档块
+    Optional<DocChunk> findByFileIdAndChunkIndex(Long fileId, Integer chunkIndex);
 }
