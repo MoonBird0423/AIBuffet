@@ -320,12 +320,46 @@ function Chat() {
             });
           }
         },
-        onError: (error) => {
+        onError: async (error) => {
           console.error('Model invocation error:', error);
-          setError('模型调用失败，请重试');
+          
+          // 如果有错误消息，显示错误消息
+          if (error.response?.data?.error) {
+            setError(error.response.data.error);
+          } else {
+            setError('模型调用失败，请重试');
+          }
+          
+          // 如果有部分生成的内容，保存当前会话
+          if (aiMessage.content) {
+            const finalMessages = [...newMessages, aiMessage];
+            try {
+              const updatedChat = await updateChatSession(activeSessionId, JSON.stringify(finalMessages));
+              setMessagesMap(prev => {
+                const newMap = new Map(prev);
+                newMap.set(activeSessionId, finalMessages);
+                return newMap;
+              });
+              
+              if (sidebarRef.current) {
+                sidebarRef.current.handleChatUpdated(updatedChat);
+              }
+            } catch (saveError) {
+              console.error('Failed to save partial response:', saveError);
+            }
+          }
+
+          // 清理状态
           setProcessingMap(prev => {
             const newMap = new Map(prev);
-            // 只在有会话ID时删除状态
+            if (activeSessionId) {
+              newMap.delete(activeSessionId);
+            }
+            return newMap;
+          });
+          
+          setPartialResponseMap(prev => {
+            const newMap = new Map(prev);
             if (activeSessionId) {
               newMap.delete(activeSessionId);
             }

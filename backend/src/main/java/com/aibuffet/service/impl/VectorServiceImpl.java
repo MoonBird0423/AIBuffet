@@ -131,11 +131,22 @@ public class VectorServiceImpl implements VectorService {
                     .dimension(config.getEmbeddingDimensions())
                     .build());
 
-                logger.debug("Adding metadata field to schema");
+                logger.debug("Adding fileId field to schema");
                 schema.addField(AddFieldReq.builder()
-                    .fieldName("metadata")
-                    .dataType(DataType.VarChar)
-                    .maxLength(4096)
+                    .fieldName("fileId")
+                    .dataType(DataType.Int64)
+                    .build());
+
+                logger.debug("Adding chunkId field to schema");
+                schema.addField(AddFieldReq.builder()
+                    .fieldName("chunkId")
+                    .dataType(DataType.Int64)
+                    .build());
+
+                logger.debug("Adding chunkIndex field to schema");
+                schema.addField(AddFieldReq.builder()
+                    .fieldName("chunkIndex")
+                    .dataType(DataType.Int64)
                     .build());
 
                 logger.debug("Preparing index parameters");
@@ -268,22 +279,15 @@ public class VectorServiceImpl implements VectorService {
         }
     }
 
-    private void validateMetadata(Map<String, Object> metadata) {
-        String jsonMetadata = gson.toJson(metadata);
-        if (jsonMetadata.length() > 4096) {
-            throw new IllegalArgumentException("Metadata JSON exceeds maximum length of 4096 characters");
-        }
-    }
-
     @Override
-    public String storeVector(float[] vector, Map<String, Object> metadata) {
+    public String storeVector(float[] vector, Long fileId, Long chunkId, Integer chunkIndex) {
         try {
-            validateMetadata(metadata);
-            
             JsonObject data = new JsonObject();
             data.add("vector", gson.toJsonTree(vector));
-            data.addProperty("metadata", gson.toJson(metadata));  // 将metadata转换为JSON字符串
-
+            data.addProperty("fileId", fileId);
+            data.addProperty("chunkId", chunkId);
+            data.addProperty("chunkIndex", chunkIndex);
+            
             InsertReq insertReq = InsertReq.builder()
                 .collectionName(config.getMilvusCollection())
                 .data(Collections.singletonList(data))
@@ -298,17 +302,19 @@ public class VectorServiceImpl implements VectorService {
     }
 
     @Override
-    public List<String> storeVectors(List<float[]> vectors, List<Map<String, Object>> metadata) {
+    public List<String> storeVectors(List<float[]> vectors, List<Long> fileIds, List<Long> chunkIds, List<Integer> chunkIndexes) {
         try {
-            List<JsonObject> dataList = new ArrayList<>();
+            if (vectors.size() != fileIds.size() || vectors.size() != chunkIds.size() || vectors.size() != chunkIndexes.size()) {
+                throw new IllegalArgumentException("All input lists must have the same size");
+            }
             
+            List<JsonObject> dataList = new ArrayList<>();
             for (int i = 0; i < vectors.size(); i++) {
-                // 验证每个metadata
-                validateMetadata(metadata.get(i));
-                
                 JsonObject data = new JsonObject();
                 data.add("vector", gson.toJsonTree(vectors.get(i)));
-                data.addProperty("metadata", gson.toJson(metadata.get(i)));
+                data.addProperty("fileId", fileIds.get(i));
+                data.addProperty("chunkId", chunkIds.get(i));
+                data.addProperty("chunkIndex", chunkIndexes.get(i));
                 dataList.add(data);
             }
             
@@ -335,8 +341,7 @@ public class VectorServiceImpl implements VectorService {
                 chunk.getId(), chunk.getFileId(), chunk.getChunkIndex());
             
             // 存储向量
-            Map<String, Object> metadata = buildMetadata(chunk);
-            String vectorId = storeVector(vector, metadata);
+            String vectorId = storeVector(vector, chunk.getFileId(), chunk.getId(), chunk.getChunkIndex());
             logger.info("向量存储完成: chunkId={}, vectorId={}", chunk.getId(), vectorId);
             
             // 更新完成状态
@@ -349,14 +354,6 @@ public class VectorServiceImpl implements VectorService {
             chunkRepository.updateStatus(chunk.getId(), VectorStatus.FAILED, e.getMessage());
             throw e;
         }
-    }
-
-    private Map<String, Object> buildMetadata(DocChunk chunk) {
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put("chunkId", chunk.getId());
-        metadata.put("fileId", chunk.getFileId());
-        metadata.put("chunkIndex", chunk.getChunkIndex());
-        return metadata;
     }
 
     @Override

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import reactor.netty.http.client.PrematureCloseException;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -31,7 +32,8 @@ public class ChatCompletionServiceImpl implements ChatCompletionService {
     private WebClient.Builder webClientBuilder;
 
     @Override
-    public void streamChatCompletion(List<Map<String, Object>> messages, String modelName, SseEmitter emitter) {
+public void streamChatCompletion(List<Map<String, Object>> messages, String modelName, SseEmitter emitter) {
+        StringBuilder generatedContent = new StringBuilder();
         try {
             // 获取模型信息
             Model model = modelRepository.findByNameExact(modelName)
@@ -59,6 +61,7 @@ public class ChatCompletionServiceImpl implements ChatCompletionService {
                 .accept(MediaType.TEXT_EVENT_STREAM)
                 .retrieve()
                 .bodyToFlux(String.class)
+                .timeout(java.time.Duration.ofMinutes(5))
                 .subscribe(
                     chunk -> {
                         try {
@@ -71,6 +74,14 @@ public class ChatCompletionServiceImpl implements ChatCompletionService {
                             // 解析返回的数据块
                             Map<String, Object> data = objectMapper.readValue(chunk, Map.class);
                             emitter.send(data);
+                            
+                            // 保存生成的内容
+                            String content = ((Map<String, Object>)((List<Object>)data.get("choices")).get(0))
+                                .get("delta").toString();
+                            if (content != null) {
+                                generatedContent.append(content);
+                            }
+                            
                             logger.trace("Sent chunk: {}", chunk);
                         } catch (Exception e) {
                             logger.error("Error processing chunk: {} - {}", chunk, e.getMessage());
@@ -93,8 +104,25 @@ public class ChatCompletionServiceImpl implements ChatCompletionService {
                         } else if (error instanceof java.net.SocketTimeoutException) {
                             errorMessage = "请求超时，请稍后重试";
                             logger.error("请求超时: {}", error.getMessage());
+                        } else if (error instanceof reactor.netty.http.client.PrematureCloseException) {
+                            errorMessage = "连接提前关闭，可能是请求超时";
+                            logger.error("连接关闭: {}", error.getMessage());
                         } else {
                             errorMessage = "调用模型服务失败: " + error.getMessage();
+                        }
+                        
+                        // 如果有部分生成的内容，先发送内容再发送错误
+                        if (generatedContent.length() > 0) {
+                            try {
+                                Map<String, Object> partialResponse = new HashMap<>();
+                                partialResponse.put("choices", List.of(Map.of(
+                                    "delta", Map.of("content", generatedContent.toString()),
+                                    "finish_reason", "length"
+                                )));
+                                emitter.send(partialResponse);
+                            } catch (Exception e) {
+                                logger.error("Error sending partial content", e);
+                            }
                         }
                         
                         handleError(emitter, errorMessage);
@@ -111,6 +139,19 @@ public class ChatCompletionServiceImpl implements ChatCompletionService {
 
         } catch (Exception e) {
             logger.error("Error in streamChatCompletion for model [{}]: {}", modelName, e.getMessage());
+            // 如果有部分生成的内容，确保在错误发生时也能发送
+            if (generatedContent.length() > 0) {
+                try {
+                    Map<String, Object> partialResponse = new HashMap<>();
+                    partialResponse.put("choices", List.of(Map.of(
+                        "delta", Map.of("content", generatedContent.toString()),
+                        "finish_reason", "length"
+                    )));
+                    emitter.send(partialResponse);
+                } catch (Exception sendError) {
+                    logger.error("Error sending partial content during exception", sendError);
+                }
+            }
             handleError(emitter, "系统错误: " + e.getMessage());
         }
     }

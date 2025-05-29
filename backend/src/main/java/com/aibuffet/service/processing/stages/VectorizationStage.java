@@ -36,6 +36,77 @@ public class VectorizationStage implements ProcessingStage {
     @Autowired
     private DocFileRepository docFileRepository;
 
+    private Map<String, Object> buildMetadata(DocChunk chunk) {
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("fileId", chunk.getFileId());
+        metadata.put("chunkId", chunk.getId());
+        metadata.put("chunkIndex", chunk.getChunkIndex());
+        return metadata;
+    }
+
+    private List<List<DocChunk>> splitIntoBatches(List<DocChunk> chunks, int batchSize) {
+        List<List<DocChunk>> batches = new ArrayList<>();
+        for (int i = 0; i < chunks.size(); i += batchSize) {
+            batches.add(new ArrayList<>(chunks.subList(i, Math.min(chunks.size(), i + batchSize))));
+        }
+        return batches;
+    }
+    
+    @Transactional(propagation = Propagation.REQUIRES_NEW,
+                  isolation = Isolation.READ_COMMITTED,
+                  timeout = 300)
+    protected void processBatch(List<DocChunk> batch, Long docId) {
+        try {
+            log.info("开始处理批次: docId={}, batchSize={}, 内存使用: {}MB", 
+                docId, batch.size(), Runtime.getRuntime().totalMemory() / (1024 * 1024));
+            
+            // 准备批量处理数据
+            List<String> texts = batch.stream()
+                .map(DocChunk::getContent)
+                .toList();
+            
+            // 生成向量
+            List<float[]> vectors = vectorService.generateVectors(texts, 1024);
+            
+            // 准备参数列表
+            List<Long> fileIds = batch.stream()
+                .map(DocChunk::getFileId)
+                .toList();
+            
+            List<Long> chunkIds = batch.stream()
+                .map(DocChunk::getId)
+                .toList();
+            
+            List<Integer> chunkIndexes = batch.stream()
+                .map(DocChunk::getChunkIndex)
+                .toList();
+            
+            // 存储向量
+            List<String> vectorIds = vectorService.storeVectors(vectors, fileIds, chunkIds, chunkIndexes);
+            
+            // 更新分块状态
+            for (int i = 0; i < batch.size(); i++) {
+                DocChunk chunk = batch.get(i);
+                chunk.setVectorId(vectorIds.get(i));
+                chunk.setVectorStatus(VectorStatus.COMPLETED);
+                chunk.setVectorError(null); // 清除之前的错误信息
+            }
+            
+            docChunkRepository.saveAll(batch);
+            log.debug("批次处理完成: docId={}, batchSize={}", docId, batch.size());
+            
+        } catch (Exception e) {
+            log.error("批次处理失败: docId={}, batchSize={}, error={}", docId, batch.size(), e.getMessage());
+            // 更新失败状态
+            batch.forEach(chunk -> {
+                chunk.setVectorStatus(VectorStatus.FAILED);
+                chunk.setVectorError(e.getMessage());
+            });
+            docChunkRepository.saveAll(batch);
+            throw e;
+        }
+    }
+
     @Override
     public void process(ProcessContext context) throws ProcessingException {
         try {
@@ -145,67 +216,6 @@ public class VectorizationStage implements ProcessingStage {
             throw new ProcessingException(errorMessage, e)
                     .withStage(this)
                     .withContext(context);
-        }
-    }
-    
-    private List<List<DocChunk>> splitIntoBatches(List<DocChunk> chunks, int batchSize) {
-        List<List<DocChunk>> batches = new ArrayList<>();
-        for (int i = 0; i < chunks.size(); i += batchSize) {
-            batches.add(new ArrayList<>(chunks.subList(i, Math.min(chunks.size(), i + batchSize))));
-        }
-        return batches;
-    }
-    
-    @Transactional(propagation = Propagation.REQUIRES_NEW,
-                  isolation = Isolation.READ_COMMITTED,
-                  timeout = 300)
-    protected void processBatch(List<DocChunk> batch, Long docId) {
-        try {
-            log.info("开始处理批次: docId={}, batchSize={}, 内存使用: {}MB", 
-                docId, batch.size(), Runtime.getRuntime().totalMemory() / (1024 * 1024));
-            
-            // 准备批量向量生成
-            List<String> texts = batch.stream()
-                .map(DocChunk::getContent)
-                .toList();
-            
-            // 生成向量
-            List<float[]> vectors = vectorService.generateVectors(texts, 1024);
-            
-            // 准备元数据
-            List<Map<String, Object>> metadata = batch.stream()
-                .map(chunk -> {
-                    Map<String, Object> meta = new HashMap<>();
-                    meta.put("chunkId", chunk.getId());
-                    meta.put("fileId", docId);
-                    meta.put("chunkIndex", chunk.getChunkIndex());
-                    return meta;
-                })
-                .toList();
-            
-            // 存储向量
-            List<String> vectorIds = vectorService.storeVectors(vectors, metadata);
-            
-            // 更新分块状态
-            for (int i = 0; i < batch.size(); i++) {
-                DocChunk chunk = batch.get(i);
-                chunk.setVectorId(vectorIds.get(i));
-                chunk.setVectorStatus(VectorStatus.COMPLETED);
-                chunk.setVectorError(null); // 清除之前的错误信息
-            }
-            
-            docChunkRepository.saveAll(batch);
-            log.debug("批次处理完成: docId={}, batchSize={}", docId, batch.size());
-            
-        } catch (Exception e) {
-            log.error("批次处理失败: docId={}, batchSize={}, error={}", docId, batch.size(), e.getMessage());
-            // 更新失败状态
-            batch.forEach(chunk -> {
-                chunk.setVectorStatus(VectorStatus.FAILED);
-                chunk.setVectorError(e.getMessage());
-            });
-            docChunkRepository.saveAll(batch);
-            throw e;
         }
     }
 }

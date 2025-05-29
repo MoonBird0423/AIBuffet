@@ -147,25 +147,25 @@ public class SearchServiceImpl implements SearchService {
             // 构造查询向量数据
             FloatVec vectorData = new FloatVec(queryVector);
 
-            // 构建文件ID的LIKE查询
-            List<String> conditions = fileIds.stream()
-                .map(id -> String.format("metadata LIKE \"%%\\\"fileId\\\":%d%%\"", id))
-                .collect(Collectors.toList());
-            String expr = String.join(" OR ", conditions);
+            // 构建文件ID的查询
+            String expr = String.format("fileId in [%s]",
+                fileIds.stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(",")));
 
             // 构建搜索参数
             Map<String, Object> searchParams = new HashMap<>();
-            searchParams.put("metric_type", "IP");
+            searchParams.put("metric_type", "COSINE");
             searchParams.put("params", "{\"nprobe\": 10}");
             searchParams.put("hints", "iterative_filter");
 
-            // 执行搜索 - 只请求必要的字段
+            // 执行搜索 - 使用新的独立字段
             SearchReq searchReq = SearchReq.builder()
                 .collectionName(collectionName)
                 .data(Collections.singletonList(vectorData))
                 .topK(request.getLimit())
                 .filter(expr)
-                .outputFields(Arrays.asList("id", "metadata"))  // 移除content字段，因为它存储在MySQL中
+                .outputFields(Arrays.asList("id", "fileId", "chunkId", "chunkIndex"))
                 .searchParams(searchParams)
                 .build();
 
@@ -195,15 +195,17 @@ public class SearchServiceImpl implements SearchService {
         for (SearchResp.SearchResult result : firstQueryResults) {
             try {
                 Map<String, Object> entity = result.getEntity();
-                long chunkId = ((Number) entity.get("id")).longValue();
-                logger.debug("处理结果 chunkId: {}", chunkId);
+                long chunkId = ((Number) entity.get("chunkId")).longValue();
+                long fileId = ((Number) entity.get("fileId")).longValue();
+                int chunkIndex = ((Number) entity.get("chunkIndex")).intValue();
+                logger.debug("处理结果: chunkId={}, fileId={}, chunkIndex={}", chunkId, fileId, chunkIndex);
                 
                 // 从MySQL查询chunk和file信息
                 DocChunk chunk = chunkRepository.findById(chunkId)
                     .orElseThrow(() -> new RuntimeException("找不到对应的文本块: " + chunkId));
                 logger.debug("已找到文本块: chunkId={}, fileId={}", chunk.getId(), chunk.getFileId());
                     
-                DocFile file = fileRepository.findById(chunk.getFileId())
+                DocFile file = fileRepository.findById(fileId)
                     .orElseThrow(() -> new RuntimeException("找不到对应的文件: " + chunk.getFileId()));
                 logger.debug("已找到文件: fileId={}, fileName={}", file.getId(), file.getFileName());
                 

@@ -19,12 +19,12 @@ public interface VectorService {
     /**
      * 存储单个向量
      */
-    String storeVector(float[] vector, Map<String, Object> metadata);
+    String storeVector(float[] vector, Long fileId, Long chunkId, Integer chunkIndex);
 
     /**
      * 批量存储向量
      */
-    List<String> storeVectors(List<float[]> vectors, List<Map<String, Object>> metadata);
+    List<String> storeVectors(List<float[]> vectors, List<Long> fileIds, List<Long> chunkIds, List<Integer> chunkIndexes);
 
     /**
      * 处理单个文档分块的向量化
