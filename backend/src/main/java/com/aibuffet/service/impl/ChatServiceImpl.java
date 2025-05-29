@@ -9,8 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class ChatServiceImpl implements ChatService {
@@ -50,7 +50,16 @@ public class ChatServiceImpl implements ChatService {
         chatSession.setSessionId(UUID.randomUUID().toString());
         chatSession.setUserId(userId);
         chatSession.setFirstMessage(firstMessage);
-        chatSession.setChatName(firstMessage.length() > 50 ? firstMessage.substring(0, 47) + "..." : firstMessage);
+        // 设置会话名称：如果有提问对象，使用提问对象名称；否则使用第一条消息内容
+        String chatName;
+        if (questionTargetName != null && !questionTargetName.trim().isEmpty()) {
+            // 如果有提问对象，使用提问对象名称作为会话名称
+            chatName = questionTargetName;
+        } else {
+            // 没有提问对象时，使用第一条消息内容（保持原有逻辑）
+            chatName = firstMessage.length() > 50 ? firstMessage.substring(0, 47) + "..." : firstMessage;
+        }
+        chatSession.setChatName(chatName);
 
         // 设置提问对象信息
         chatSession.setQuestionTargetType(questionTargetType);
@@ -136,5 +145,46 @@ public class ChatServiceImpl implements ChatService {
         logger.info("Deleting chat session {} for user: {}", sessionId, userId);
         chatSessionRepository.softDeleteByUserIdAndSessionId(userId, sessionId);
         logger.info("Deleted chat session {} for user: {}", sessionId, userId);
+    }
+
+    @Override
+    public List<Map<String, Object>> getRecentQuestionTargets(Long userId, int limit) {
+        logger.info("Getting recent question targets for user: {} with limit: {}", userId, limit);
+        
+        // 获取用户最近的聊天会话，过滤出有提问对象的会话
+        List<ChatSession> sessions = chatSessionRepository.findByUserIdOrderByLastMessageAtDesc(userId);
+        
+        // 使用 LinkedHashMap 保持插入顺序，同时避免重复
+        Map<String, Map<String, Object>> uniqueTargets = new LinkedHashMap<>();
+        
+        for (ChatSession session : sessions) {
+            // 检查是否有提问对象信息
+            if (session.getQuestionTargetType() != null && 
+                session.getQuestionTargetId() != null && 
+                session.getQuestionTargetName() != null) {
+                
+                // 创建唯一标识符
+                String uniqueKey = session.getQuestionTargetType() + ":" + session.getQuestionTargetId();
+                
+                // 如果还没有添加过这个提问对象，则添加
+                if (!uniqueTargets.containsKey(uniqueKey)) {
+                    Map<String, Object> target = new HashMap<>();
+                    target.put("type", session.getQuestionTargetType());
+                    target.put("id", session.getQuestionTargetId());
+                    target.put("name", session.getQuestionTargetName());
+                    
+                    uniqueTargets.put(uniqueKey, target);
+                    
+                    // 如果已经达到限制数量，停止添加
+                    if (uniqueTargets.size() >= limit) {
+                        break;
+                    }
+                }
+            }
+        }
+        
+        List<Map<String, Object>> result = new ArrayList<>(uniqueTargets.values());
+        logger.info("Found {} unique recent question targets for user: {}", result.size(), userId);
+        return result;
     }
 }

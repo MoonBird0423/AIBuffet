@@ -3,21 +3,24 @@ import PropTypes from 'prop-types';
 import PromptTemplates from './PromptTemplates';
 import { ToastManager } from '../common/Toast';
 
-function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates }) {
+function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates, questionTarget }) {
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef(null);
+  
+  // 判断是否禁用输入
+  const isDisabled = !questionTarget;
 
   // 组件挂载时自动聚焦
   useEffect(() => {
-    if (!showPromptTemplates) {
+    if (!showPromptTemplates && !isDisabled) {
       textareaRef.current?.focus();
     }
-  }, [showPromptTemplates]);
+  }, [showPromptTemplates, isDisabled]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!message.trim() || isSubmitting) return;
+    if (!message.trim() || isSubmitting || isDisabled) return;
 
     try {
       setIsSubmitting(true);
@@ -56,7 +59,12 @@ function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates }) {
       <div className="flex justify-start mb-3">
         <button 
           onClick={onTogglePromptTemplates}
-          className="flex items-center justify-center px-3 py-1 text-xs text-blue-500 hover:text-blue-700 border border-gray-200 rounded-md hover:bg-gray-50 transition duration-200"
+          disabled={isDisabled}
+          className={`flex items-center justify-center px-3 py-1 text-xs border border-gray-200 rounded-md transition duration-200 ${
+            isDisabled 
+              ? 'text-gray-400 cursor-not-allowed bg-gray-50' 
+              : 'text-blue-500 hover:text-blue-700 hover:bg-gray-50'
+          }`}
         >
           <i className="fas fa-magic mr-1"></i> 提示词工程
         </button>
@@ -77,9 +85,13 @@ function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates }) {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="block w-full px-4 py-3 border-0 resize-none focus:ring-0 rounded-lg"
-              placeholder="输入消息..."
-              disabled={isSubmitting}
+              className={`block w-full px-4 py-3 border-0 resize-none focus:ring-0 rounded-lg ${
+                isDisabled 
+                  ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
+                  : 'bg-white text-gray-900'
+              }`}
+              placeholder={isDisabled ? "请先选择提问对象..." : "输入消息..."}
+              disabled={isSubmitting || isDisabled}
             />
           </div>
           
@@ -88,9 +100,9 @@ function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates }) {
             {/* 发送按钮 */}
             <button 
               type="submit"
-              disabled={!message.trim() || isSubmitting}
-              className={`p-2 rounded-full ${
-                message.trim() && !isSubmitting
+              disabled={!message.trim() || isSubmitting || isDisabled}
+              className={`p-2 rounded-full transition-colors ${
+                message.trim() && !isSubmitting && !isDisabled
                   ? 'bg-blue-500 hover:bg-blue-600 text-white' 
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
@@ -112,7 +124,8 @@ function ChatInput({ onSend, showPromptTemplates, onTogglePromptTemplates }) {
 ChatInput.propTypes = {
   onSend: PropTypes.func.isRequired,
   showPromptTemplates: PropTypes.bool.isRequired,
-  onTogglePromptTemplates: PropTypes.func.isRequired
+  onTogglePromptTemplates: PropTypes.func.isRequired,
+  questionTarget: PropTypes.object
 };
 
 export default ChatInput;

@@ -2,6 +2,7 @@ package com.aibuffet.service;
 
 import com.aibuffet.model.ChatSession;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 对话管理服务接口
@@ -77,4 +78,12 @@ public interface ChatService {
      * @param sessionId 对话ID
      */
     void deleteChatSession(Long userId, String sessionId);
+
+    /**
+     * 获取用户最近使用的提问对象
+     * @param userId 用户ID
+     * @param limit 返回数量限制
+     * @return 最近使用的提问对象列表
+     */
+    List<Map<String, Object>> getRecentQuestionTargets(Long userId, int limit);
 }

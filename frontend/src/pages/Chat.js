@@ -4,7 +4,7 @@ import ChatHeader from '../components/chat/ChatHeader';
 import ChatMessages from '../components/chat/ChatMessages';
 import ChatInput from '../components/chat/ChatInput';
 import ChatSidebar from '../components/chat/ChatSidebar';
-import { getChatSession, createChatSession, updateChatSession, invokeModel, clearQuestionTarget } from '../services/api';
+import { getChatSession, createChatSession, updateChatSession, invokeModel } from '../services/api';
 import { ToastManager } from '../components/common/Toast';
 
 function Chat() {
@@ -390,22 +390,32 @@ function Chat() {
     setInputFocusKey(prev => prev + 1);
   };
 
-  const togglePromptTemplates = () => {
-    setShowPromptTemplates(!showPromptTemplates);
+  // 处理提问对象选择
+  const handleTargetSelect = (target) => {
+    setQuestionTarget(target);
+    setShowNoTargetHint(false);
+    setInputFocusKey(prev => prev + 1); // 触发输入框聚焦
+    
+    // 更新URL参数以保持状态同步
+    const params = new URLSearchParams(window.location.search);
+    params.set(`${target.type}Id`, target.id);
+    params.set(`${target.type}Name`, encodeURIComponent(target.name));
+    
+    // 清除其他类型的参数
+    if (target.type === 'book') {
+      params.delete('knowledgeBaseId');
+      params.delete('knowledgeBaseName');
+    } else {
+      params.delete('bookId');
+      params.delete('bookName');
+    }
+    
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
   };
 
-  // 删除提问对象标签
-  const handleRemoveTarget = async () => {
-    if (currentSessionId) {
-      try {
-        await clearQuestionTarget(currentSessionId);
-      } catch (error) {
-        console.error('Clear question target error:', error);
-        // 即使API调用失败，也继续更新前端状态
-      }
-    }
-    setQuestionTarget(null);
-    setShowNoTargetHint(true);
+  const togglePromptTemplates = () => {
+    setShowPromptTemplates(!showPromptTemplates);
   };
 
   useEffect(() => {
@@ -434,7 +444,6 @@ function Chat() {
       <div className="flex-1 flex flex-col">
         <ChatHeader
           questionTarget={questionTarget}
-          onRemoveTarget={handleRemoveTarget}
           showNoTargetHint={showNoTargetHint}
         />
         {error && (
@@ -453,12 +462,15 @@ function Chat() {
           messages={messagesMap.get(currentSessionId) || []}
           partialResponse={currentSessionId ? partialResponseMap.get(currentSessionId) || '' : ''}
           messageStatus={currentSessionId ? (processingMap.get(currentSessionId) ? 'streaming' : 'completed') : 'completed'}
+          questionTarget={questionTarget}
+          onTargetSelect={handleTargetSelect}
         />
         <ChatInput
           key={inputFocusKey}
           onSend={handleSendMessage}
           showPromptTemplates={showPromptTemplates}
           onTogglePromptTemplates={togglePromptTemplates}
+          questionTarget={questionTarget}
         />
       </div>
     </div>

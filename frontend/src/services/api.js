@@ -749,4 +749,15 @@ export const searchDocument = async (documentId, query, limit = 10, threshold = 
   }
 };
 
+// 获取最近使用的提问对象
+export const getRecentQuestionTargets = async (limit = 10) => {
+  try {
+    const response = await apiClient.get(`/chats/recent-targets?limit=${limit}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting recent question targets:', error);
+    throw error;
+  }
+};
+
 export default apiClient;

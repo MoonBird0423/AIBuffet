@@ -141,6 +141,20 @@ public class ChatController {
         }
     }
 
+    @GetMapping("/recent-targets")
+    public ResponseEntity<List<Map<String, Object>>> getRecentQuestionTargets(
+            Authentication authentication,
+            @RequestParam(defaultValue = "10") int limit) {
+        try {
+            Long userId = getUserId(authentication);
+            List<Map<String, Object>> recentTargets = chatService.getRecentQuestionTargets(userId, limit);
+            return ResponseEntity.ok(recentTargets);
+        } catch (Exception e) {
+            logger.error("Get recent question targets failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @PostMapping("/upload-image")
     public ResponseEntity<Map<String, String>> uploadChatImage(
             Authentication authentication,

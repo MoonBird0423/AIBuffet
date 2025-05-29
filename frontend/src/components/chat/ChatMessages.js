@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import MarkdownIt from 'markdown-it';
 import { ToastManager } from '../common/Toast';
+import ChatGuidance from './ChatGuidance';
 import {
   AiOutlineLoading3Quarters,
   AiOutlineWarning,
@@ -20,7 +21,7 @@ const MessageStatus = {
   ERROR: 'error'
 };
 
-function ChatMessages({ messages, partialResponse, error, messageStatus }) {
+function ChatMessages({ messages, partialResponse, error, messageStatus, questionTarget, onTargetSelect }) {
   const messagesEndRef = useRef(null);
   
   // 初始化markdown-it实例，配置安全选项
@@ -228,6 +229,11 @@ function ChatMessages({ messages, partialResponse, error, messageStatus }) {
     
     return <p>无法显示的内容</p>;
   };
+
+  // 如果没有消息且没有提问对象，显示引导界面
+  if (messages.length === 0 && !questionTarget) {
+    return <ChatGuidance onTargetSelect={onTargetSelect} />;
+  }
 
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar">
