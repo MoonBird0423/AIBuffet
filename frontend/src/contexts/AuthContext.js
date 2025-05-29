@@ -24,7 +24,7 @@ export function AuthProvider({ children }) {
 
   // 初始化和token变化时获取用户信息
   useEffect(() => {
-    if (user?.token) {
+    if (user?.token && !user.profile) {
       fetchUserProfile();
     }
   }, [user?.token]);
@@ -48,7 +48,12 @@ export function AuthProvider({ children }) {
   };
 
   const login = (userData) => {
-    // 确保保存完整的用户数据，包括token
+    // 验证并确保数据包含必要的字段
+    if (!userData.token || !userData.profile) {
+      console.error('Login data is missing required fields:', userData);
+      return;
+    }
+    // 保存完整的用户数据
     setUser(userData);
   };
 

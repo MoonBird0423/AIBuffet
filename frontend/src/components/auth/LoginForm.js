@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FaMobile, FaLock } from 'react-icons/fa';
 import CaptchaModal from './CaptchaModal';
 import authApi from '../../services/auth';
@@ -14,15 +14,20 @@ function LoginForm() {
   const [captcha, setCaptcha] = useState({ captchaId: '', captchaCode: '' });
   
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
 
   const handleSendCode = async () => {
+    // 清空之前的错误提示
+    setError('');
+    
     if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
       setError('请输入正确的手机号');
       return;
     }
 
     if (countdown > 0) {
+      setError(`请等待${countdown}秒后再次发送`);
       return;
     }
 
@@ -57,8 +62,15 @@ function LoginForm() {
       // 发送成功后开始倒计时
       startCountdown();
     } catch (error) {
-      // 发送失败只显示错误信息，不重新打开验证码弹窗
-      setError(error.message || '短信发送失败，请重试');
+      // 处理频率限制错误
+      if (error.message && error.message.includes('发送频率超限')) {
+        setError('发送过于频繁，请稍后再试');
+        // 强制等待60秒
+        startCountdown();
+      } else {
+        // 其他错误处理
+        setError(error.message || '短信发送失败，请重试');
+      }
     }
   };
 
@@ -76,8 +88,14 @@ function LoginForm() {
         code
       });
       
-      // 登录成功，保存用户信息
-      login(userData);
+      // 添加必要的用户信息
+      const userDataWithProfile = {
+        ...userData,
+        profile: userData // 确保profile信息存在
+      };
+      
+      // 登录成功，保存完整的用户信息
+      login(userDataWithProfile);
 
       // 如果是新用户，显示欢迎消息
       if (userData.newUser) {
@@ -85,7 +103,10 @@ function LoginForm() {
         alert(`欢迎加入AI自助餐！您的默认用户名为：${userData.username}`);
       }
       
-      navigate(-1);
+      // 智能跳转逻辑：检查是否有来源页面，否则跳转到首页
+      const redirectTo = location.state?.from?.pathname || '/';
+      // 使用replace模式导航，防止用户返回到登录页
+      navigate(redirectTo, { replace: true });
     } catch (error) {
       setError(error.message || '登录失败，请稍后重试');
       if (error.response?.data?.code === 2004) {

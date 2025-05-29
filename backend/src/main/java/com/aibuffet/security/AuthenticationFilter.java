@@ -36,14 +36,9 @@ public class AuthenticationFilter extends OncePerRequestFilter {
         try {
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String token = authHeader.substring(7);
-
-                // 处理SSE请求
-                if (request.getRequestURI().contains("/chat/completions")) {
-                    handleSseRequest(token);
-                } else {
-                    // 处理普通请求
-                    handleStandardRequest(token);
-                }
+                
+                // 统一处理所有请求的认证
+                handleAuthentication(token);
             } else {
                 // 如果是登录相关的请求，允许通过
                 if (request.getRequestURI().startsWith("/api/auth/")) {
@@ -61,31 +56,21 @@ public class AuthenticationFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    private void handleSseRequest(String token) {
-        // 为SSE请求创建临时认证
-        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-            "anonymous",
-            null,
-            Collections.singleton(new SimpleGrantedAuthority("ROLE_USER"))
-        );
-        SecurityContextHolder.getContext().setAuthentication(auth);
-        logger.debug("Set temporary authentication for SSE request");
-    }
-
-    private void handleStandardRequest(String token) {
+    private void handleAuthentication(String token) {
         try {
             // 从token中提取手机号（格式为 "phone_timestamp"）
             String phone = token.split("_")[0];
             User user = userRepository.findByPhone(phone).orElse(null);
 
             if (user != null) {
+                // 使用用户ID作为principal
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                    user,
+                    user.getId().toString(),  // 使用用户ID字符串
                     null,
                     user.getAuthorities()
                 );
                 SecurityContextHolder.getContext().setAuthentication(auth);
-                logger.debug("Successfully authenticated user with phone: {}", phone);
+                logger.debug("Successfully authenticated user with phone: {}, userId: {}", phone, user.getId());
             } else {
                 logger.warn("User not found for phone: {}", phone);
                 SecurityContextHolder.clearContext();

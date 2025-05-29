@@ -36,7 +36,6 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/chat/completions").permitAll()
                 .requestMatchers("/api/knowledge-bases/public/**").permitAll()
                 .anyRequest().authenticated())
             .addFilterBefore(
