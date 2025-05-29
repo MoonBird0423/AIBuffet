@@ -1,7 +1,11 @@
 package com.aibuffet.controller;
 
+import com.aibuffet.dto.MessageReference;
 import com.aibuffet.service.ChatCompletionService;
+import com.aibuffet.service.ChatService;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +16,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +29,9 @@ public class ChatCompletionController {
 
     @Autowired
     private ChatCompletionService chatCompletionService;
+
+    @Autowired
+    private ChatService chatService;
     
     @Value("${ai.chat.default.model}")
     private String defaultModel;
@@ -37,6 +45,19 @@ public class ChatCompletionController {
         logger.info("Received chat completion request from user: {}", userId);
 
         try {
+            // 验证用户认证
+            if (userId == null || "anonymous".equals(userId) || "anonymousUser".equals(userId)) {
+                throw new IllegalArgumentException("Authentication required for chat completion");
+            }
+
+            // 验证用户ID格式
+            Long userIdLong;
+            try {
+                userIdLong = Long.valueOf(userId);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid user ID format: " + userId);
+            }
+
             // 记录请求参数
             logger.info("Request parameters: {}", objectMapper.writeValueAsString(request));
 
@@ -59,6 +80,15 @@ public class ChatCompletionController {
                 throw new IllegalArgumentException("No model specified and no default model configured");
             }
 
+            // 对消息进行增强处理
+            String messagesJson = objectMapper.writeValueAsString(messages);
+            String enhancedJson = chatService.enhanceMessageWithReferences(messagesJson, userIdLong);
+            messages = objectMapper.readValue(enhancedJson, List.class);
+            logger.info("Enhanced messages for user {}: {}", userId, enhancedJson);
+
+            // 从增强的消息中提取参考信息
+            List<MessageReference> references = extractReferences(enhancedJson);
+
             // 创建SSE发射器
             SseEmitter emitter = new SseEmitter(-1L); // 无超时
 
@@ -77,15 +107,108 @@ public class ChatCompletionController {
                 logger.error("SSE connection error for user: {}", userId, ex);
             });
 
-            // 异步处理模型调用
-            chatCompletionService.streamChatCompletion(messages, modelName, emitter);
+            // 如果有参考信息，需要在AI回复完成后添加参考信息
+            if (!references.isEmpty()) {
+                // 创建自定义的SseEmitter包装器来处理参考信息
+                SseEmitter wrappedEmitter = createWrappedEmitter(emitter, references);
+                chatCompletionService.streamChatCompletion(messages, modelName, wrappedEmitter);
+            } else {
+                // 没有参考信息，直接调用模型
+                chatCompletionService.streamChatCompletion(messages, modelName, emitter);
+            }
             
-            logger.info("Started streaming for user: {}", userId);
+            logger.info("Started streaming for authenticated user: {}", userId);
             return emitter;
 
         } catch (Exception e) {
-            logger.error("Error processing chat completion request", e);
+            logger.error("Error processing chat completion request for user: {}", userId, e);
             throw new RuntimeException("处理请求失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 从增强的消息中提取参考信息
+     */
+    private List<MessageReference> extractReferences(String enhancedJson) {
+        try {
+            JsonNode messagesNode = objectMapper.readTree(enhancedJson);
+            if (!messagesNode.isArray()) {
+                return new ArrayList<>();
+            }
+
+            ArrayNode messages = (ArrayNode) messagesNode;
+            
+            // 查找最后一条用户消息中的searchReferences
+            for (int i = messages.size() - 1; i >= 0; i--) {
+                JsonNode message = messages.get(i);
+                if ("user".equals(message.get("role").asText()) && message.has("searchReferences")) {
+                    JsonNode searchReferences = message.get("searchReferences");
+                    List<MessageReference> references = new ArrayList<>();
+                    
+                    for (JsonNode ref : searchReferences) {
+                        MessageReference reference = new MessageReference();
+                        reference.setFileId(ref.get("fileId").asLong());
+                        reference.setChunkIndex(ref.get("chunkIndex").asInt());
+                        reference.setFileName(ref.get("fileName").asText());
+                        reference.setSimilarity(ref.get("similarity").floatValue());
+                        references.add(reference);
+                    }
+                    
+                    return references;
+                }
+            }
+            
+            return new ArrayList<>();
+        } catch (Exception e) {
+            logger.error("Error extracting references from enhanced messages", e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 创建包装的SseEmitter来处理参考信息
+     */
+    private SseEmitter createWrappedEmitter(SseEmitter originalEmitter, List<MessageReference> references) {
+        SseEmitter wrappedEmitter = new SseEmitter(-1L);
+        
+        // 复制回调设置
+        wrappedEmitter.onCompletion(() -> {
+            try {
+                // 在完成前发送包含参考信息的最终消息
+                Map<String, Object> referencesMessage = Map.of(
+                    "references", references
+                );
+                originalEmitter.send(referencesMessage);
+                originalEmitter.complete();
+            } catch (Exception e) {
+                logger.error("Error sending references in completion", e);
+                originalEmitter.complete();
+            }
+        });
+        
+        wrappedEmitter.onTimeout(() -> {
+            originalEmitter.completeWithError(new RuntimeException("Timeout"));
+        });
+        
+        wrappedEmitter.onError(ex -> {
+            originalEmitter.completeWithError(ex);
+        });
+        
+        return new SseEmitter(-1L) {
+            @Override
+            public void send(Object object) throws java.io.IOException {
+                originalEmitter.send(object);
+            }
+            
+            @Override
+            public void complete() {
+                wrappedEmitter.complete();
+            }
+            
+            @Override
+            public void completeWithError(Throwable ex) {
+                wrappedEmitter.completeWithError(ex);
+            }
+        };
     }
 }

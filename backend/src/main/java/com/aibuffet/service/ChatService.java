@@ -86,4 +86,12 @@ public interface ChatService {
      * @return 最近使用的提问对象列表
      */
     List<Map<String, Object>> getRecentQuestionTargets(Long userId, int limit);
+
+    /**
+     * 对消息进行向量检索增强处理
+     * @param messagesJson 消息JSON字符串
+     * @param userId 用户ID
+     * @return 增强后的消息JSON字符串
+     */
+    String enhanceMessageWithReferences(String messagesJson, Long userId);
 }

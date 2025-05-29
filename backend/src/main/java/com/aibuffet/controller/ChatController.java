@@ -2,8 +2,13 @@ package com.aibuffet.controller;
 
 import com.aibuffet.dto.CreateChatRequest;
 import com.aibuffet.dto.QuestionTargetRequest;
+import com.aibuffet.dto.ReferenceChunkDetail;
 import com.aibuffet.model.ChatSession;
+import com.aibuffet.model.DocChunk;
+import com.aibuffet.model.DocFile;
 import com.aibuffet.model.User;
+import com.aibuffet.repository.DocChunkRepository;
+import com.aibuffet.repository.DocFileRepository;
 import com.aibuffet.service.ChatService;
 import com.aibuffet.service.OSSService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +22,8 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/chats")
@@ -30,12 +37,22 @@ public class ChatController {
     @Autowired
     private OSSService ossService;
 
+    @Autowired
+    private DocChunkRepository docChunkRepository;
+
+    @Autowired
+    private DocFileRepository docFileRepository;
+
     private Long getUserId(Authentication authentication) {
         if (authentication == null) {
             throw new IllegalStateException("No authentication found");
         }
-        User user = (User) authentication.getPrincipal();
-        return user.getId();
+        String userId = authentication.getName();
+        try {
+            return Long.valueOf(userId);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid user ID format: " + userId);
+        }
     }
 
     @GetMapping
@@ -174,6 +191,63 @@ public class ChatController {
         } catch (Exception e) {
             logger.error("图片上传失败: 错误信息={}, 异常类型={}, 堆栈信息={}", 
                 e.getMessage(), e.getClass().getName(), e.getStackTrace());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/reference-chunks")
+    public ResponseEntity<List<ReferenceChunkDetail>> getReferenceChunks(
+            Authentication authentication,
+            @RequestBody Map<String, Object> request) {
+        try {
+            Long userId = getUserId(authentication);
+            
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> references = (List<Map<String, Object>>) request.get("references");
+            
+            if (references == null || references.isEmpty()) {
+                return ResponseEntity.ok(new ArrayList<>());
+            }
+            
+            List<ReferenceChunkDetail> details = new ArrayList<>();
+            
+            for (Map<String, Object> ref : references) {
+                Long fileId = Long.valueOf(ref.get("fileId").toString());
+                Integer chunkIndex = Integer.valueOf(ref.get("chunkIndex").toString());
+                Float similarity = Float.valueOf(ref.get("similarity").toString());
+                
+                // 查询文档块详情
+                Optional<DocChunk> chunkOpt = docChunkRepository.findByFileIdAndChunkIndex(fileId, chunkIndex);
+                if (chunkOpt.isPresent()) {
+                    DocChunk chunk = chunkOpt.get();
+                    
+                    // 查询文件信息
+                    Optional<DocFile> fileOpt = docFileRepository.findById(fileId);
+                    if (fileOpt.isPresent()) {
+                        DocFile file = fileOpt.get();
+                        
+                        // 验证用户权限
+                        if (file.getUploadedBy().equals(userId) || "PUBLISHED".equals(file.getPublishStatus())) {
+                            ReferenceChunkDetail detail = new ReferenceChunkDetail(
+                                fileId,
+                                chunkIndex,
+                                file.getFileName(),
+                                chunk.getContent(),
+                                similarity
+                            );
+                            details.add(detail);
+                        } else {
+                            logger.warn("User {} does not have permission to access file {}", userId, fileId);
+                        }
+                    }
+                } else {
+                    logger.warn("Chunk not found: fileId={}, chunkIndex={}", fileId, chunkIndex);
+                }
+            }
+            
+            return ResponseEntity.ok(details);
+        } catch (Exception e) {
+            logger.error("Error getting reference chunks: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().build();
         }
     }

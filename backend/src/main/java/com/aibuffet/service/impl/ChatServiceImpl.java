@@ -1,8 +1,17 @@
 package com.aibuffet.service.impl;
 
+import com.aibuffet.dto.MessageReference;
+import com.aibuffet.dto.SearchRequest;
+import com.aibuffet.dto.SearchResult;
 import com.aibuffet.model.ChatSession;
 import com.aibuffet.repository.ChatSessionRepository;
 import com.aibuffet.service.ChatService;
+import com.aibuffet.service.SearchService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +28,11 @@ public class ChatServiceImpl implements ChatService {
 
     @Autowired
     private ChatSessionRepository chatSessionRepository;
+
+    @Autowired
+    private SearchService searchService;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public List<ChatSession> getUserChatSessions(Long userId) {
@@ -66,12 +80,8 @@ public class ChatServiceImpl implements ChatService {
         chatSession.setQuestionTargetId(questionTargetId);
         chatSession.setQuestionTargetName(questionTargetName);
 
-        // 初始化消息数组
-        String initialMessages = String.format(
-            "[{\"role\":\"system\",\"content\":\"You are a helpful assistant.\"}," +
-            "{\"role\":\"user\",\"content\":\"%s\"}]",
-            firstMessage.replace("\"", "\\\"")
-        );
+        // 初始化消息数组，包含提问对象信息
+        String initialMessages = createInitialMessages(firstMessage, questionTargetType, questionTargetId, questionTargetName);
         chatSession.setMessages(initialMessages);
         chatSession.setIsDeleted(false);
         
@@ -79,6 +89,47 @@ public class ChatServiceImpl implements ChatService {
         logger.info("Created chat session with ID: {} and question target: {}/{}", 
             saved.getSessionId(), questionTargetType, questionTargetName);
         return saved;
+    }
+
+    /**
+     * 创建初始消息数组，包含提问对象信息
+     */
+    private String createInitialMessages(String firstMessage, String questionTargetType, String questionTargetId, String questionTargetName) {
+        try {
+            ArrayNode messages = objectMapper.createArrayNode();
+            
+            // 添加系统消息
+            ObjectNode systemMessage = objectMapper.createObjectNode();
+            systemMessage.put("role", "system");
+            systemMessage.put("content", "You are a helpful assistant.");
+            messages.add(systemMessage);
+            
+            // 添加用户消息
+            ObjectNode userMessage = objectMapper.createObjectNode();
+            userMessage.put("role", "user");
+            userMessage.put("content", firstMessage);
+            
+            // 如果有提问对象，添加questionTarget信息
+            if (questionTargetType != null && questionTargetId != null && questionTargetName != null) {
+                ObjectNode questionTarget = objectMapper.createObjectNode();
+                questionTarget.put("type", questionTargetType);
+                questionTarget.put("id", questionTargetId);
+                questionTarget.put("name", questionTargetName);
+                userMessage.set("questionTarget", questionTarget);
+            }
+            
+            messages.add(userMessage);
+            
+            return objectMapper.writeValueAsString(messages);
+        } catch (JsonProcessingException e) {
+            logger.error("Error creating initial messages JSON", e);
+            // 降级到原有格式
+            return String.format(
+                "[{\"role\":\"system\",\"content\":\"You are a helpful assistant.\"}," +
+                "{\"role\":\"user\",\"content\":\"%s\"}]",
+                firstMessage.replace("\"", "\\\"")
+            );
+        }
     }
 
     @Override
@@ -137,6 +188,164 @@ public class ChatServiceImpl implements ChatService {
         ChatSession updated = chatSessionRepository.save(chatSession);
         logger.info("Updated chat session: {}", updated.getSessionId());
         return updated;
+    }
+
+    /**
+     * 增强消息处理 - 对参考消息进行向量检索
+     */
+    public String enhanceMessageWithReferences(String messagesJson, Long userId) {
+        try {
+            JsonNode messagesNode = objectMapper.readTree(messagesJson);
+            if (!messagesNode.isArray()) {
+                return messagesJson;
+            }
+            
+            ArrayNode messages = (ArrayNode) messagesNode;
+            
+            // 查找最后一条用户消息
+            ObjectNode lastUserMessage = null;
+            for (int i = messages.size() - 1; i >= 0; i--) {
+                JsonNode message = messages.get(i);
+                if ("user".equals(message.get("role").asText())) {
+                    lastUserMessage = (ObjectNode) message;
+                    break;
+                }
+            }
+            
+            if (lastUserMessage == null || !lastUserMessage.has("questionTarget")) {
+                return messagesJson; // 没有找到带questionTarget的用户消息
+            }
+            
+            JsonNode questionTarget = lastUserMessage.get("questionTarget");
+            String userQuery = lastUserMessage.get("content").asText();
+            
+            // 执行向量检索
+            List<SearchResult> searchResults = performVectorSearch(questionTarget, userQuery, userId);
+            
+            if (searchResults.isEmpty()) {
+                // 如果没有检索到结果，添加提示
+                String enhancedContent = userQuery + "\n\n[注：未找到相关参考内容]";
+                lastUserMessage.put("content", enhancedContent);
+            } else {
+                // 构造增强消息
+                String enhancedContent = constructEnhancedMessage(userQuery, searchResults);
+                lastUserMessage.put("content", enhancedContent);
+                
+                // 保存检索结果供后续使用
+                ArrayNode references = objectMapper.createArrayNode();
+                for (SearchResult result : searchResults) {
+                    ObjectNode ref = objectMapper.createObjectNode();
+                    ref.put("fileId", result.getFileId());
+                    ref.put("chunkIndex", result.getChunkIndex());
+                    ref.put("fileName", result.getFileName());
+                    ref.put("similarity", result.getSimilarity());
+                    references.add(ref);
+                }
+                lastUserMessage.set("searchReferences", references);
+            }
+            
+            return objectMapper.writeValueAsString(messages);
+        } catch (Exception e) {
+            logger.error("Error enhancing message with references", e);
+            return messagesJson; // 降级返回原消息
+        }
+    }
+
+    /**
+     * 执行向量检索
+     */
+    private List<SearchResult> performVectorSearch(JsonNode questionTarget, String query, Long userId) {
+        try {
+            String type = questionTarget.get("type").asText();
+            String id = questionTarget.get("id").asText();
+            
+            SearchRequest searchRequest = new SearchRequest();
+            searchRequest.setQuery(query);
+            searchRequest.setLimit(5); // 检索5个相关块
+            searchRequest.setSimilarityThreshold(0.7f);
+            
+            if ("book".equals(type)) {
+                searchRequest.setDocumentId(Long.valueOf(id));
+                // 验证文档权限
+                if (!searchService.validateDocumentPermission(Long.valueOf(id), userId)) {
+                    logger.warn("User {} does not have permission to access document {}", userId, id);
+                    return Collections.emptyList();
+                }
+            } else if ("knowledge".equals(type)) {
+                searchRequest.setKnowledgeBaseId(Long.valueOf(id));
+                // 验证知识库权限
+                if (!searchService.validateKnowledgeBasePermission(Long.valueOf(id), userId)) {
+                    logger.warn("User {} does not have permission to access knowledge base {}", userId, id);
+                    return Collections.emptyList();
+                }
+            } else {
+                logger.warn("Unknown question target type: {}", type);
+                return Collections.emptyList();
+            }
+            
+            return searchService.search(searchRequest);
+        } catch (Exception e) {
+            logger.error("Error performing vector search", e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 构造增强消息
+     */
+    private String constructEnhancedMessage(String userQuery, List<SearchResult> searchResults) {
+        StringBuilder enhanced = new StringBuilder();
+        enhanced.append("用户问题：").append(userQuery).append("\n\n");
+        enhanced.append("相关参考内容：\n");
+        
+        for (int i = 0; i < searchResults.size(); i++) {
+            SearchResult result = searchResults.get(i);
+            enhanced.append(i + 1).append(". 来源《").append(result.getFileName()).append("》\n");
+            enhanced.append(result.getContent()).append("\n\n");
+        }
+        
+        enhanced.append("请基于以上参考内容回答用户问题。如果参考内容不足以回答问题，请说明并提供一般性建议。");
+        return enhanced.toString();
+    }
+
+    /**
+     * 为助手回复添加参考信息
+     */
+    public String addReferencesToAssistantMessage(String messagesJson, List<MessageReference> references) {
+        try {
+            JsonNode messagesNode = objectMapper.readTree(messagesJson);
+            if (!messagesNode.isArray() || references == null || references.isEmpty()) {
+                return messagesJson;
+            }
+            
+            ArrayNode messages = (ArrayNode) messagesNode;
+            
+            // 查找最后一条助手消息
+            for (int i = messages.size() - 1; i >= 0; i--) {
+                JsonNode message = messages.get(i);
+                if ("assistant".equals(message.get("role").asText())) {
+                    ObjectNode assistantMessage = (ObjectNode) message;
+                    
+                    // 添加references字段
+                    ArrayNode referencesArray = objectMapper.createArrayNode();
+                    for (MessageReference ref : references) {
+                        ObjectNode refNode = objectMapper.createObjectNode();
+                        refNode.put("fileId", ref.getFileId());
+                        refNode.put("chunkIndex", ref.getChunkIndex());
+                        refNode.put("fileName", ref.getFileName());
+                        refNode.put("similarity", ref.getSimilarity());
+                        referencesArray.add(refNode);
+                    }
+                    assistantMessage.set("references", referencesArray);
+                    break;
+                }
+            }
+            
+            return objectMapper.writeValueAsString(messages);
+        } catch (Exception e) {
+            logger.error("Error adding references to assistant message", e);
+            return messagesJson;
+        }
     }
 
     @Override
