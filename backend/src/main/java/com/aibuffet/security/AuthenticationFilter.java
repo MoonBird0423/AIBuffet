@@ -28,56 +28,65 @@ public class AuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        
-        String authHeader = request.getHeader("Authorization");
-        logger.debug("Processing request: {} {}", request.getMethod(), request.getRequestURI());
-        logger.debug("Authorization header: {}", authHeader);
-
         try {
+            String authHeader = request.getHeader("Authorization");
+            logger.debug("Processing request: {} {}", request.getMethod(), request.getRequestURI());
+            logger.debug("Authorization header: {}", authHeader);
+
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String token = authHeader.substring(7);
-                
-                // 统一处理所有请求的认证
-                handleAuthentication(token);
-            } else {
-                // 如果是登录相关的请求，允许通过
-                if (request.getRequestURI().startsWith("/api/auth/")) {
-                    logger.debug("Allowing auth request to proceed without token");
-                } else {
-                    logger.debug("No auth header found, clearing security context");
-                    SecurityContextHolder.clearContext();
+                if (!handleAuthentication(token)) {
+                    logger.debug("Authentication failed for token");
+                    sendUnauthorizedError(response, "认证失败：无效的token");
+                    return;
                 }
+            } else if (!request.getRequestURI().startsWith("/api/auth/")) {
+                logger.debug("No auth header found for protected resource");
+                sendUnauthorizedError(response, "认证失败：缺少token");
+                return;
             }
+
+            // 只有认证成功或是认证接口才继续处理
+            chain.doFilter(request, response);
         } catch (Exception e) {
             logger.error("Authentication error", e);
             SecurityContextHolder.clearContext();
+            if (!response.isCommitted()) {
+                sendUnauthorizedError(response, "认证处理异常");
+            }
         }
-
-        chain.doFilter(request, response);
     }
 
-    private void handleAuthentication(String token) {
+    private void sendUnauthorizedError(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write(String.format("{\"code\":4003,\"message\":\"%s\"}", message));
+    }
+
+    private boolean handleAuthentication(String token) {
         try {
             // 从token中提取手机号（格式为 "phone_timestamp"）
             String phone = token.split("_")[0];
             User user = userRepository.findByPhone(phone).orElse(null);
 
             if (user != null) {
-                // 使用用户ID作为principal
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                    user.getId().toString(),  // 使用用户ID字符串
+                    user.getId().toString(),
                     null,
                     user.getAuthorities()
                 );
                 SecurityContextHolder.getContext().setAuthentication(auth);
                 logger.debug("Successfully authenticated user with phone: {}, userId: {}", phone, user.getId());
-            } else {
-                logger.warn("User not found for phone: {}", phone);
-                SecurityContextHolder.clearContext();
+                return true;
             }
+            
+            logger.warn("User not found for phone: {}", phone);
+            SecurityContextHolder.clearContext();
+            return false;
         } catch (Exception e) {
             logger.error("Token parsing error", e);
             SecurityContextHolder.clearContext();
+            return false;
         }
     }
 }

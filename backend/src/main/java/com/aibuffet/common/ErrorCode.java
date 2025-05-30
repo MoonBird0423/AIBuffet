@@ -27,9 +27,10 @@ public enum ErrorCode {
     // 资源访问相关错误码
     RESOURCE_NOT_FOUND(4001, "资源不存在"),
     PERMISSION_DENIED(4002, "无权限访问"),
+    UNAUTHORIZED(4003, "未经授权的访问"),
     
     // 请求相关错误码
-    INVALID_REQUEST(4003, "无效请求参数");
+    INVALID_REQUEST(4004, "无效请求参数");
 
     private final int code;
     private final String message;
