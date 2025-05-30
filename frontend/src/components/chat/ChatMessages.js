@@ -1,9 +1,7 @@
-import React, { useEffect, useRef, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import MarkdownIt from 'markdown-it';
 import { ToastManager } from '../common/Toast';
 import ChatGuidance from './ChatGuidance';
-import ReferenceModal from './ReferenceModal';
-import { getReferenceChunks } from '../../services/api';
 import {
   AiOutlineLoading3Quarters,
   AiOutlineWarning,
@@ -26,12 +24,6 @@ const MessageStatus = {
 
 function ChatMessages({ messages, partialResponse, error, messageStatus, questionTarget, onTargetSelect }) {
   const messagesEndRef = useRef(null);
-  const [referenceModal, setReferenceModal] = useState({
-    isOpen: false,
-    references: [],
-    loading: false
-  });
-  
   // 初始化markdown-it实例，配置安全选项
   const md = useMemo(() => {
     const instance = new MarkdownIt({
@@ -48,8 +40,13 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
   };
 
   useEffect(() => {
+    // 使用 requestAnimationFrame 来确保滚动发生在浏览器重绘之后
+    const scrollTimeout = requestAnimationFrame(() => {
       scrollToBottom();
-    }, [messages, partialResponse]);
+    });
+    
+    return () => cancelAnimationFrame(scrollTimeout);
+  }, [messages, partialResponse, messageStatus]);
   
     // 监听错误状态，显示Toast提示
     useEffect(() => {
@@ -57,41 +54,6 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
         ToastManager.error(error);
       }
     }, [error]);
-
-  // 处理查看参考内容
-  const handleViewReferences = async (references) => {
-    setReferenceModal({
-      isOpen: true,
-      references: [],
-      loading: true
-    });
-
-    try {
-      const details = await getReferenceChunks(references);
-      setReferenceModal({
-        isOpen: true,
-        references: details,
-        loading: false
-      });
-    } catch (error) {
-      console.error('获取参考内容失败:', error);
-      ToastManager.error('获取参考内容失败');
-      setReferenceModal({
-        isOpen: false,
-        references: [],
-        loading: false
-      });
-    }
-  };
-
-  // 关闭参考内容弹窗
-  const handleCloseReferenceModal = () => {
-    setReferenceModal({
-      isOpen: false,
-      references: [],
-      loading: false
-    });
-  };
 
   const getMessageIcon = (role, model, status) => {
     if (role === 'user') {
@@ -149,15 +111,16 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
   };
 
   // 渲染消息内容
-  const renderContent = (content, isPartial = false, status = MessageStatus.COMPLETED) => {
-    // 如果内容为空且状态为STREAMING，显示Loading图标
-    if (!content && status === MessageStatus.STREAMING) {
-      return (
-        <div className="markdown-content flex justify-center py-4">
-          <AiOutlineLoading3Quarters className="text-2xl text-gray-600 animate-spin" />
-        </div>
-      );
-    }
+const renderContent = (content, isPartial = false, status) => {
+  // 如果内容为空且消息正在流式传输中，显示加载动画
+  if (!content && status === MessageStatus.STREAMING) {
+    return (
+      <div className="flex items-center space-x-2">
+        <AiOutlineLoading3Quarters className="animate-spin text-gray-400" />
+        <span className="text-gray-400">正在生成回复...</span>
+      </div>
+    );
+  }
 
     // 处理数组格式的内容
     if (Array.isArray(content)) {
@@ -221,18 +184,16 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
                 dangerouslySetInnerHTML={{ __html: renderedHTML }}
               />
             );
-            // 如果是部分响应且是最后一个文本块，添加光标
             if (isPartial && i === content.length - 1 && status === MessageStatus.STREAMING) {
-              renderedHTML += '<span class="inline-block w-2 h-4 ml-0.5 bg-gray-600 animate-pulse"></span>';
+              const finalHTML = renderedHTML + '<span class="inline-block w-2 h-4 ml-0.5 bg-gray-600 animate-pulse"></span>';
+              return (
+                <div
+                  key={i}
+                  className="markdown-content"
+                  dangerouslySetInnerHTML={{ __html: finalHTML }}
+                />
+              );
             }
-            
-            return (
-              <div
-                key={i}
-                className="markdown-content"
-                dangerouslySetInnerHTML={{ __html: renderedHTML }}
-              />
-            );
             return result;
           case 'input_audio':
             return (
@@ -271,26 +232,6 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
     }
     
     return <p>无法显示的内容</p>;
-  };
-
-  // 渲染参考按钮
-  const renderReferenceButton = (message) => {
-    // 检查消息是否有参考信息
-    if (message.role !== 'assistant' || !message.references || message.references.length === 0) {
-      return null;
-    }
-
-    return (
-      <div className="mt-3 pt-3 border-t border-gray-200">
-        <button
-          onClick={() => handleViewReferences(message.references)}
-          className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
-        >
-          <AiOutlineFileText className="text-lg" />
-          <span>查看参考内容 ({message.references.length}个)</span>
-        </button>
-      </div>
-    );
   };
 
   // 如果没有消息且没有提问对象，显示引导界面
@@ -390,7 +331,19 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
           const showPartialResponse = isLastAssistantMessage && partialResponse;
           const currentStatus = error ? MessageStatus.ERROR :
                                showPartialResponse ? MessageStatus.STREAMING :
-                               MessageStatus.COMPLETED;
+                               messageStatus === MessageStatus.STREAMING ? MessageStatus.STREAMING :
+                               messageStatus;
+          
+          console.log('[Message Debug]', {
+            index,
+            role: message.role,
+            isLastMessage,
+            isLastAssistantMessage,
+            showPartialResponse,
+            currentStatus,
+            messageStatus,
+            error: !!error
+          });
 
           if (message.role === 'system') {
             return (
@@ -419,15 +372,28 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
                       ? renderContent(partialResponse, true, currentStatus)
                       : renderContent(message.content, false, currentStatus)}
                   </div>
-                  {/* 显示参考内容按钮 */}
-                  {!isUser && renderReferenceButton(message)}
                 </div>
               </div>
-              {currentStatus === MessageStatus.ERROR && (
-                <div className="flex items-start mt-2">
-                  <div className="ml-11 text-sm text-red-600">
-                    输出中断 - {error}
+              {currentStatus === MessageStatus.ERROR && error && (
+                <div className="flex items-center mt-2 ml-11">
+                  <div className="flex items-center space-x-2 text-red-600">
+                    <AiOutlineWarning className="flex-shrink-0" />
+                    <span className="text-sm">
+                      {error.includes('登录已过期') ? '登录已过期，请重新登录' :
+                       error.includes('会话不存在') ? '会话已失效，请刷新页面' :
+                       error.includes('网络') ? '网络连接失败，请检查网络' :
+                       error.includes('调用失败') ? '模型响应异常，请重试' :
+                       `输出中断 - ${error}`}
+                    </span>
                   </div>
+                  {(error.includes('会话') || error.includes('失效')) && (
+                    <button 
+                      onClick={() => window.location.reload()}
+                      className="text-blue-600 hover:text-blue-800 text-sm underline ml-4"
+                    >
+                      刷新页面
+                    </button>
+                  )}
                 </div>
               )}
             </React.Fragment>
@@ -435,13 +401,6 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
         })}
         <div ref={messagesEndRef} />
       </div>
-
-      {/* 参考内容弹窗 */}
-      <ReferenceModal
-        isOpen={referenceModal.isOpen}
-        onClose={handleCloseReferenceModal}
-        references={referenceModal.loading ? [] : referenceModal.references}
-      />
     </>
   );
 }

@@ -184,6 +184,23 @@ public class ChatServiceImpl implements ChatService {
             throw new RuntimeException("Chat session not found");
         }
         
+        if (messages == null) {
+            logger.warn("Received null messages for session {}, using empty array", sessionId);
+            messages = "[]";
+        }
+
+        try {
+            // 验证消息格式
+            JsonNode messagesNode = objectMapper.readTree(messages);
+            if (!messagesNode.isArray()) {
+                logger.warn("Invalid messages format for session {}, using empty array", sessionId);
+                messages = "[]";
+            }
+        } catch (Exception e) {
+            logger.error("Error parsing messages JSON for session {}", sessionId, e);
+            messages = "[]";
+        }
+        
         chatSession.setMessages(messages);
         ChatSession updated = chatSessionRepository.save(chatSession);
         logger.info("Updated chat session: {}", updated.getSessionId());
@@ -306,46 +323,6 @@ public class ChatServiceImpl implements ChatService {
         
         enhanced.append("请基于以上参考内容回答用户问题。如果参考内容不足以回答问题，请说明并提供一般性建议。");
         return enhanced.toString();
-    }
-
-    /**
-     * 为助手回复添加参考信息
-     */
-    public String addReferencesToAssistantMessage(String messagesJson, List<MessageReference> references) {
-        try {
-            JsonNode messagesNode = objectMapper.readTree(messagesJson);
-            if (!messagesNode.isArray() || references == null || references.isEmpty()) {
-                return messagesJson;
-            }
-            
-            ArrayNode messages = (ArrayNode) messagesNode;
-            
-            // 查找最后一条助手消息
-            for (int i = messages.size() - 1; i >= 0; i--) {
-                JsonNode message = messages.get(i);
-                if ("assistant".equals(message.get("role").asText())) {
-                    ObjectNode assistantMessage = (ObjectNode) message;
-                    
-                    // 添加references字段
-                    ArrayNode referencesArray = objectMapper.createArrayNode();
-                    for (MessageReference ref : references) {
-                        ObjectNode refNode = objectMapper.createObjectNode();
-                        refNode.put("fileId", ref.getFileId());
-                        refNode.put("chunkIndex", ref.getChunkIndex());
-                        refNode.put("fileName", ref.getFileName());
-                        refNode.put("similarity", ref.getSimilarity());
-                        referencesArray.add(refNode);
-                    }
-                    assistantMessage.set("references", referencesArray);
-                    break;
-                }
-            }
-            
-            return objectMapper.writeValueAsString(messages);
-        } catch (Exception e) {
-            logger.error("Error adding references to assistant message", e);
-            return messagesJson;
-        }
     }
 
     @Override

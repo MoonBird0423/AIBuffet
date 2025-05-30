@@ -144,13 +144,21 @@ export const createChatSession = async (message, questionTarget = null) => {
   }
 };
 
-export const updateChatSession = async (sessionId, messages) => {
-  try {
-    const response = await apiClient.put(`/chats/${sessionId}`, { messages });
-    return response.data;
-  } catch (error) {
-    console.error('Error updating chat session:', error);
-    throw error;
+export const updateChatSession = async (sessionId, messages, retryCount = 3) => {
+  for (let i = 0; i < retryCount; i++) {
+    try {
+      const response = await apiClient.put(`/chats/${sessionId}`, { messages });
+      return response.data;
+    } catch (error) {
+      // 如果是404错误（会话不存在）或者是最后一次重试，直接抛出错误
+      if (error.response?.status === 404 || i === retryCount - 1) {
+        console.error('Error updating chat session:', error);
+        throw error;
+      }
+      console.log(`Retrying update chat session (${i + 1}/${retryCount})...`);
+      // 等待后重试，每次等待时间递增
+      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+    }
   }
 };
 
@@ -229,39 +237,66 @@ export const invokeModel = ({ messages, onMessage, onError, onFinish, signal }) 
     const decoder = new TextDecoder();
     let buffer = '';
 
-    const processText = (text) => {
-      buffer += text;
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
+  const processText = async (text) => {
+      try {
+        buffer += text;
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
 
-      lines.forEach(line => {
-        if (!line.trim()) return;
-        
-        if (line.trim() === 'data: [DONE]') {
-          onFinish?.();
-          return;
-        }
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          
+          if (line.trim() === 'data: [DONE]') {
+            console.log('[SSE Debug] Received [DONE] signal');
+            console.log('[SSE Debug] Current buffer content:', buffer);
+            // 等待一小段时间确保所有内容都已处理完
+            await new Promise(resolve => setTimeout(resolve, 100));
+            onFinish?.();
+            return;
+          }
 
-        try {
-          // 检查并删除"data:"前缀
-          const jsonStr = line.startsWith('data:') ? line.slice(5) : line;
-          const data = JSON.parse(jsonStr);
-          onMessage?.(data);
-        } catch (error) {
-          console.warn('Error parsing SSE message:', error, line);
+          try {
+            // 检查并删除"data:"前缀
+            const jsonStr = line.startsWith('data:') ? line.slice(5) : line;
+            const data = JSON.parse(jsonStr);
+            if (data.error) {
+              throw new Error(data.error);
+            }
+            onMessage?.(data);
+          } catch (error) {
+            console.error('解析SSE消息失败:', error, line);
+            onError?.(new Error('消息解析失败: ' + error.message));
+            return;
+          }
         }
-      });
+      } catch (error) {
+        console.error('处理SSE流错误:', error);
+        onError?.(error);
+      }
     };
 
-    const pump = () => reader.read()
-      .then(({ value, done }) => {
+    const pump = async () => {
+      try {
+        const { value, done } = await reader.read();
         if (done) {
+          console.log('[SSE Debug] Stream read complete');
+          console.log('[SSE Debug] Final buffer state:', buffer);
+          // 如果已经收到过[DONE]信号，则不再调用onFinish
+          if (buffer.includes('[DONE]')) {
+            console.log('[SSE Debug] Skip onFinish as [DONE] was already received');
+            return;
+          }
+          await new Promise(resolve => setTimeout(resolve, 100));
           onFinish?.();
           return;
         }
-        processText(decoder.decode(value, { stream: true }));
+        await processText(decoder.decode(value, { stream: true }));
         return pump();
-      });
+      } catch (error) {
+        console.error('SSE流读取错误:', error);
+        onError?.(error);
+      }
+    };
 
     return pump();
   })
@@ -756,19 +791,6 @@ export const getRecentQuestionTargets = async (limit = 10) => {
     return response.data;
   } catch (error) {
     console.error('Error getting recent question targets:', error);
-    throw error;
-  }
-};
-
-// 获取参考内容详情
-export const getReferenceChunks = async (references) => {
-  try {
-    const response = await apiClient.post('/chats/reference-chunks', {
-      references: references
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error getting reference chunks:', error);
     throw error;
   }
 };

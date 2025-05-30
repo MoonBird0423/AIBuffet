@@ -6,7 +6,6 @@ import com.aibuffet.dto.ReferenceChunkDetail;
 import com.aibuffet.model.ChatSession;
 import com.aibuffet.model.DocChunk;
 import com.aibuffet.model.DocFile;
-import com.aibuffet.model.User;
 import com.aibuffet.repository.DocChunkRepository;
 import com.aibuffet.repository.DocFileRepository;
 import com.aibuffet.service.ChatService;
@@ -18,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
@@ -72,6 +72,22 @@ public class ChatController {
             logger.warn("Chat session {} not found for user {}", sessionId, userId);
             return ResponseEntity.notFound().build();
         }
+
+        // 确保 messages 字段不为 null
+        if (chatSession.getMessages() == null) {
+            logger.warn("Chat session {} has null messages, initializing with empty array", sessionId);
+            chatSession.setMessages("[]");
+            chatSession = chatService.updateChatSession(userId, sessionId, "[]");
+        }
+
+        // 验证消息格式
+        try {
+            new ObjectMapper().readTree(chatSession.getMessages());
+        } catch (Exception e) {
+            logger.error("Invalid messages format in session {}, resetting to empty array", sessionId, e);
+            chatSession = chatService.updateChatSession(userId, sessionId, "[]");
+        }
+
         return ResponseEntity.ok(chatSession);
     }
 
@@ -102,15 +118,33 @@ public class ChatController {
             @RequestBody Map<String, String> request) {
         Long userId = getUserId(authentication);
         String messages = request.get("messages");
-        if (messages == null) {
-            return ResponseEntity.badRequest().build();
-        }
+        
         try {
+            // 1. 先检查会话是否存在
+            ChatSession existingSession = chatService.getChatSession(userId, sessionId);
+            if (existingSession == null) {
+                logger.error("Chat session not found: sessionId={}, userId={}", sessionId, userId);
+                return ResponseEntity.status(404)
+                    .body(null);
+            }
+            
+            // 2. 验证消息格式
+            if (messages == null) {
+                logger.error("Invalid messages format: messages is null");
+                return ResponseEntity.badRequest()
+                    .body(null);
+            }
+
+            // 3. 尝试更新会话
             ChatSession updated = chatService.updateChatSession(userId, sessionId, messages);
+            logger.info("Successfully updated chat session: sessionId={}, userId={}", sessionId, userId);
             return ResponseEntity.ok(updated);
+            
         } catch (RuntimeException e) {
-            logger.error("Error updating chat session: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
+            logger.error("Error updating chat session: sessionId={}, userId={}, error={}", 
+                sessionId, userId, e.getMessage());
+            return ResponseEntity.status(500)
+                .body(null);
         }
     }
 
@@ -119,8 +153,14 @@ public class ChatController {
             Authentication authentication,
             @PathVariable String sessionId) {
         Long userId = getUserId(authentication);
-        chatService.deleteChatSession(userId, sessionId);
-        return ResponseEntity.ok().build();
+        try {
+            chatService.deleteChatSession(userId, sessionId);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            logger.error("Error deleting chat session: sessionId={}, userId={}, error={}", 
+                sessionId, userId, e.getMessage());
+            return ResponseEntity.status(500).build();
+        }
     }
 
     @PutMapping("/{sessionId}/question-target")
@@ -139,8 +179,9 @@ public class ChatController {
             );
             return ResponseEntity.ok(updated);
         } catch (RuntimeException e) {
-            logger.error("Error updating question target: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
+            logger.error("Error updating question target: sessionId={}, userId={}, error={}", 
+                sessionId, userId, e.getMessage());
+            return ResponseEntity.status(500).build();
         }
     }
 
@@ -153,8 +194,9 @@ public class ChatController {
             ChatSession updated = chatService.clearQuestionTarget(userId, sessionId);
             return ResponseEntity.ok(updated);
         } catch (RuntimeException e) {
-            logger.error("Error clearing question target: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
+            logger.error("Error clearing question target: sessionId={}, userId={}, error={}", 
+                sessionId, userId, e.getMessage());
+            return ResponseEntity.status(500).build();
         }
     }
 
@@ -167,8 +209,9 @@ public class ChatController {
             List<Map<String, Object>> recentTargets = chatService.getRecentQuestionTargets(userId, limit);
             return ResponseEntity.ok(recentTargets);
         } catch (Exception e) {
-            logger.error("Get recent question targets failed: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
+            logger.error("Get recent question targets failed: userId={}, error={}", 
+                getUserId(authentication), e.getMessage());
+            return ResponseEntity.status(500).build();
         }
     }
 
@@ -189,9 +232,9 @@ public class ChatController {
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            logger.error("图片上传失败: 错误信息={}, 异常类型={}, 堆栈信息={}", 
-                e.getMessage(), e.getClass().getName(), e.getStackTrace());
-            return ResponseEntity.badRequest().build();
+            logger.error("图片上传失败: 用户ID={}, 错误信息={}", 
+                getUserId(authentication), e.getMessage());
+            return ResponseEntity.status(500).build();
         }
     }
 
@@ -247,8 +290,9 @@ public class ChatController {
             
             return ResponseEntity.ok(details);
         } catch (Exception e) {
-            logger.error("Error getting reference chunks: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().build();
+            logger.error("Error getting reference chunks: userId={}, error={}", 
+                getUserId(authentication), e.getMessage());
+            return ResponseEntity.status(500).build();
         }
     }
 }

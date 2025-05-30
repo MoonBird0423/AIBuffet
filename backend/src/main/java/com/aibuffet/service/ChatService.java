@@ -1,5 +1,6 @@
 package com.aibuffet.service;
 
+import com.aibuffet.dto.MessageReference;
 import com.aibuffet.model.ChatSession;
 import java.util.List;
 import java.util.Map;

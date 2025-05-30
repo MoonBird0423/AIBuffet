@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ChatHeader from '../components/chat/ChatHeader';
 import ChatMessages from '../components/chat/ChatMessages';
@@ -18,6 +18,7 @@ function Chat() {
   const [showPromptTemplates, setShowPromptTemplates] = useState(false);
   const [currentSession, setCurrentSession] = useState(null);
   const [error, setError] = useState(null);
+  const [completedMap, setCompletedMap] = useState(new Map());
   const [inputFocusKey, setInputFocusKey] = useState(0);
   const [loadingRetryCount, setLoadingRetryCount] = useState(0);
   const [questionTarget, setQuestionTarget] = useState(null); // {type: 'book'|'knowledge', id: string, name: string}
@@ -86,39 +87,49 @@ function Chat() {
       if (sessionId) {
         try {
           const session = await getChatSession(sessionId);
-      if (session) {
-        setCurrentSessionId(sessionId);
-        setCurrentSession(session);
-        const messages = JSON.parse(session.messages);
-        
-        // 从session中恢复questionTarget
-        if (session.questionTargetType) {
-          setQuestionTarget({
-            type: session.questionTargetType,
-            id: session.questionTargetId,
-            name: session.questionTargetName
-          });
-          setShowNoTargetHint(false);
-        }
-        
-        // 只在非流式输出状态时更新消息
-        const isStreaming = processingMap.get(sessionId);
-        if (!isStreaming) {
-          // 如果当前有用户消息且正在等待响应，将其添加到消息列表
-          if (currentUserMessage) {
-            messages.push(currentUserMessage);
-          }
-          
-          setMessagesMap(prev => {
-            const newMap = new Map(prev);
-            newMap.set(sessionId, messages);
-            return newMap;
-          });
-        }
+          if (session) {
+            setCurrentSessionId(sessionId);
+            setCurrentSession(session);
+            
+            let messages = [];
+            try {
+              messages = JSON.parse(session.messages || '[]');
+              console.log('[Chat Debug] Parsed messages:', {
+                sessionId,
+                rawMessages: session.messages,
+                parsedMessages: messages
+              });
+            } catch (error) {
+              console.error('[Chat Debug] Failed to parse messages:', error);
+              messages = [];
+            }
+            
+            // 从session中恢复questionTarget
+            if (session.questionTargetType) {
+              setQuestionTarget({
+                type: session.questionTargetType,
+                id: session.questionTargetId,
+                name: session.questionTargetName
+              });
+              setShowNoTargetHint(false);
+            }
+            
+            // 只在非流式输出状态时更新消息
+            const isStreaming = processingMap.get(sessionId);
+            if (!isStreaming) {
+              if (currentUserMessage) {
+                messages.push(currentUserMessage);
+              }
+              
+              setMessagesMap(prev => {
+                const newMap = new Map(prev);
+                newMap.set(sessionId, messages);
+                return newMap;
+              });
+            }
             setInputFocusKey(prev => prev + 1);
-            setLoadingRetryCount(0); // 重置重试计数
-          } else if (loadingRetryCount < 3) { // 最多重试3次
-            // 如果session为null且未超过重试次数，延迟1秒后重试
+            setLoadingRetryCount(0);
+          } else if (loadingRetryCount < 3) {
             retryTimeoutRef.current = setTimeout(() => {
               setLoadingRetryCount(prev => prev + 1);
             }, 1000);
@@ -172,6 +183,14 @@ function Chat() {
     });
     
     setPartialResponseMap(prev => {
+      const newMap = new Map(prev);
+      if (sessionIdToCancel) {
+        newMap.delete(sessionIdToCancel);
+      }
+      return newMap;
+    });
+
+    setCompletedMap(prev => {
       const newMap = new Map(prev);
       if (sessionIdToCancel) {
         newMap.delete(sessionIdToCancel);
@@ -237,6 +256,13 @@ function Chat() {
         }
       }
 
+      // 重置状态
+      setCompletedMap(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(activeSessionId);
+        return newMap;
+      });
+
       // 设置处理状态
       setProcessingMap(prev => {
         const newMap = new Map(prev);
@@ -249,6 +275,13 @@ function Chat() {
         const newMap = new Map(prev);
         newMap.set(activeSessionId, '');
         return newMap;
+      });
+
+      console.log('[Chat Debug] Starting new message, activeSessionId:', activeSessionId);
+      console.log('[Chat Debug] Current state:', {
+        processing: [...processingMap.entries()],
+        completed: [...completedMap.entries()],
+        partial: [...partialResponseMap.entries()]
       });
 
       // 获取当前会话的消息
@@ -366,54 +399,55 @@ function Chat() {
             return newMap;
           });
         },
-          onFinish: async () => {
-            // 清理当前用户消息
-            setCurrentUserMessage(null);
-            
-            // 清理状态
-            setPartialResponseMap(prev => {
-            const newMap = new Map(prev);
-            newMap.delete(activeSessionId);
-            return newMap;
-          });
-          
-          setProcessingMap(prev => {
-            const newMap = new Map(prev);
-            newMap.delete(activeSessionId);
-            return newMap;
-          });
-          
-          const finalMessages = [...newMessages, aiMessage];
+        onFinish: async () => {
           try {
-            const updatedChat = await updateChatSession(activeSessionId, JSON.stringify(finalMessages));
+            // 设置完成状态
+            setCompletedMap(prev => {
+              const newMap = new Map(prev);
+              newMap.set(activeSessionId, true);
+              return newMap;
+            });
+    
+            // 准备最终消息
+            const finalMessages = [...newMessages, { ...aiMessage }];
             
-            // 使用完整的消息列表更新状态
+            // 直接更新会话
+            const updatedChat = await updateChatSession(activeSessionId, JSON.stringify(finalMessages));
+
+            // 更新UI并清理状态
             setMessagesMap(prev => {
               const newMap = new Map(prev);
               newMap.set(activeSessionId, finalMessages);
               return newMap;
             });
+
+            setCurrentUserMessage(null);
+
+            // 清理其他状态
+            setPartialResponseMap(prev => {
+              const newMap = new Map(prev);
+              newMap.delete(activeSessionId);
+              return newMap;
+            });
             
+            setProcessingMap(prev => {
+              const newMap = new Map(prev);
+              newMap.delete(activeSessionId);
+              return newMap;
+            });
+
             if (sidebarRef.current) {
               sidebarRef.current.handleChatUpdated(updatedChat);
             }
           } catch (error) {
-            console.error('Update session error after completion:', error);
-            setError('更新对话失败，但对话已完成');
+            console.error('Update session error:', error);
+            setError('更新会话失败，但对话已完成');
           }
         },
         signal: abortControllerRef.current.signal
       });
     } catch (error) {
-      console.error('Send message error:', error);
-      if (error.name === 'AbortError') {
-        setError('请求已取消');
-      } else if (error.response && error.response.status === 401) {
-        setError('未登录或登录已过期，请重新登录');
-        navigate('/login', { state: { from: location.pathname + location.search } });
-      } else {
-        setError('发送消息失败，请重试');
-      }
+      handleError(error);
       setProcessingMap(prev => {
         const newMap = new Map(prev);
         newMap.delete(activeSessionId);
@@ -422,6 +456,63 @@ function Chat() {
     }
   };
 
+  // 统一的错误处理函数
+  const handleError = (error) => {
+    console.error('Operation error:', error);
+    
+    let errorMessage = '发送消息失败，请重试';
+    
+    if (error.name === 'AbortError') {
+      errorMessage = '请求已取消';
+    } else if (error.response) {
+      switch (error.response.status) {
+        case 401:
+          errorMessage = '未登录或登录已过期，请重新登录';
+          navigate('/login', { state: { from: location.pathname + location.search } });
+          break;
+        case 404:
+          errorMessage = '会话不存在或已失效';
+          // 尝试重新获取会话
+          tryRefreshSession(currentSessionId);
+          break;
+        case 500:
+          errorMessage = '服务器内部错误，请稍后重试';
+          break;
+        default:
+          if (!navigator.onLine) {
+            errorMessage = '网络连接失败，请检查网络';
+          } else {
+            errorMessage = error.response.data?.message || '发送消息失败，请重试';
+          }
+      }
+    } else if (!error.response) {
+      errorMessage = '网络连接失败，请检查网络';
+    }
+    
+    setError(errorMessage);
+  };
+
+  // 会话刷新函数
+  const tryRefreshSession = async (sessionId) => {
+    if (!sessionId) return;
+    
+    try {
+      const session = await getChatSession(sessionId);
+      if (session) {
+        setCurrentSession(session);
+        const messages = JSON.parse(session.messages || '[]');
+        setMessagesMap(prev => {
+          const newMap = new Map(prev);
+          newMap.set(sessionId, messages);
+          return newMap;
+        });
+        setError(null); // 清除错误状态
+      }
+    } catch (retryError) {
+      console.error('Session refresh failed:', retryError);
+      // 刷新失败保持原有错误消息
+    }
+  };
   const handleNewChat = () => {
     if (sessionId) {
       cancelCurrentRequest(sessionId);
@@ -430,6 +521,7 @@ function Chat() {
     setCurrentSession(null);
     setCurrentSessionId(null);
     setMessagesMap(new Map());
+    setCompletedMap(new Map());
     setInputFocusKey(prev => prev + 1);
   };
 
@@ -470,6 +562,9 @@ function Chat() {
       // 清理会话状态
       setCurrentSessionId(null);
       setCurrentSession(null);
+      setCompletedMap(new Map());
+      setProcessingMap(new Map());
+      setPartialResponseMap(new Map());
     };
   }, []);
 
@@ -504,7 +599,17 @@ function Chat() {
         <ChatMessages
           messages={messagesMap.get(currentSessionId) || []}
           partialResponse={currentSessionId ? partialResponseMap.get(currentSessionId) || '' : ''}
-          messageStatus={currentSessionId ? (processingMap.get(currentSessionId) ? 'streaming' : 'completed') : 'completed'}
+          messageStatus={
+            currentSessionId 
+              ? (error 
+                  ? 'error' 
+                  : completedMap.get(currentSessionId) 
+                    ? 'completed'
+                    : processingMap.get(currentSessionId) 
+                      ? 'streaming' 
+                      : 'completed')
+              : 'completed'
+          }
           questionTarget={questionTarget}
           onTargetSelect={handleTargetSelect}
         />

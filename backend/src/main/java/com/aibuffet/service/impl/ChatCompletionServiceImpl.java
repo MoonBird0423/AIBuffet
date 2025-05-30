@@ -43,13 +43,26 @@ public void streamChatCompletion(List<Map<String, Object>> messages, String mode
             Map<String, Object> requestBody = buildRequestBody(messages, model);
 
             // 使用配置的WebClient.Builder创建实例
+            String baseUrl = model.getBaseUrl();
+            logger.info("准备连接模型服务 [{}], 开始DNS解析: {}", modelName, baseUrl);
+
             WebClient client = webClientBuilder
-                .baseUrl(model.getBaseUrl())
+                .baseUrl(baseUrl)
+                .filters(filterList -> {
+                    filterList.add((request, next) -> {
+                        logger.debug("DNS解析完成，开始建立连接: {}", request.url());
+                        return next.exchange(request);
+                    });
+                })
                 .build();
 
-            logger.info("Sending request to model [{}] at URL: {}", modelName, model.getBaseUrl());
+            logger.info("DNS解析成功，准备发送请求到模型 [{}]", modelName);
             logger.debug("Request body: {}", objectMapper.writeValueAsString(requestBody));
 
+            // 添加连接监控
+            final long startTime = System.currentTimeMillis();
+            logger.debug("开始建立连接...");
+            
             // 发送请求并处理流式响应
             client.post()
                 .uri("")
@@ -67,22 +80,43 @@ public void streamChatCompletion(List<Map<String, Object>> messages, String mode
                         try {
                             // 处理特殊标记
                             if ("[DONE]".equals(chunk.trim())) {
-                                logger.debug("Received [DONE] signal");
+                                logger.debug("收到[DONE]信号，当前生成内容长度: {}", generatedContent.length());
                                 return;
                             }
 
                             // 解析返回的数据块
+                            logger.debug("处理响应chunk: {}", chunk);
                             Map<String, Object> data = objectMapper.readValue(chunk, Map.class);
-                            emitter.send(data);
-                            
-                            // 保存生成的内容
-                            String content = ((Map<String, Object>)((List<Object>)data.get("choices")).get(0))
-                                .get("delta").toString();
-                            if (content != null) {
-                                generatedContent.append(content);
+                            try {
+                                emitter.send(data);
+                            } catch (Exception e) {
+                                logger.error("发送数据到SSE失败: {}", e.getMessage());
+                                throw e;
                             }
                             
-                            logger.trace("Sent chunk: {}", chunk);
+                            // 保存生成的内容
+                            Map<String, Object> choice = (Map<String, Object>)((List<Object>)data.get("choices")).get(0);
+                            Map<String, Object> delta = (Map<String, Object>) choice.get("delta");
+                            Object finishReason = choice.get("finish_reason");
+                            
+                            // 检查完成状态
+                            if (finishReason != null) {
+                                logger.debug("检测到完成状态: {}", finishReason);
+                                return;
+                            }
+                            
+                            String content = delta != null ? delta.toString() : null;
+                            if (content != null) {
+                                generatedContent.append(content);
+                                if (generatedContent.length() % 100 == 0) {
+                                    long currentTime = System.currentTimeMillis();
+                                    long duration = currentTime - startTime;
+                                    logger.debug("处理进度 - 内容长度: {}, 已耗时: {}ms, 平均速度: {}/s", 
+                                        generatedContent.length(),
+                                        duration,
+                                        String.format("%.2f", (generatedContent.length() * 1000.0 / duration)));
+                                }
+                            }
                         } catch (Exception e) {
                             logger.error("Error processing chunk: {} - {}", chunk, e.getMessage());
                             // 不要因为单个chunk解析错误就中断整个流
@@ -95,12 +129,15 @@ public void streamChatCompletion(List<Map<String, Object>> messages, String mode
                         
                         // 区分不同类型的错误
                         String errorMessage;
-                        if (error instanceof java.net.SocketException) {
+                        if (error instanceof java.net.UnknownHostException) {
+                            errorMessage = "域名解析失败，请检查DNS设置";
+                            logger.error("DNS解析失败: {}, 请确认域名 {} 是否正确", error.getMessage(), model.getBaseUrl());
+                        } else if (error instanceof java.net.SocketException) {
                             errorMessage = "网络连接异常，请检查网络状态";
                             logger.error("网络连接异常: {}", error.getMessage());
                         } else if (error instanceof java.net.ConnectException) {
                             errorMessage = "无法连接到模型服务器";
-                            logger.error("连接失败: {}", error.getMessage());
+                            logger.error("连接失败: {}, URL: {}", error.getMessage(), model.getBaseUrl());
                         } else if (error instanceof java.net.SocketTimeoutException) {
                             errorMessage = "请求超时，请稍后重试";
                             logger.error("请求超时: {}", error.getMessage());
@@ -129,10 +166,13 @@ public void streamChatCompletion(List<Map<String, Object>> messages, String mode
                     },
                     () -> {
                         try {
+                            long duration = System.currentTimeMillis() - startTime;
                             emitter.complete();
-                            logger.info("Stream completed for model: {}", modelName);
+                            logger.info("Stream completed for model: {}, 总耗时: {}ms, 生成内容长度: {}", 
+                                modelName, duration, generatedContent.length());
                         } catch (Exception e) {
-                            logger.error("Error completing emitter for model [{}]: {}", modelName, e.getMessage());
+                            logger.error("完成SSE发送时发生错误 [model: {}, 生成内容长度: {}]: {}", 
+                                modelName, generatedContent.length(), e.getMessage(), e);
                         }
                     }
                 );
