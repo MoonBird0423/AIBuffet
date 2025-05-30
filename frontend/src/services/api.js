@@ -83,20 +83,69 @@ apiClient.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// 添加响应拦截器处理认证错误
+// 认证错误检测函数
+const isAuthenticationError = (error) => {
+  if (!error.response) return false;
+  
+  const { status, data } = error.response;
+  
+  // 明确的认证失败状态码
+  if (status === 401 || status === 403) {
+    // 如果没有响应数据，默认视为认证错误
+    if (!data || !data.message) {
+      return true;
+    }
+    
+    const message = data.message.toLowerCase();
+    
+    // 排除业务相关的错误消息（这些不应该触发登录跳转）
+    const businessErrorKeywords = [
+      'chat session',
+      'session not found',
+      'session expired',
+      'session invalid',
+      '会话',
+      '对话'
+    ];
+    
+    // 如果包含业务错误关键词，不视为认证错误
+    if (businessErrorKeywords.some(keyword => message.includes(keyword))) {
+      return false;
+    }
+    
+    // 只有包含特定认证相关关键词才视为认证错误
+    const authKeywords = [
+      'unauthorized', 
+      'authentication failed', 
+      'invalid token', 
+      'token expired',
+      'access denied',
+      'login required',
+      'not authenticated',
+      '认证失败',
+      '未授权',
+      '登录已过期',
+      'token无效',
+      '请先登录'
+    ];
+    
+    return authKeywords.some(keyword => message.includes(keyword));
+  }
+  
+  return false;
+};
+
+// 修复后的响应拦截器处理认证错误
 apiClient.interceptors.response.use(
   response => response,
   error => {
-    if (error.response) {
-      if (error.response.status === 403 ||
-          error.response.status === 401 ||
-          (error.response.data && error.response.data.message && error.response.data.message.includes('session'))) {
-        localStorage.removeItem('auth_user');
-        if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
-        }
-        throw new Error('认证失败，请重新登录');
+    if (isAuthenticationError(error)) {
+      console.log('检测到认证错误，清除用户状态并跳转登录页');
+      localStorage.removeItem('auth_user');
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
       }
+      throw new Error('认证失败，请重新登录');
     }
     return Promise.reject(error);
   }
@@ -237,7 +286,16 @@ export const invokeModel = ({ messages, onMessage, onError, onFinish, signal }) 
     const decoder = new TextDecoder();
     let buffer = '';
 
-  const processText = async (text) => {
+    let isCompleted = false;
+    const markAsCompleted = async () => {
+      if (!isCompleted) {
+        isCompleted = true;
+        await new Promise(resolve => setTimeout(resolve, 100));
+        onFinish?.();
+      }
+    };
+
+    const processText = async (text) => {
       try {
         buffer += text;
         const lines = buffer.split('\n');
@@ -247,16 +305,12 @@ export const invokeModel = ({ messages, onMessage, onError, onFinish, signal }) 
           if (!line.trim()) continue;
           
           if (line.trim() === 'data: [DONE]') {
-            console.log('[SSE Debug] Received [DONE] signal');
-            console.log('[SSE Debug] Current buffer content:', buffer);
-            // 等待一小段时间确保所有内容都已处理完
-            await new Promise(resolve => setTimeout(resolve, 100));
-            onFinish?.();
+            console.log('[SSE Debug] Stream completion signal received');
+            await markAsCompleted();
             return;
           }
 
           try {
-            // 检查并删除"data:"前缀
             const jsonStr = line.startsWith('data:') ? line.slice(5) : line;
             const data = JSON.parse(jsonStr);
             if (data.error) {
@@ -279,15 +333,8 @@ export const invokeModel = ({ messages, onMessage, onError, onFinish, signal }) 
       try {
         const { value, done } = await reader.read();
         if (done) {
-          console.log('[SSE Debug] Stream read complete');
-          console.log('[SSE Debug] Final buffer state:', buffer);
-          // 如果已经收到过[DONE]信号，则不再调用onFinish
-          if (buffer.includes('[DONE]')) {
-            console.log('[SSE Debug] Skip onFinish as [DONE] was already received');
-            return;
-          }
-          await new Promise(resolve => setTimeout(resolve, 100));
-          onFinish?.();
+          console.log('[SSE Debug] Stream naturally completed');
+          await markAsCompleted();
           return;
         }
         await processText(decoder.decode(value, { stream: true }));

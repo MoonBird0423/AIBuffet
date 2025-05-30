@@ -334,16 +334,13 @@ const renderContent = (content, isPartial = false, status) => {
                                messageStatus === MessageStatus.STREAMING ? MessageStatus.STREAMING :
                                messageStatus;
           
-          console.log('[Message Debug]', {
-            index,
-            role: message.role,
-            isLastMessage,
-            isLastAssistantMessage,
-            showPartialResponse,
-            currentStatus,
-            messageStatus,
-            error: !!error
-          });
+          // 仅在状态变化时输出日志
+          if (currentStatus !== messageStatus) {
+            console.log('[Message Status Change]', {
+              status: currentStatus,
+              isStreaming: showPartialResponse
+            });
+          }
 
           if (message.role === 'system') {
             return (

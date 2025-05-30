@@ -94,13 +94,8 @@ function Chat() {
             let messages = [];
             try {
               messages = JSON.parse(session.messages || '[]');
-              console.log('[Chat Debug] Parsed messages:', {
-                sessionId,
-                rawMessages: session.messages,
-                parsedMessages: messages
-              });
             } catch (error) {
-              console.error('[Chat Debug] Failed to parse messages:', error);
+              console.error('Failed to parse messages:', error);
               messages = [];
             }
             
@@ -221,6 +216,12 @@ function Chat() {
       };
     }
 
+    console.log('[Chat Debug] 用户发送消息:', {
+      content: content,
+      userMessage: userMessage,
+      sessionId: sessionId
+    });
+    
     setCurrentUserMessage(userMessage);
 
     let activeSessionId = sessionId;
@@ -234,6 +235,11 @@ function Chat() {
           activeSessionId = newSession.sessionId;
           setCurrentSessionId(activeSessionId);
           setCurrentSession(newSession);
+          
+          console.log('[Chat Debug] 新会话创建成功:', {
+            sessionId: newSession.sessionId,
+            messages: newSession.messages
+          });
           
           // 使用后端返回的消息列表
           const serverMessages = JSON.parse(newSession.messages);
@@ -277,13 +283,6 @@ function Chat() {
         return newMap;
       });
 
-      console.log('[Chat Debug] Starting new message, activeSessionId:', activeSessionId);
-      console.log('[Chat Debug] Current state:', {
-        processing: [...processingMap.entries()],
-        completed: [...completedMap.entries()],
-        partial: [...partialResponseMap.entries()]
-      });
-
       // 获取当前会话的消息
       const currentMessages = messagesMap.get(activeSessionId) || [];
       // 构建新的消息列表
@@ -299,7 +298,17 @@ function Chat() {
       // 如果已有会话ID，更新会话
       if (activeSessionId) {
         try {
+          console.log('[Chat Debug] 准备保存用户消息:', {
+            sessionId: activeSessionId,
+            messages: newMessages
+          });
+          
           const updatedChat = await updateChatSession(activeSessionId, JSON.stringify(newMessages));
+          
+          console.log('[Chat Debug] 用户消息保存成功:', {
+            sessionId: activeSessionId,
+            updatedChat: updatedChat
+          });
           if (sidebarRef.current) {
             sidebarRef.current.handleChatUpdated(updatedChat);
           }
@@ -312,13 +321,13 @@ function Chat() {
       // 创建新的AbortController
       abortControllerRef.current = new AbortController();
 
-      // 调用模型
+      // 初始化AI消息对象（仅用于UI显示）
       let aiMessage = {
         role: 'assistant',
         content: ''
       };
       
-      // 更新特定会话的消息
+      // 添加空的AI消息到UI
       setMessagesMap(prev => {
         const newMap = new Map(prev);
         const sessionMessages = [...(newMap.get(activeSessionId) || [])];
@@ -331,10 +340,9 @@ function Chat() {
       invokeModel({
         messages: newMessages,
         onMessage: (data) => {
-          // 从SSE响应中提取content
           const content = data.choices?.[0]?.delta?.content || '';
           if (content) {
-            // 更新部分响应状态
+            // 更新UI显示
             setPartialResponseMap(prev => {
               const newMap = new Map(prev);
               const currentPartial = (newMap.get(activeSessionId) || '') + content;
@@ -342,8 +350,10 @@ function Chat() {
               return newMap;
             });
             
-            aiMessage.content = aiMessage.content + content;
-            // 使用确定的activeSessionId更新消息
+            // 累积AI响应内容
+            aiMessage.content += content;
+            
+            // 更新UI中的消息
             setMessagesMap(prev => {
               const newMap = new Map(prev);
               const sessionMessages = [...(newMap.get(activeSessionId) || [])];
@@ -356,24 +366,17 @@ function Chat() {
         onError: async (error) => {
           console.error('Model invocation error:', error);
           
-          // 如果有错误消息，显示错误消息
           if (error.response?.data?.error) {
             setError(error.response.data.error);
           } else {
             setError('模型调用失败，请重试');
           }
           
-          // 如果有部分生成的内容，保存当前会话
+          // 如果有部分生成的内容，保存到数据库
           if (aiMessage.content) {
-            const finalMessages = [...newMessages, aiMessage];
+            const finalMessages = [...newMessages, { ...aiMessage }];
             try {
               const updatedChat = await updateChatSession(activeSessionId, JSON.stringify(finalMessages));
-              setMessagesMap(prev => {
-                const newMap = new Map(prev);
-                newMap.set(activeSessionId, finalMessages);
-                return newMap;
-              });
-              
               if (sidebarRef.current) {
                 sidebarRef.current.handleChatUpdated(updatedChat);
               }
@@ -385,36 +388,45 @@ function Chat() {
           // 清理状态
           setProcessingMap(prev => {
             const newMap = new Map(prev);
-            if (activeSessionId) {
-              newMap.delete(activeSessionId);
-            }
+            newMap.delete(activeSessionId);
             return newMap;
           });
           
           setPartialResponseMap(prev => {
             const newMap = new Map(prev);
-            if (activeSessionId) {
-              newMap.delete(activeSessionId);
-            }
+            newMap.delete(activeSessionId);
             return newMap;
           });
         },
         onFinish: async () => {
           try {
+            console.log('[Chat Debug] 模型回复完成:', {
+              sessionId: activeSessionId,
+              aiMessage: aiMessage
+            });
             // 设置完成状态
             setCompletedMap(prev => {
               const newMap = new Map(prev);
               newMap.set(activeSessionId, true);
               return newMap;
             });
-    
-            // 准备最终消息
+
+            // 使用完整的AI响应更新数据库
             const finalMessages = [...newMessages, { ...aiMessage }];
             
-            // 直接更新会话
+            console.log('[Chat Debug] 准备保存模型回复:', {
+              sessionId: activeSessionId,
+              finalMessages: finalMessages
+            });
+            
             const updatedChat = await updateChatSession(activeSessionId, JSON.stringify(finalMessages));
+            
+            console.log('[Chat Debug] 模型回复保存成功:', {
+              sessionId: activeSessionId,
+              updatedChat: updatedChat
+            });
 
-            // 更新UI并清理状态
+            // 更新UI状态
             setMessagesMap(prev => {
               const newMap = new Map(prev);
               newMap.set(activeSessionId, finalMessages);
@@ -423,7 +435,7 @@ function Chat() {
 
             setCurrentUserMessage(null);
 
-            // 清理其他状态
+            // 清理状态
             setPartialResponseMap(prev => {
               const newMap = new Map(prev);
               newMap.delete(activeSessionId);
@@ -513,6 +525,7 @@ function Chat() {
       // 刷新失败保持原有错误消息
     }
   };
+
   const handleNewChat = () => {
     if (sessionId) {
       cancelCurrentRequest(sessionId);
