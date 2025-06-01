@@ -6,6 +6,7 @@ import com.aibuffet.dto.ReferenceChunkDetail;
 import com.aibuffet.model.ChatSession;
 import com.aibuffet.model.DocChunk;
 import com.aibuffet.model.DocFile;
+import com.aibuffet.model.User;
 import com.aibuffet.repository.DocChunkRepository;
 import com.aibuffet.repository.DocFileRepository;
 import com.aibuffet.service.ChatService;
@@ -47,12 +48,8 @@ public class ChatController {
         if (authentication == null) {
             throw new IllegalStateException("No authentication found");
         }
-        String userId = authentication.getName();
-        try {
-            return Long.valueOf(userId);
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid user ID format: " + userId);
-        }
+        User user = (User) authentication.getPrincipal();
+        return user.getId();
     }
 
     @GetMapping

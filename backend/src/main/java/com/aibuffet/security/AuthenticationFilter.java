@@ -34,14 +34,14 @@ public class AuthenticationFilter extends OncePerRequestFilter {
             logger.debug("Authorization header: {}", authHeader);
 
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                String token = authHeader.substring(7);
-                if (!handleAuthentication(token)) {
+                if (!handleAuthentication(authHeader)) {
                     logger.debug("Authentication failed for token");
                     sendUnauthorizedError(response, "认证失败：无效的token");
                     return;
                 }
             } else if (!request.getRequestURI().startsWith("/api/auth/")) {
                 logger.debug("No auth header found for protected resource");
+                logger.debug("Request URI: {}", request.getRequestURI());
                 sendUnauthorizedError(response, "认证失败：缺少token");
                 return;
             }
@@ -65,13 +65,32 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 
     private boolean handleAuthentication(String token) {
         try {
-            // 从token中提取手机号（格式为 "phone_timestamp"）
-            String phone = token.split("_")[0];
+            logger.debug("Handling authentication for token: {}", token);
+            
+            // 如果token开头还有Bearer，去掉它
+            if (token.startsWith("Bearer ")) {
+                token = token.substring(7);
+                logger.debug("Removed Bearer prefix, token: {}", token);
+            }
+            
+            // 确保token格式正确
+            String[] parts = token.split("_");
+            if (parts.length != 2) {
+                logger.warn("Invalid token format, expected: phone_timestamp, got: {}", token);
+                return false;
+            }
+            
+            // 从token中提取手机号
+            String phone = parts[0];
+            String timestamp = parts[1];  // 可以用于未来的token过期检查
+            
+            logger.debug("Extracted phone: {}, timestamp: {}", phone, timestamp);
+            
             User user = userRepository.findByPhone(phone).orElse(null);
 
             if (user != null) {
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                    user.getId().toString(),
+                    user, // 直接使用User对象作为Principal
                     null,
                     user.getAuthorities()
                 );
@@ -84,7 +103,8 @@ public class AuthenticationFilter extends OncePerRequestFilter {
             SecurityContextHolder.clearContext();
             return false;
         } catch (Exception e) {
-            logger.error("Token parsing error", e);
+            logger.error("Token parsing error: {}", e.getMessage());
+            logger.debug("Token parsing stack trace:", e);
             SecurityContextHolder.clearContext();
             return false;
         }

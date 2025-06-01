@@ -108,8 +108,8 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
 
     @Override
     public Page<KnowledgeBaseResponse> findMyKnowledgeBases(KnowledgeBaseQuery query, Authentication authentication) {
-        String userIdStr = (String) authentication.getPrincipal();
-        Long userId = Long.parseLong(userIdStr);
+        User user = (User) authentication.getPrincipal();
+        Long userId = user.getId();
         
         Specification<KnowledgeBase> spec = (root, criteriaQuery, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();

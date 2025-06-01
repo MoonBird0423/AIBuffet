@@ -2,14 +2,15 @@ package com.aibuffet.controller;
 
 import com.aibuffet.common.ApiResponse;
 import com.aibuffet.common.ErrorCode;
+import com.aibuffet.model.User;
 import com.aibuffet.service.AudioSynthesisService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,18 +30,11 @@ public class DocumentAudioController {
      * @return 音频合成结果
      */
     @PostMapping("/{docId}/audio/synthesize")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> synthesizeAudio(@PathVariable Long docId) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> synthesizeAudio(
+            @PathVariable Long docId,
+            @AuthenticationPrincipal User user) {
         try {
-            // 获取当前用户ID
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || !authentication.isAuthenticated()) {
-                logger.warn("用户未认证，无法生成音频，文档ID: {}", docId);
-                return ResponseEntity.ok(ApiResponse.error(ErrorCode.PERMISSION_DENIED, "用户未认证"));
-            }
-
-            String username = authentication.getName();
-            Long userId = Long.parseLong(username); // 假设用户名就是用户ID
-            
+            Long userId = user.getId();
             logger.info("开始为文档生成音频: 文档ID={}, 用户ID={}", docId, userId);
 
             // 检查是否已有音频

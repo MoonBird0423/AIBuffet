@@ -57,7 +57,7 @@ public class DocumentController {
     public ApiResponse<Map<String, Object>> uploadDocuments(
             @RequestParam("files") MultipartFile[] files,
             @RequestParam("knowledgeBaseId") Long knowledgeBaseId,
-            @AuthenticationPrincipal String userIdStr) {
+            @AuthenticationPrincipal User user) {
         try {
             String uploadId = String.format("%d_%d", knowledgeBaseId, System.currentTimeMillis());
             uploadProgress.put(uploadId, new ConcurrentHashMap<>());
@@ -72,7 +72,7 @@ public class DocumentController {
                     List<UploadResult> results = documentService.uploadDocuments(
                         files,
                         knowledgeBaseId,
-                        Long.parseLong(userIdStr),
+                        user.getId(),
                         uploadId,
                         this
                     );
@@ -170,18 +170,17 @@ public class DocumentController {
     public ApiResponse<Void> deleteDocument(
             @PathVariable Long id,
             @RequestParam Long knowledgeBaseId,
-            @AuthenticationPrincipal String userIdStr) {
+            @AuthenticationPrincipal User user) {
         try {
-            
             // 执行删除操作
-            documentService.deleteDocument(id, knowledgeBaseId, Long.parseLong(userIdStr));
+            documentService.deleteDocument(id, knowledgeBaseId, user.getId());
             
             return ApiResponse.success(null);
         } catch (ResourceNotFoundException e) {
-            logger.warn("删除文档失败，文档不存在: docId={}, userId={}", id, userIdStr);
+            logger.warn("删除文档失败，文档不存在: docId={}, userId={}", id, user.getId());
             return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
         } catch (IllegalArgumentException e) {
-            logger.warn("删除文档失败，无权限: docId={}, userId={}", id, userIdStr);
+            logger.warn("删除文档失败，无权限: docId={}, userId={}", id, user.getId());
             return ApiResponse.error(ErrorCode.PERMISSION_DENIED, e.getMessage());
         } catch (Exception e) {
             logger.error("删除文档失败，系统错误: ", e);
@@ -192,15 +191,15 @@ public class DocumentController {
     @PostMapping("/{id}/retry")
     public ApiResponse<Void> retryProcessing(
             @PathVariable Long id,
-            @AuthenticationPrincipal String userIdStr) {
+            @AuthenticationPrincipal User user) {
         try {
-            documentService.retryProcessing(id, Long.parseLong(userIdStr));
+            documentService.retryProcessing(id, user.getId());
             return ApiResponse.success(null);
         } catch (ResourceNotFoundException e) {
-            logger.warn("重试文档处理失败，文档不存在: docId={}, userId={}", id, userIdStr);
+            logger.warn("重试文档处理失败，文档不存在: docId={}, userId={}", id, user.getId());
             return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
         } catch (IllegalArgumentException e) {
-            logger.warn("重试文档处理失败，无权限: docId={}, userId={}", id, userIdStr);
+            logger.warn("重试文档处理失败，无权限: docId={}, userId={}", id, user.getId());
             return ApiResponse.error(ErrorCode.PERMISSION_DENIED, e.getMessage());
         } catch (Exception e) {
             logger.error("重试文档处理失败，系统错误: ", e);
@@ -211,15 +210,15 @@ public class DocumentController {
     @GetMapping("/{id}/chunks")
     public ApiResponse<List<DocChunk>> getDocumentChunks(
             @PathVariable Long id,
-            @AuthenticationPrincipal String userIdStr) {
+            @AuthenticationPrincipal User user) {
         try {
-            List<DocChunk> chunks = documentService.getDocumentChunks(id, Long.parseLong(userIdStr));
+            List<DocChunk> chunks = documentService.getDocumentChunks(id, user.getId());
             return ApiResponse.success(chunks);
         } catch (ResourceNotFoundException e) {
-            logger.warn("获取文档分块失败，文档不存在: docId={}, userId={}", id, userIdStr);
+            logger.warn("获取文档分块失败，文档不存在: docId={}, userId={}", id, user.getId());
             return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
         } catch (IllegalArgumentException e) {
-            logger.warn("获取文档分块失败，无权限: docId={}, userId={}", id, userIdStr);
+            logger.warn("获取文档分块失败，无权限: docId={}, userId={}", id, user.getId());
             return ApiResponse.error(ErrorCode.PERMISSION_DENIED, e.getMessage());
         } catch (Exception e) {
             logger.error("获取文档分块失败，系统错误: ", e);
@@ -235,18 +234,17 @@ public class DocumentController {
             @RequestParam(required = false) String author,
             @RequestParam(required = false) String fileName,
             @RequestParam(required = false) String description,
-            @AuthenticationPrincipal String userIdStr) {
+            @AuthenticationPrincipal User user) {
         try {
             String coverUrl = null;
             if (cover != null) {
                 if (cover.getSize() > MAX_COVER_SIZE) {
                     return ApiResponse.error(ErrorCode.INVALID_REQUEST, "封面图片大小不能超过2MB");
                 }
-                Long userId = Long.parseLong(userIdStr);
-                coverUrl = ossService.uploadBookCover(cover, userId);
+                coverUrl = ossService.uploadBookCover(cover, user.getId());
             }
             
-            documentService.updateDocumentInfo(id, Long.parseLong(userIdStr), coverUrl, category, author, fileName, description);
+            documentService.updateDocumentInfo(id, user.getId(), coverUrl, category, author, fileName, description);
             return ApiResponse.success(null);
         } catch (ResourceNotFoundException e) {
             return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
@@ -260,9 +258,9 @@ public class DocumentController {
     public ApiResponse<Void> updatePublishStatus(
             @PathVariable Long id,
             @RequestParam DocFile.PublishStatus status,
-            @AuthenticationPrincipal String userIdStr) {
+            @AuthenticationPrincipal User user) {
         try {
-            documentService.updatePublishStatus(id, Long.parseLong(userIdStr), status);
+            documentService.updatePublishStatus(id, user.getId(), status);
             return ApiResponse.success(null);
         } catch (ResourceNotFoundException e) {
             return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
@@ -275,17 +273,17 @@ public class DocumentController {
     @GetMapping("/{id}")
     public ApiResponse<DocFile> getDocument(
             @PathVariable Long id,
-            @AuthenticationPrincipal String userIdStr) {
+            @AuthenticationPrincipal User user) {
         try {
-            logger.info("获取文档详情请求: docId={}, userId={}", id, userIdStr);
-            DocFile document = documentService.getDocument(id, Long.parseLong(userIdStr));
+            logger.info("获取文档详情请求: docId={}, userId={}", id, user.getId());
+            DocFile document = documentService.getDocument(id, user.getId());
             logger.info("获取文档详情成功: docId={}", id);
             return ApiResponse.success(document);
         } catch (ResourceNotFoundException e) {
-            logger.warn("获取文档详情失败，文档不存在: docId={}, userId={}", id, userIdStr);
+            logger.warn("获取文档详情失败，文档不存在: docId={}, userId={}", id, user.getId());
             return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
         } catch (IllegalArgumentException e) {
-            logger.warn("获取文档详情失败，无权限: docId={}, userId={}", id, userIdStr);
+            logger.warn("获取文档详情失败，无权限: docId={}, userId={}", id, user.getId());
             return ApiResponse.error(ErrorCode.PERMISSION_DENIED, e.getMessage());
         } catch (Exception e) {
             logger.error("获取文档详情失败，系统错误: ", e);

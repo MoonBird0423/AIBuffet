@@ -3,6 +3,7 @@ package com.aibuffet.controller;
 import com.aibuffet.service.ChatCompletionService;
 import com.aibuffet.dto.MessageReference;
 import com.aibuffet.service.ChatService;
+import com.aibuffet.model.User;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -42,22 +43,17 @@ public class ChatCompletionController {
             @RequestBody Map<String, Object> request,
             Authentication authentication) {
         
-        String userId = authentication.getName();
-        logger.info("Received chat completion request from user: {}", userId);
-
         try {
             // 验证用户认证
-            if (userId == null || "anonymous".equals(userId) || "anonymousUser".equals(userId)) {
+            if (authentication == null || !authentication.isAuthenticated()) {
                 throw new IllegalArgumentException("Authentication required for chat completion");
             }
 
-            // 验证用户ID格式
-            Long userIdLong;
-            try {
-                userIdLong = Long.valueOf(userId);
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid user ID format: " + userId);
-            }
+            // 从Authentication获取用户信息
+            User user = (User) authentication.getPrincipal();
+            Long userId = user.getId();
+            
+            logger.info("Received chat completion request from user: {}", userId);
 
             // 记录请求参数
             logger.info("Request parameters: {}", objectMapper.writeValueAsString(request));
@@ -83,7 +79,7 @@ public class ChatCompletionController {
 
             // 对消息进行增强处理
             String messagesJson = objectMapper.writeValueAsString(messages);
-            String enhancedJson = chatService.enhanceMessageWithReferences(messagesJson, userIdLong);
+            String enhancedJson = chatService.enhanceMessageWithReferences(messagesJson, userId);
             messages = objectMapper.readValue(enhancedJson, List.class);
             logger.info("Enhanced messages for user {}: {}", userId, enhancedJson);
 
@@ -112,9 +108,8 @@ public class ChatCompletionController {
             return emitter;
 
         } catch (Exception e) {
-            logger.error("Error processing chat completion request for user: {}", userId, e);
+            logger.error("Error processing chat completion request", e);
             throw new RuntimeException("处理请求失败: " + e.getMessage());
         }
     }
-
 }

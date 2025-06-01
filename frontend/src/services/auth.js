@@ -52,22 +52,12 @@ const authApi = {
       });
       console.log('Login response:', response);
       
-      // 检查响应状态
+      // 检查响应状态并返回数据
       if (response.data.code !== 200) {
         throw new Error(response.data.message || '登录失败');
       }
       
-      const userData = response.data.data;
-      
-      // 确保token被保存
-      if (userData.token) {
-        localStorage.setItem('auth_user', JSON.stringify({
-          ...userData,
-          token: userData.token
-        }));
-      }
-      
-      return userData;
+      return response.data.data;
     } catch (error) {
       console.error('Login error:', error.response || error);
       throw new Error(error.response?.data?.message || '登录失败');

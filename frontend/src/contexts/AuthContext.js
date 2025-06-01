@@ -15,28 +15,33 @@ export function AuthProvider({ children }) {
 
   // 用户数据变化时保存到localStorage
   useEffect(() => {
+    console.log('Storage Sync: User state changed:', user);
+    console.log('Storage Sync: Previous localStorage:', localStorage.getItem(AUTH_STORAGE_KEY));
     if (user) {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      console.log('Storage Sync: Updated localStorage:', localStorage.getItem(AUTH_STORAGE_KEY));
     } else {
       localStorage.removeItem(AUTH_STORAGE_KEY);
+      console.log('Storage Sync: Cleared localStorage');
     }
   }, [user]);
 
-  // 初始化和token变化时获取用户信息
+  // 避免首次加载时重复获取用户信息
   useEffect(() => {
-    if (user?.token && !user.profile) {
+    if (user?.token) {
       fetchUserProfile();
     }
-  }, [user?.token]);
+  }, []);
 
   const fetchUserProfile = async () => {
     try {
       setLoading(true);
       const userData = await getUserProfile();
-      // 保留token，合并新的用户数据
+      // 合并原有用户数据和新获取的数据，确保token和其他重要信息不丢失
       setUser(prevUser => ({
-        ...userData,
-        token: prevUser.token
+        ...prevUser,        // 保留所有现有数据
+        ...userData,        // 更新新的用户信息
+        token: prevUser.token  // 确保token不被覆盖
       }));
     } catch (err) {
       setError(err.message);
@@ -48,13 +53,24 @@ export function AuthProvider({ children }) {
   };
 
   const login = (userData) => {
-    // 验证并确保数据包含必要的字段
-    if (!userData.token || !userData.profile) {
-      console.error('Login data is missing required fields:', userData);
+    // 验证token存在
+    if (!userData.token) {
+      console.error('Login data is missing token:', userData);
       return;
     }
-    // 保存完整的用户数据
-    setUser(userData);
+
+    console.log('Login: Received user data:', userData);
+    
+    // 构造完整的用户数据
+    const completeUserData = {
+      ...userData,
+      token: userData.token  // 确保token存在
+    };
+    
+    console.log('Login: Setting complete user data:', completeUserData);
+    
+    // 保存到状态
+    setUser(completeUserData);
   };
 
   const logout = async () => {
@@ -77,9 +93,11 @@ export function AuthProvider({ children }) {
     try {
       setLoading(true);
       const { avatarUrl } = await updateUserAvatar(file);
+      // 确保更新头像时保留所有现有用户数据
       setUser({
         ...user,
-        avatar: avatarUrl
+        avatar: avatarUrl,
+        token: user.token  // 显式保留token
       });
     } catch (err) {
       setError(err.message);
@@ -107,9 +125,11 @@ export function AuthProvider({ children }) {
       console.log('Previous user state:', user);
       console.log('New username from API:', updatedUsername);
       
+      // 确保更新用户名时保留所有现有用户数据
       const updatedUser = {
         ...user,
-        username: updatedUsername
+        username: updatedUsername,
+        token: user.token  // 显式保留token
       };
       
       console.log('Updated user state:', updatedUser);

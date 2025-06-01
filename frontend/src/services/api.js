@@ -50,6 +50,9 @@ apiClient.interceptors.response.use(null, async (error) => {
 
 // 添加请求拦截器来处理认证
 apiClient.interceptors.request.use((config) => {
+  console.log('Request Interceptor: URL', config.url);
+  console.log('Request Interceptor: Method', config.method);
+  
   // 保存原有的Content-Type
   const originalContentType = config.headers['Content-Type'];
 
@@ -57,17 +60,29 @@ apiClient.interceptors.request.use((config) => {
   config.headers = config.headers || {};
 
   // 从localStorage获取认证信息
+  console.log('Request Interceptor: Getting auth from localStorage');
   const authUser = localStorage.getItem('auth_user');
   if (authUser) {
     try {
+      console.log('Request Interceptor: Auth data found in localStorage');
       const user = JSON.parse(authUser);
+      console.log('Request Interceptor: Parsed user data:', { 
+        ...user, 
+        token: user.token ? '***' : undefined 
+      });
+      
       if (user.token) {
         // 设置认证头
+        console.log('Request Interceptor: Setting Authorization header');
         config.headers['Authorization'] = `Bearer ${user.token}`;
+      } else {
+        console.log('Request Interceptor: No token found in user data');
       }
     } catch (e) {
-      console.error('解析认证信息失败:', e);
+      console.error('Request Interceptor: Failed to parse auth data:', e);
     }
+  } else {
+    console.log('Request Interceptor: No auth data in localStorage');
   }
 
   // 如果是文件上传，设置正确的Content-Type，但保留其他headers
@@ -135,15 +150,21 @@ const isAuthenticationError = (error) => {
   return false;
 };
 
-// 修复后的响应拦截器处理认证错误
+// 响应拦截器处理认证错误，添加重试机制
 apiClient.interceptors.response.use(
   response => response,
-  error => {
+  async error => {
     if (isAuthenticationError(error)) {
-      console.log('检测到认证错误，清除用户状态并跳转登录页');
-      localStorage.removeItem('auth_user');
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
+      // 记录当前token
+      const authUser = localStorage.getItem('auth_user');
+      if (authUser) {
+        console.log('检测到认证错误，准备清除用户状态');
+        // 确保用户不在登录页面才清除状态和跳转
+        if (!window.location.pathname.includes('/login')) {
+          console.log('清除用户状态并跳转登录页');
+          localStorage.removeItem('auth_user');
+          window.location.href = '/login';
+        }
       }
       throw new Error('认证失败，请重新登录');
     }

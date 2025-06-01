@@ -88,14 +88,8 @@ function LoginForm() {
         code
       });
       
-      // 添加必要的用户信息
-      const userDataWithProfile = {
-        ...userData,
-        profile: userData // 确保profile信息存在
-      };
-      
-      // 登录成功，保存完整的用户信息
-      login(userDataWithProfile);
+      // 登录成功，直接使用API返回的完整用户数据
+      login(userData);
 
       // 如果是新用户，显示欢迎消息
       if (userData.newUser) {

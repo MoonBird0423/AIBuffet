@@ -1,5 +1,6 @@
 package com.aibuffet.service.impl;
 
+import com.aibuffet.common.ResourceNotFoundException;
 import com.aibuffet.model.DocFile;
 import com.aibuffet.model.DocInterpretation;
 import com.aibuffet.model.DocMindmap;
@@ -50,6 +51,15 @@ public class PublishServiceImpl implements PublishService {
     @Value("${book.quiz.user-prompt}")
     private String quizUserPrompt;
 
+    private void verifyDocAccess(Long docId, Long userId) {
+        DocFile docFile = docFileRepository.findById(docId)
+                .orElseThrow(() -> new ResourceNotFoundException("文档不存在"));
+                
+        if (!docFile.getUploadedBy().equals(userId) && !"PUBLISHED".equals(docFile.getPublishStatus())) {
+            throw new IllegalArgumentException("无权访问此文档");
+        }
+    }
+
     private OpenAIClient createClient(Model model) {
         return OpenAIOkHttpClient.builder()
                 .apiKey(model.getApiKey())
@@ -58,23 +68,25 @@ public class PublishServiceImpl implements PublishService {
     }
 
     @Override
-    public CompletableFuture<String> uploadFileAndGetFileId(Long docId) {
+    public CompletableFuture<String> uploadFileAndGetFileId(Long docId, Long userId) {
         return CompletableFuture.supplyAsync((Supplier<String>) () -> {
+            verifyDocAccess(docId, userId);
+
             // 1. 获取发布用途的模型信息
             Model model = modelRepository.findByPurposeExact("发布")
                     .orElseThrow(() -> new RuntimeException("未找到发布用途的模型"));
             
             // 2. 获取文档内容
-        DocFile docFile = docFileRepository.findById(docId)
-                .orElseThrow(() -> new RuntimeException("文档不存在"));
+            DocFile docFile = docFileRepository.findById(docId)
+                    .orElseThrow(() -> new RuntimeException("文档不存在"));
 
-        // 检查是否已存在openai_file_id
-        if (docFile.getOpenaiFileId() != null && !docFile.getOpenaiFileId().isEmpty()) {
-            log.info("文档已存在OpenAI文件ID，直接返回: {}", docFile.getOpenaiFileId());
-            return docFile.getOpenaiFileId();
-        }
+            // 检查是否已存在openai_file_id
+            if (docFile.getOpenaiFileId() != null && !docFile.getOpenaiFileId().isEmpty()) {
+                log.info("文档已存在OpenAI文件ID，直接返回: {}", docFile.getOpenaiFileId());
+                return docFile.getOpenaiFileId();
+            }
 
-        String content = docFile.getExtractedText();
+            String content = docFile.getExtractedText();
             if (content == null || content.isEmpty()) {
                 throw new RuntimeException("文档内容为空");
             }
@@ -121,7 +133,7 @@ public class PublishServiceImpl implements PublishService {
     }
 
     @Override
-    public CompletableFuture<String> generateContent(String fileId, String userPrompt) {
+    public CompletableFuture<String> generateContent(String fileId, String userPrompt, Long userId) {
         return CompletableFuture.supplyAsync((Supplier<String>) () -> {
             log.info("开始生成内容，fileId: {}, userPrompt: {}", fileId, userPrompt);
             
@@ -169,9 +181,11 @@ public class PublishServiceImpl implements PublishService {
     }
 
     @Override
-    public CompletableFuture<String> generateInterpretation(Long docId) {
+    public CompletableFuture<String> generateInterpretation(Long docId, Long userId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
+                verifyDocAccess(docId, userId);
+
                 // 1. 先检查是否已经存在解读内容
                 DocInterpretation existingInterpretation = docInterpretationRepository.findByDocId(docId)
                         .orElse(null);
@@ -182,10 +196,10 @@ public class PublishServiceImpl implements PublishService {
 
                 // 2. 上传文件获取fileId
                 log.info("开始为文档生成解读，docId: {}", docId);
-                String fileId = uploadFileAndGetFileId(docId).get();
+                String fileId = uploadFileAndGetFileId(docId, userId).get();
 
                 // 3. 调用AI生成解读内容
-                String content = generateContent(fileId, interpretationUserPrompt).get();
+                String content = generateContent(fileId, interpretationUserPrompt, userId).get();
 
                 // 4. 保存解读内容
                 DocInterpretation interpretation = new DocInterpretation();
@@ -204,9 +218,11 @@ public class PublishServiceImpl implements PublishService {
     }
     
     @Override
-    public CompletableFuture<String> generateMindmap(Long docId) {
+    public CompletableFuture<String> generateMindmap(Long docId, Long userId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
+                verifyDocAccess(docId, userId);
+
                 // 1. 检查是否已存在脑图内容
                 DocMindmap existingMindmap = docMindmapRepository.findByDocId(docId)
                         .orElse(null);
@@ -217,10 +233,10 @@ public class PublishServiceImpl implements PublishService {
 
                 // 2. 上传文件获取fileId
                 log.info("开始为文档生成脑图，docId: {}", docId);
-                String fileId = uploadFileAndGetFileId(docId).get();
+                String fileId = uploadFileAndGetFileId(docId, userId).get();
 
                 // 3. 调用AI生成脑图内容
-                String content = generateContent(fileId, mindmapUserPrompt).get();
+                String content = generateContent(fileId, mindmapUserPrompt, userId).get();
                 log.debug("AI生成的脑图内容: {}", content);
 
                 // 4. 直接保存为markdown格式
@@ -240,9 +256,11 @@ public class PublishServiceImpl implements PublishService {
     }
 
     @Override
-    public CompletableFuture<String> generateQuiz(Long docId) {
+    public CompletableFuture<String> generateQuiz(Long docId, Long userId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
+                verifyDocAccess(docId, userId);
+
                 // 1. 检查是否已存在测试题内容
                 DocQuiz existingQuiz = docQuizRepository.findByDocId(docId)
                         .orElse(null);
@@ -253,10 +271,10 @@ public class PublishServiceImpl implements PublishService {
 
                 // 2. 上传文件获取fileId
                 log.info("开始为文档生成测试题，docId: {}", docId);
-                String fileId = uploadFileAndGetFileId(docId).get();
+                String fileId = uploadFileAndGetFileId(docId, userId).get();
 
                 // 3. 调用AI生成测试题内容并保存
-                String content = generateContent(fileId, quizUserPrompt).get();
+                String content = generateContent(fileId, quizUserPrompt, userId).get();
                 DocQuiz quiz = new DocQuiz();
                 quiz.setDocId(docId);
                 quiz.setQuestions(content);
@@ -273,8 +291,10 @@ public class PublishServiceImpl implements PublishService {
     }
 
     @Override
-    public CompletableFuture<String> getMindmap(Long docId) {
+    public CompletableFuture<String> getMindmap(Long docId, Long userId) {
         return CompletableFuture.supplyAsync(() -> {
+            verifyDocAccess(docId, userId);
+
             DocMindmap mindmap = docMindmapRepository.findByDocId(docId)
                     .orElse(null);
             return mindmap != null ? mindmap.getContent() : null;
@@ -282,8 +302,10 @@ public class PublishServiceImpl implements PublishService {
     }
 
     @Override
-    public CompletableFuture<String> getQuiz(Long docId) {
+    public CompletableFuture<String> getQuiz(Long docId, Long userId) {
         return CompletableFuture.supplyAsync(() -> {
+            verifyDocAccess(docId, userId);
+
             DocQuiz quiz = docQuizRepository.findByDocId(docId)
                     .orElse(null);
             return quiz != null ? quiz.getQuestions() : null;
@@ -291,8 +313,10 @@ public class PublishServiceImpl implements PublishService {
     }
 
     @Override
-    public CompletableFuture<String> getInterpretation(Long docId) {
+    public CompletableFuture<String> getInterpretation(Long docId, Long userId) {
         return CompletableFuture.supplyAsync(() -> {
+            verifyDocAccess(docId, userId);
+
             DocInterpretation interpretation = docInterpretationRepository.findByDocId(docId)
                     .orElse(null);
             return interpretation != null ? interpretation.getContent() : null;
@@ -300,7 +324,7 @@ public class PublishServiceImpl implements PublishService {
     }
 
     @Override
-    public CompletableFuture<Boolean> deleteFile(String fileId) {
+    public CompletableFuture<Boolean> deleteFile(String fileId, Long userId) {
         return CompletableFuture.supplyAsync(() -> {
             log.info("开始删除文件，fileId: {}", fileId);
             
