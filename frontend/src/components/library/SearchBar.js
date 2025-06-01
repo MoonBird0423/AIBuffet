@@ -3,13 +3,13 @@ import { FaSearch } from 'react-icons/fa';
 
 function SearchBar({ value, onChange }) {
   return (
-    <div className="relative">
-      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-        <FaSearch className="text-gray-400" />
+    <div className="relative group">
+      <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
+        <FaSearch className="text-blue-600 text-xl transition-colors group-hover:text-blue-500 group-focus-within:text-blue-700" />
       </div>
       <input
         type="text"
-        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        className="block w-full pl-14 pr-6 py-4 text-lg border-0 rounded-2xl bg-white/90 backdrop-blur-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white shadow-xl"
         placeholder="搜索图书名称..."
         value={value}
         onChange={(e) => onChange(e.target.value)}
