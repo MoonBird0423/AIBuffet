@@ -3,141 +3,313 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DocuChat - 图书分享阅读平台</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>DocuChat - 问书答意，懂你所惑</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sf': ['-apple-system', 'BlinkMacSystemFont', 'San Francisco', 'Helvetica Neue', 'sans-serif'],
+                    },
+                    colors: {
+                        'apple-blue': '#007AFF',
+                        'apple-gray': '#F2F2F7',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(20px);
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .carousel-item {
+            transition: opacity 0.5s ease-in-out;
+        }
+        .feature-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+    </style>
 </head>
-<body class="bg-gray-50">
-    <!-- 导航栏 -->
-    <nav class="bg-white shadow-md">
+<body class="font-sf bg-white">
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 glass-effect">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex">
-                    <div class="flex-shrink-0 flex items-center">
-                        <span class="text-2xl font-bold text-indigo-600">DocuChat</span>
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-white">DocuChat</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <a href="#" class="text-white hover:text-gray-300 px-3 py-2 text-sm font-medium">产品</a>
+                        <a href="#" class="text-white hover:text-gray-300 px-3 py-2 text-sm font-medium">功能</a>
+                        <a href="#" class="text-white hover:text-gray-300 px-3 py-2 text-sm font-medium">关于</a>
+                        <a href="#" class="bg-white text-blue-600 px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-100">开始使用</a>
                     </div>
                 </div>
-                <div class="flex items-center">
-                    <a href="library.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-indigo-600">图书馆</a>
-                    <a href="my-knowledge.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-indigo-600">我的</a>
-                    <div class="ml-4 flex items-center">
-                        <div class="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-white">
-                            <i class="fas fa-user text-sm"></i>
-                        </div>
-                    </div>
+                <div class="md:hidden">
+                    <button class="text-white">
+                        <i class="fas fa-bars"></i>
+                    </button>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- 英雄区 -->
-    <div class="relative min-h-[600px] overflow-hidden">
-        <div class="absolute inset-0">
-            <img class="w-full h-full object-cover" src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80" alt="书籍阅读">
-            <div class="absolute inset-0 bg-black opacity-50"></div>
-        </div>
-        <div class="relative z-10 max-w-7xl mx-auto">
-            <div class="relative pt-10 pb-8 sm:pb-16 md:pb-20 lg:w-1/2 lg:pb-28 xl:pb-32">
-                <main class="mt-10 mx-auto px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
-                    <div class="sm:text-center lg:text-left">
-                        <h1 class="text-4xl tracking-tight font-extrabold text-white sm:text-5xl md:text-6xl">
-                            <span class="block xl:inline">每天学习一本书</span>
-                            <span class="block text-indigo-300 xl:inline">成就更好的自己</span>
-                        </h1>
-                        <p class="mt-3 text-base text-gray-200 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
-                            通过 DocuChat，获取深度解读、知识脑图、互动测试，让阅读更高效、知识更系统。
-                        </p>
-                        <div class="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
-                            <div class="rounded-md shadow">
-                                <a href="my-knowledge.html" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 md:py-4 md:text-lg md:px-10">
-                                    上传图书
-                                </a>
+    <!-- Hero Section -->
+    <section class="gradient-bg min-h-screen flex items-center justify-center pt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid lg:grid-cols-5 gap-12 items-center">
+                <!-- Left Content -->
+                <div class="lg:col-span-2 text-center lg:text-left">
+                    <h1 class="text-5xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+                        问书答意<br>
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-pink-400">懂你所惑</span>
+                    </h1>
+                    <p class="text-xl lg:text-2xl text-white/90 mb-8 leading-relaxed">
+                        通过 DocuChat 获取深度语音文字解读、知识脑图、知识测试、知识问答，跨入高效阅读时代。
+                    </p>
+                    <button class="bg-white text-blue-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg">
+                        <i class="fas fa-book-open mr-2"></i>
+                        浏览图书馆
+                    </button>
+                </div>
+
+                <!-- Right Carousel -->
+                <div class="lg:col-span-3 relative">
+                    <div class="bg-white/10 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20">
+                        <div id="carousel" class="relative h-[500px] rounded-2xl overflow-hidden">
+                            <!-- Carousel Item 1 - 语音解读 -->
+                            <div class="carousel-item absolute inset-0 opacity-100" data-slide="0">
+                                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=600&fit=crop&crop=face" 
+                                     alt="语音解读界面" class="w-full h-full object-cover rounded-2xl">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-2xl"></div>
+                                <div class="absolute bottom-6 left-6">
+                                    <h3 class="text-white text-2xl font-bold mb-2">语音解读</h3>
+                                    <p class="text-white/90">AI语音播报，边听边学</p>
+                                </div>
                             </div>
-                            <div class="mt-3 sm:mt-0 sm:ml-3">
-                                <a href="library.html" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 md:py-4 md:text-lg md:px-10">
-                                    浏览图书馆
-                                </a>
+
+                            <!-- Carousel Item 2 - 知识脑图 -->
+                            <div class="carousel-item absolute inset-0 opacity-0" data-slide="1">
+                                <img src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800&h=600&fit=crop" 
+                                     alt="知识脑图界面" class="w-full h-full object-cover rounded-2xl">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-2xl"></div>
+                                <div class="absolute bottom-6 left-6">
+                                    <h3 class="text-white text-2xl font-bold mb-2">知识脑图</h3>
+                                    <p class="text-white/90">结构化知识体系</p>
+                                </div>
+                            </div>
+
+                            <!-- Carousel Item 3 - 知识测试 -->
+                            <div class="carousel-item absolute inset-0 opacity-0" data-slide="2">
+                                <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&h=600&fit=crop" 
+                                     alt="知识测试界面" class="w-full h-full object-cover rounded-2xl">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-2xl"></div>
+                                <div class="absolute bottom-6 left-6">
+                                    <h3 class="text-white text-2xl font-bold mb-2">知识测试</h3>
+                                    <p class="text-white/90">智能题目生成</p>
+                                </div>
+                            </div>
+
+                            <!-- Carousel Item 4 - 知识问答 -->
+                            <div class="carousel-item absolute inset-0 opacity-0" data-slide="3">
+                                <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop" 
+                                     alt="知识问答界面" class="w-full h-full object-cover rounded-2xl">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-2xl"></div>
+                                <div class="absolute bottom-6 left-6">
+                                    <h3 class="text-white text-2xl font-bold mb-2">知识问答</h3>
+                                    <p class="text-white/90">智能答疑解惑</p>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Carousel Controls -->
+                        <div class="flex justify-center space-x-3 mt-6">
+                            <button class="carousel-dot w-3 h-3 rounded-full bg-white opacity-100" data-slide="0"></button>
+                            <button class="carousel-dot w-3 h-3 rounded-full bg-white opacity-30" data-slide="1"></button>
+                            <button class="carousel-dot w-3 h-3 rounded-full bg-white opacity-30" data-slide="2"></button>
+                            <button class="carousel-dot w-3 h-3 rounded-full bg-white opacity-30" data-slide="3"></button>
+                        </div>
                     </div>
-                </main>
+                </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- 特性介绍 -->
-    <div class="py-12 bg-white">
+    <!-- Features Section -->
+    <section class="py-20 bg-apple-gray">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="lg:text-center">
-                <p class="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-                    为什么选择 DocuChat？
-                </p>
-                <p class="mt-4 max-w-2xl text-xl text-gray-500 lg:mx-auto">
-                    提供全方位的图书学习体验，让阅读和知识获取更高效
+            <!-- Section Header -->
+            <div class="text-center mb-16">
+                <h2 class="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">为什么选择DocuChat？</h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    AI伴读，直达书魂，30分钟读懂一本书。
                 </p>
             </div>
 
-            <div class="mt-10">
-                <dl class="space-y-10 md:space-y-0 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-10">
-                    <div class="relative">
-                        <dt>
-                            <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
-                                <i class="fas fa-book"></i>
-                            </div>
-                            <p class="ml-16 text-lg leading-6 font-medium text-gray-900">书籍解读</p>
-                        </dt>
-                        <dd class="mt-2 ml-16 text-base text-gray-500">
-                            书籍全面解读，快速了解核心观点，减少阅读时间，提高学习效率。
-                        </dd>
+            <!-- Features Grid -->
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!-- Feature 1 -->
+                <div class="feature-card bg-white rounded-3xl p-8 shadow-lg">
+                    <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mb-6">
+                        <i class="fas fa-headphones text-2xl text-blue-600"></i>
                     </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">书籍解读</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        书籍全面解读，能看也能听，快速了解核心观点，减少阅读时间，提高学习效率。
+                    </p>
+                </div>
 
-                    <div class="relative">
-                        <dt>
-                            <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
-                                <i class="fas fa-sitemap"></i>
-                            </div>
-                            <p class="ml-16 text-lg leading-6 font-medium text-gray-900">知识脑图</p>
-                        </dt>
-                        <dd class="mt-2 ml-16 text-base text-gray-500">
-                            快速了解全书知识结构，建立系统化的知识体系，提高记忆和理解。
-                        </dd>
+                <!-- Feature 2 -->
+                <div class="feature-card bg-white rounded-3xl p-8 shadow-lg">
+                    <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mb-6">
+                        <i class="fas fa-project-diagram text-2xl text-green-600"></i>
                     </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">知识脑图</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        快速了解全书知识结构，建立系统化的知识体系，提高记忆和理解。
+                    </p>
+                </div>
 
-                    <div class="relative">
-                        <dt>
-                            <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
-                                <i class="fas fa-tasks"></i>
-                            </div>
-                            <p class="ml-16 text-lg leading-6 font-medium text-gray-900">知识测试</p>
-                        </dt>
-                        <dd class="mt-2 ml-16 text-base text-gray-500">
-                            根据图书内容自动生成测试题目，检验对知识的掌握情况，强化学习成果。
-                        </dd>
+                <!-- Feature 3 -->
+                <div class="feature-card bg-white rounded-3xl p-8 shadow-lg">
+                    <div class="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mb-6">
+                        <i class="fas fa-tasks text-2xl text-purple-600"></i>
                     </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">知识测试</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        根据图书内容自动生成测试题目，检验对知识的掌握情况，强化学习成果。
+                    </p>
+                </div>
 
-                    <div class="relative">
-                        <dt>
-                            <div class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
-                                <i class="fas fa-comments"></i>
-                            </div>
-                            <p class="ml-16 text-lg leading-6 font-medium text-gray-900">知识问答</p>
-                        </dt>
-                        <dd class="mt-2 ml-16 text-base text-gray-500">
-                            基于图书内容进行知识问答，解决阅读疑问，深化对书籍内容的理解。
-                        </dd>
+                <!-- Feature 4 -->
+                <div class="feature-card bg-white rounded-3xl p-8 shadow-lg">
+                    <div class="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mb-6">
+                        <i class="fas fa-comments text-2xl text-orange-600"></i>
                     </div>
-                </dl>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">知识问答</h3>
+                    <p class="text-gray-600 leading-relaxed">
+                        基于图书内容进行知识问答，解决阅读疑问，深化对书籍内容的理解。
+                    </p>
+                </div>
+            </div>
+
+            <!-- CTA Section -->
+            <div class="text-center mt-16">
+                <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl p-12 text-white">
+                    <h3 class="text-3xl font-bold mb-4">准备开始您的智能阅读之旅？</h3>
+                    <p class="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
+                        加入千万用户，体验AI驱动的高效阅读方式
+                    </p>
+                    <button class="bg-white text-blue-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg">
+                        <i class="fas fa-rocket mr-2"></i>
+                        立即开始
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- 页脚 -->
-    <footer class="bg-gray-800">
-        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-            <div class="text-center text-white">
-                <p>&copy; 2023 DocuChat 图书分享阅读平台. 保留所有权利.</p>
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div>
+                    <h4 class="text-2xl font-bold mb-4">DocuChat</h4>
+                    <p class="text-gray-400">AI伴读，让阅读更高效</p>
+                </div>
+                <div>
+                    <h5 class="font-semibold mb-4">产品</h5>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-white">语音解读</a></li>
+                        <li><a href="#" class="hover:text-white">知识脑图</a></li>
+                        <li><a href="#" class="hover:text-white">知识测试</a></li>
+                        <li><a href="#" class="hover:text-white">知识问答</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="font-semibold mb-4">支持</h5>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-white">帮助中心</a></li>
+                        <li><a href="#" class="hover:text-white">联系我们</a></li>
+                        <li><a href="#" class="hover:text-white">用户指南</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="font-semibold mb-4">关注我们</h5>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fab fa-twitter text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fab fa-weixin text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fab fa-weibo text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+                <p>&copy; 2024 DocuChat. All rights reserved.</p>
             </div>
         </div>
     </footer>
+
+    <script>
+        // Carousel functionality
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.carousel-item');
+        const dots = document.querySelectorAll('.carousel-dot');
+        
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.style.opacity = i === index ? '1' : '0';
+            });
+            dots.forEach((dot, i) => {
+                dot.style.opacity = i === index ? '1' : '0.3';
+            });
+            currentSlide = index;
+        }
+        
+        function nextSlide() {
+            currentSlide = (currentSlide + 1) % slides.length;
+            showSlide(currentSlide);
+        }
+        
+        // Auto-advance carousel
+        setInterval(nextSlide, 2000);
+        
+        // Dot click handlers
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => showSlide(index));
+        });
+        
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
 </body>
 </html>

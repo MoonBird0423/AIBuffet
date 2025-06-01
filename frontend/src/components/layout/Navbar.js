@@ -1,39 +1,55 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import Logo from '../common/Logo';
 import UserProfile from '../common/UserProfile';
 
 function Navbar() {
   const location = useLocation();
   return (
-    <nav className="bg-white fixed top-0 left-0 right-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <nav className="fixed top-0 left-0 right-0 z-50" style={{
+      backdropFilter: 'blur(20px)',
+      background: 'rgba(0, 0, 0, 0.3)',
+      border: '1px solid rgba(255, 255, 255, 0.1)'
+    }}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">        <div className="flex justify-between items-center h-16">
           <div className="flex items-center flex-1">
-            <Logo />
-          </div>
-          <div className="hidden md:flex items-center space-x-4">
-            <div className="flex space-x-4">
+            <Link to="/" className="text-2xl font-bold text-white hover:text-gray-300 transition-colors">
+              DocuChat
+            </Link>
+          </div>          <div className="hidden md:flex items-center space-x-8">
+            <div className="flex space-x-8">
+              <Link 
+                to="/" 
+                className={`text-white hover:text-gray-300 px-3 py-2 text-sm font-medium ${
+                  location.pathname === '/' ? 'bg-white/20 rounded-lg' : ''
+                }`}
+              >
+                首页
+              </Link>
               <Link 
                 to="/library" 
-                className={`text-base font-semibold min-w-[80px] text-center ${
-                  location.pathname === '/library' ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'
-                } h-16 flex items-center justify-center`}
+                className={`text-white hover:text-gray-300 px-3 py-2 text-sm font-medium ${
+                  location.pathname === '/library' ? 'bg-white/20 rounded-lg' : ''
+                }`}
               >
                 图书馆
               </Link>
               <Link 
                 to="/my-knowledge" 
-                className={`text-base font-semibold min-w-[80px] text-center ${
-                  location.pathname === '/my-knowledge' ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'
-                } h-16 flex items-center justify-center`}
+                className={`text-white hover:text-gray-300 px-3 py-2 text-sm font-medium ${
+                  location.pathname === '/my-knowledge' ? 'bg-white/20 rounded-lg' : ''
+                }`}
               >
-                我的
+                我的学习
               </Link>
             </div>
-            <div className="flex items-center ml-2">
-              <UserProfile />
+            <div className="flex items-center">
+              <UserProfile className="text-white hover:bg-white/10 rounded-lg transition-colors" />
             </div>
+          </div>
+          <div className="md:hidden">
+            <button className="text-white">
+              <i className="fas fa-bars"></i>
+            </button>
           </div>
         </div>
       </div>

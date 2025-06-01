@@ -4,296 +4,618 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的知识库 - DocuChat</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sf': ['-apple-system', 'BlinkMacSystemFont', 'San Francisco', 'Helvetica Neue', 'sans-serif'],
+                    },
+                    colors: {
+                        'apple-blue': '#007AFF',
+                        'apple-gray': '#F2F2F7',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .stat-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        }
+        .knowledge-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .knowledge-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .floating-button {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .floating-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        .tab-content {
+            transition: opacity 0.3s ease-in-out;
+        }
+        .progress-ring {
+            transition: stroke-dasharray 0.3s ease;
+        }
+    </style>
 </head>
-<body class="bg-gray-50">
-    <!-- 导航栏 -->
-    <nav class="bg-white">
+<body class="font-sf bg-apple-gray">
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 glass-effect">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex">
-                    <div class="flex-shrink-0 flex items-center">
-                        <a href="index.html" class="text-2xl font-bold text-indigo-600 hover:text-indigo-700">DocuChat</a>
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="index.html" class="text-2xl font-bold text-white hover:text-gray-300 transition-colors">DocuChat</a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <a href="index.html" class="text-white hover:text-gray-300 px-3 py-2 text-sm font-medium">首页</a>
+                        <a href="library.html" class="text-white hover:text-gray-300 px-3 py-2 text-sm font-medium">图书馆</a>
+                        <a href="my-knowledge.html" class="text-white bg-white/20 px-3 py-2 rounded-lg text-sm font-medium">我的学习</a>
+                        <a href="#" class="bg-white text-blue-600 px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-100">登录</a>
                     </div>
                 </div>
-                <div class="flex items-center">
-                    <a href="library.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-indigo-600">图书馆</a>
-                    <a href="my-knowledge.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-indigo-600">我的</a>
-                    <div class="ml-4">
-                        <div class="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-white">
-                            <i class="fas fa-user text-sm"></i>
-                        </div>
-                    </div>
+                <div class="md:hidden">
+                    <button class="text-white">
+                        <i class="fas fa-bars"></i>
+                    </button>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- 知识库内容 -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="flex flex-col lg:flex-row">
-            <!-- 左侧知识库列表 -->
-            <div class="w-full lg:w-1/4 lg:pr-6 mb-6 lg:mb-0">
-                <div class="bg-white rounded-lg shadow-sm p-4">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-medium text-gray-900">我的知识库</h2>
-                        <button class="p-1 rounded-full text-indigo-600 hover:bg-indigo-100">
-                            <i class="fas fa-plus-circle"></i>
-                        </button>
+    <!-- Hero Section -->
+    <section class="gradient-bg pt-20 pb-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl lg:text-5xl font-bold text-white mb-4">
+                    我的知识库
+                </h1>
+                <p class="text-xl text-white/90">
+                    管理您的学习内容，构建个人知识体系
+                </p>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="stat-card bg-white/20 backdrop-blur-lg rounded-2xl p-6 border border-white/30">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/70 text-sm">上传图书</p>
+                            <p class="text-white text-3xl font-bold">12</p>
+                        </div>
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-upload text-white text-xl"></i>
+                        </div>
                     </div>
-                    
-                    <ul class="space-y-2">
-                        <li class="bg-indigo-50 rounded-md p-3 flex justify-between items-center">
-                            <div class="flex items-center">
-                                <i class="fas fa-book-open text-indigo-600 mr-2"></i>
-                                <span class="text-indigo-600 font-medium">个人成长</span>
-                            </div>
-                            <div class="flex space-x-2">
-                                <button class="text-gray-500 hover:text-gray-600">
-                                    <i class="fas fa-ellipsis-v"></i>
-                                </button>
-                            </div>
-                        </li>
-                        <li class="hover:bg-gray-50 rounded-md p-3 flex justify-between items-center">
-                            <div class="flex items-center">
-                                <i class="fas fa-book-open text-gray-500 mr-2"></i>
-                                <span class="text-gray-700">职场技能</span>
-                            </div>
-                            <div class="flex space-x-2">
-                                <button class="text-gray-500 hover:text-gray-600">
-                                    <i class="fas fa-ellipsis-v"></i>
-                                </button>
-                            </div>
-                        </li>
-                        <li class="hover:bg-gray-50 rounded-md p-3 flex justify-between items-center">
-                            <div class="flex items-center">
-                                <i class="fas fa-book-open text-gray-500 mr-2"></i>
-                                <span class="text-gray-700">心理学</span>
-                            </div>
-                            <div class="flex space-x-2">
-                                <button class="text-gray-500 hover:text-gray-600">
-                                    <i class="fas fa-ellipsis-v"></i>
-                                </button>
-                            </div>
-                        </li>
-                        <li class="hover:bg-gray-50 rounded-md p-3 flex justify-between items-center">
-                            <div class="flex items-center">
-                                <i class="fas fa-book-open text-gray-500 mr-2"></i>
-                                <span class="text-gray-700">理财投资</span>
-                            </div>
-                            <div class="flex space-x-2">
-                                <button class="text-gray-500 hover:text-gray-600">
-                                    <i class="fas fa-ellipsis-v"></i>
-                                </button>
-                            </div>
-                        </li>
-                    </ul>
-                    
+                </div>
+
+                <div class="stat-card bg-white/20 backdrop-blur-lg rounded-2xl p-6 border border-white/30">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/70 text-sm">收藏图书</p>
+                            <p class="text-white text-3xl font-bold">28</p>
+                        </div>
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-heart text-white text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card bg-white/20 backdrop-blur-lg rounded-2xl p-6 border border-white/30">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/70 text-sm">学习时长</p>
+                            <p class="text-white text-3xl font-bold">156</p>
+                            <p class="text-white/70 text-xs">小时</p>
+                        </div>
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-clock text-white text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card bg-white/20 backdrop-blur-lg rounded-2xl p-6 border border-white/30">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/70 text-sm">知识库</p>
+                            <p class="text-white text-3xl font-bold">4</p>
+                        </div>
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-folder text-white text-xl"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <!-- 右侧图书展示区 -->
-            <div class="w-full lg:w-3/4">
-                <div class="space-y-4">
-                    <!-- 知识库信息 -->
-                    <div class="bg-white rounded-lg shadow-sm p-4">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <h2 class="text-xl font-medium text-gray-900">个人成长</h2>
-                                <p class="text-sm text-gray-500 mt-1">收录图书：12本</p>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col lg:flex-row gap-8">
+                <!-- Knowledge Base Sidebar -->
+                <div class="lg:w-1/4">
+                    <div class="bg-white rounded-3xl p-6 shadow-xl sticky top-24">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-2xl font-bold text-gray-900">知识库</h2>
+                            <button class="floating-button w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl flex items-center justify-center">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div class="knowledge-card bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-4 border border-blue-200">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-3">
+                                            <i class="fas fa-chart-line text-white"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-semibold text-gray-900">个人成长</h3>
+                                            <p class="text-sm text-gray-600">6本图书</p>
+                                        </div>
+                                    </div>
+                                    <button class="text-gray-400 hover:text-gray-600">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <button class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none">
-                                <i class="fas fa-comments mr-2"></i> 知识库问答
+
+                            <div class="knowledge-card bg-gray-50 rounded-2xl p-4 hover:bg-gray-100 transition-all duration-200">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mr-3">
+                                            <i class="fas fa-briefcase text-green-600"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-semibold text-gray-900">职场技能</h3>
+                                            <p class="text-sm text-gray-600">3本图书</p>
+                                        </div>
+                                    </div>
+                                    <button class="text-gray-400 hover:text-gray-600">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="knowledge-card bg-gray-50 rounded-2xl p-4 hover:bg-gray-100 transition-all duration-200">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center mr-3">
+                                            <i class="fas fa-brain text-orange-600"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-semibold text-gray-900">心理学</h3>
+                                            <p class="text-sm text-gray-600">2本图书</p>
+                                        </div>
+                                    </div>
+                                    <button class="text-gray-400 hover:text-gray-600">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="knowledge-card bg-gray-50 rounded-2xl p-4 hover:bg-gray-100 transition-all duration-200">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center mr-3">
+                                            <i class="fas fa-coins text-yellow-600"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-semibold text-gray-900">理财投资</h3>
+                                            <p class="text-sm text-gray-600">1本图书</p>
+                                        </div>
+                                    </div>
+                                    <button class="text-gray-400 hover:text-gray-600">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Knowledge Base Chat -->
+                        <div class="mt-8 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl">
+                            <h3 class="font-semibold text-gray-900 mb-3">知识库问答</h3>
+                            <p class="text-sm text-gray-600 mb-4">与您的个人知识库进行智能对话</p>
+                            <button class="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-medium hover:shadow-lg transition-all duration-200">
+                                <i class="fas fa-comments mr-2"></i>
+                                开始对话
                             </button>
                         </div>
                     </div>
+                </div>
 
-                    
-                    <!-- 上传文档区 -->
-                    <div class="bg-white rounded-lg shadow-sm p-4 mt-4">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-lg font-medium text-gray-900">我的上传</h2>
-                            <button class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                <i class="fas fa-upload mr-2"></i> 上传图书
-                            </button>
+                <!-- Main Content Area -->
+                <div class="lg:w-3/4">
+                    <!-- Tab Navigation -->
+                    <div class="flex justify-center mb-8">
+                        <div class="bg-white rounded-2xl p-2 shadow-lg">
+                            <div class="flex space-x-2">
+                                <button class="tab-button active px-6 py-3 rounded-xl text-sm font-medium bg-gradient-to-r from-blue-500 to-purple-600 text-white" onclick="showTab('uploads')">
+                                    <i class="fas fa-upload mr-2"></i>
+                                    我的上传
+                                </button>
+                                <button class="tab-button px-6 py-3 rounded-xl text-sm font-medium text-gray-600 hover:text-gray-900" onclick="showTab('collections')">
+                                    <i class="fas fa-heart mr-2"></i>
+                                    我的收藏
+                                </button>
+                                <button class="tab-button px-6 py-3 rounded-xl text-sm font-medium text-gray-600 hover:text-gray-900" onclick="showTab('progress')">
+                                    <i class="fas fa-chart-line mr-2"></i>
+                                    学习进度
+                                </button>
+                            </div>
                         </div>
-                        <div class="bg-white rounded-lg shadow-sm">
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">图书名称</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">大小</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">上传时间</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="flex items-center">
-                                            <div class="h-10 w-10 flex-shrink-0">
-                                                <img class="h-10 w-10 rounded-md" src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="">
-                                            </div>
-                                            <div class="ml-4">
-                                                <div class="text-sm font-medium text-gray-900">原子习惯</div>
-                                                <div class="text-sm text-gray-500">詹姆斯·克利尔</div>
-                                            </div>
+                    </div>
+
+                    <!-- Uploads Tab -->
+                    <div id="uploads" class="tab-content">
+                        <div class="bg-white rounded-3xl shadow-xl p-8">
+                            <div class="flex justify-between items-center mb-8">
+                                <div>
+                                    <h2 class="text-3xl font-bold text-gray-900">我的上传</h2>
+                                    <p class="text-gray-600 mt-1">管理您上传的图书内容</p>
+                                </div>
+                                <button class="floating-button bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-2xl font-medium" onclick="showUploadModal()">
+                                    <i class="fas fa-plus mr-2"></i>
+                                    上传图书
+                                </button>
+                            </div>
+
+                            <!-- Books Grid -->
+                            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <!-- Book Item 1 -->
+                                <div class="bg-gray-50 rounded-2xl p-6 hover:shadow-lg transition-all duration-200">
+                                    <div class="flex items-start justify-between mb-4">
+                                        <img src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=60&h=80&fit=crop" 
+                                             alt="原子习惯" 
+                                             class="w-12 h-16 object-cover rounded-lg">
+                                        <div class="flex-1 ml-4">
+                                            <h3 class="font-semibold text-gray-900 mb-1">原子习惯</h3>
+                                            <p class="text-sm text-gray-600 mb-2">詹姆斯·克利尔</p>
+                                            <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                                已发布
+                                            </span>
                                         </div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-500">2.5 MB</div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-500">2023-05-18</div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                            已发布
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <button class="text-indigo-600 hover:text-indigo-900 mr-2">学习</button>
-                                        <button class="text-gray-600 hover:text-gray-900" onclick="unpublishBook(this)">取消发布</button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="flex items-center">
-                                            <div class="h-10 w-10 flex-shrink-0">
-                                                <img class="h-10 w-10 rounded-md" src="https://images.unsplash.com/photo-1589998059171-988d887df646?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="">
-                                            </div>
-                                            <div class="ml-4">
-                                                <div class="text-sm font-medium text-gray-900">深度工作</div>
-                                                <div class="text-sm text-gray-500">卡尔·纽波特</div>
-                                            </div>
+                                    </div>
+                                    <div class="text-xs text-gray-500 mb-4">
+                                        <div class="flex justify-between">
+                                            <span>文件大小: 2.5 MB</span>
+                                            <span>上传时间: 2024-01-15</span>
                                         </div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-500">3.1 MB</div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-500">2023-05-15</div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                            未发布
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <button class="text-indigo-600 hover:text-indigo-900 mr-2">学习</button>
-                                        <button class="text-indigo-600 hover:text-indigo-900 mr-2" onclick="document.getElementById('publishModal').classList.remove('hidden')">发布</button>
-                                        <button class="text-red-600 hover:text-red-900">删除</button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="flex items-center">
-                                            <div class="h-10 w-10 flex-shrink-0">
-                                                <img class="h-10 w-10 rounded-md" src="https://images.unsplash.com/photo-1531988042231-d39a9cc12a9a?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="">
-                                            </div>
-                                            <div class="ml-4">
-                                                <div class="text-sm font-medium text-gray-900">思考，快与慢</div>
-                                                <div class="text-sm text-gray-500">丹尼尔·卡尼曼</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-500">4.2 MB</div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-500">2023-05-10</div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                            已发布
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <button class="text-indigo-600 hover:text-indigo-900 mr-2">学习</button>
-                                        <button class="text-gray-600 hover:text-gray-900" onclick="unpublishBook(this)">取消发布</button>
-                                    </td>
-                                </tr>
-                                            </tbody>
-                                        </table>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button class="flex-1 bg-blue-100 text-blue-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-blue-200 transition-all duration-200">
+                                            学习
+                                        </button>
+                                        <button class="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-gray-200 transition-all duration-200">
+                                            编辑
+                                        </button>
                                     </div>
                                 </div>
+
+                                <!-- Book Item 2 -->
+                                <div class="bg-gray-50 rounded-2xl p-6 hover:shadow-lg transition-all duration-200">
+                                    <div class="flex items-start justify-between mb-4">
+                                        <img src="https://images.unsplash.com/photo-1589998059171-988d887df646?w=60&h=80&fit=crop" 
+                                             alt="深度工作" 
+                                             class="w-12 h-16 object-cover rounded-lg">
+                                        <div class="flex-1 ml-4">
+                                            <h3 class="font-semibold text-gray-900 mb-1">深度工作</h3>
+                                            <p class="text-sm text-gray-600 mb-2">卡尔·纽波特</p>
+                                            <span class="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
+                                                处理中
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-gray-500 mb-4">
+                                        <div class="flex justify-between">
+                                            <span>文件大小: 3.1 MB</span>
+                                            <span>上传时间: 2024-01-12</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button class="flex-1 bg-gray-100 text-gray-400 py-2 px-3 rounded-lg text-sm font-medium cursor-not-allowed">
+                                            处理中...
+                                        </button>
+                                        <button class="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-gray-200 transition-all duration-200">
+                                            删除
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Book Item 3 -->
+                                <div class="bg-gray-50 rounded-2xl p-6 hover:shadow-lg transition-all duration-200">
+                                    <div class="flex items-start justify-between mb-4">
+                                        <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=60&h=80&fit=crop" 
+                                             alt="思考，快与慢" 
+                                             class="w-12 h-16 object-cover rounded-lg">
+                                        <div class="flex-1 ml-4">
+                                            <h3 class="font-semibold text-gray-900 mb-1">思考，快与慢</h3>
+                                            <p class="text-sm text-gray-600 mb-2">丹尼尔·卡尼曼</p>
+                                            <span class="px-3 py-1 bg-gray-100 text-gray-800 text-xs font-medium rounded-full">
+                                                未发布
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-gray-500 mb-4">
+                                        <div class="flex justify-between">
+                                            <span>文件大小: 4.2 MB</span>
+                                            <span>上传时间: 2024-01-10</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button class="flex-1 bg-blue-100 text-blue-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-blue-200 transition-all duration-200" onclick="showPublishModal()">
+                                            发布
+                                        </button>
+                                        <button class="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-gray-200 transition-all duration-200">
+                                            编辑
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- 我的收藏区 -->
-                    <div class="bg-white rounded-lg shadow-sm p-4 mt-4">
-                        <h2 class="text-lg font-medium text-gray-900 mb-4">我的收藏</h2>
-                        <div class="bg-white rounded-lg shadow-sm overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">图书名称</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作者</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">发布用户</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <!-- 收藏图书 1 -->
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="flex items-center">
-                                                <div class="h-10 w-10 flex-shrink-0">
-                                                    <img class="h-10 w-10 rounded-md" src="https://images.unsplash.com/photo-1535398089889-dd807df1dfaa?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="">
-                                                </div>
-                                                <div class="ml-4">
-                                                    <div class="text-sm font-medium text-gray-900">刻意练习</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-900">安德斯·艾利克森</div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-500">张三</div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <button class="text-indigo-600 hover:text-indigo-900 mr-2">学习</button>
-                                            <button class="text-gray-600 hover:text-gray-900">取消收藏</button>
-                                        </td>
-                                    </tr>
-                                    <!-- 收藏图书 2 -->
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="flex items-center">
-                                                <div class="h-10 w-10 flex-shrink-0">
-                                                    <img class="h-10 w-10 rounded-md" src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" alt="">
-                                                </div>
-                                                <div class="ml-4">
-                                                    <div class="text-sm font-medium text-gray-900">原子习惯</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-900">詹姆斯·克利尔</div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-500">李四</div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <button class="text-indigo-600 hover:text-indigo-900 mr-2">学习</button>
-                                            <button class="text-gray-600 hover:text-gray-900">取消收藏</button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    <!-- Collections Tab -->
+                    <div id="collections" class="tab-content hidden">
+                        <div class="bg-white rounded-3xl shadow-xl p-8">
+                            <div class="mb-8">
+                                <h2 class="text-3xl font-bold text-gray-900 mb-2">我的收藏</h2>
+                                <p class="text-gray-600">您收藏的精选图书</p>
+                            </div>
+
+                            <div class="space-y-4">
+                                <!-- Collection Item 1 -->
+                                <div class="flex items-center p-6 bg-gray-50 rounded-2xl hover:shadow-lg transition-all duration-200">
+                                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=100&fit=crop" 
+                                         alt="刻意练习" 
+                                         class="w-16 h-20 object-cover rounded-lg">
+                                    <div class="flex-1 ml-6">
+                                        <h3 class="text-xl font-semibold text-gray-900 mb-1">刻意练习</h3>
+                                        <p class="text-gray-600 mb-2">安德斯·艾利克森</p>
+                                        <p class="text-sm text-gray-500">收藏于 2024-01-08 · 来自 张三</p>
+                                    </div>
+                                    <div class="flex space-x-3">
+                                        <button class="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-medium hover:bg-blue-200 transition-all duration-200">
+                                            学习
+                                        </button>
+                                        <button class="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200">
+                                            取消收藏
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Collection Item 2 -->
+                                <div class="flex items-center p-6 bg-gray-50 rounded-2xl hover:shadow-lg transition-all duration-200">
+                                    <img src="https://images.unsplash.com/photo-1516414447565-b14be0adf13e?w=80&h=100&fit=crop" 
+                                         alt="非暴力沟通" 
+                                         class="w-16 h-20 object-cover rounded-lg">
+                                    <div class="flex-1 ml-6">
+                                        <h3 class="text-xl font-semibold text-gray-900 mb-1">非暴力沟通</h3>
+                                        <p class="text-gray-600 mb-2">马歇尔·卢森堡</p>
+                                        <p class="text-sm text-gray-500">收藏于 2024-01-05 · 来自 李四</p>
+                                    </div>
+                                    <div class="flex space-x-3">
+                                        <button class="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-medium hover:bg-blue-200 transition-all duration-200">
+                                            学习
+                                        </button>
+                                        <button class="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200">
+                                            取消收藏
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                    </div>
+
+                    <!-- Progress Tab -->
+                    <div id="progress" class="tab-content hidden">
+                        <div class="bg-white rounded-3xl shadow-xl p-8">
+                            <div class="mb-8">
+                                <h2 class="text-3xl font-bold text-gray-900 mb-2">学习进度</h2>
+                                <p class="text-gray-600">您的学习数据统计</p>
+                            </div>
+
+                            <!-- Progress Overview -->
+                            <div class="grid md:grid-cols-2 gap-8 mb-8">
+                                <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6">
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-4">本月学习概览</h3>
+                                    <div class="flex items-center justify-center">
+                                        <div class="relative w-32 h-32">
+                                            <svg class="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+                                                <circle cx="50" cy="50" r="40" stroke="#e5e7eb" stroke-width="8" fill="none"/>
+                                                <circle cx="50" cy="50" r="40" stroke="url(#gradient)" stroke-width="8" fill="none" 
+                                                        stroke-dasharray="251.2" stroke-dashoffset="75.36" class="progress-ring"/>
+                                                <defs>
+                                                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                        <stop offset="0%" style="stop-color:#667eea"/>
+                                                        <stop offset="100%" style="stop-color:#764ba2"/>
+                                                    </linearGradient>
+                                                </defs>
+                                            </svg>
+                                            <div class="absolute inset-0 flex items-center justify-center">
+                                                <div class="text-center">
+                                                    <div class="text-2xl font-bold text-gray-900">70%</div>
+                                                    <div class="text-sm text-gray-600">完成度</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-6">
+                                    <div class="flex items-center justify-between p-4 bg-blue-50 rounded-2xl">
+                                        <div class="flex items-center">
+                                            <div class="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mr-4">
+                                                <i class="fas fa-book text-white"></i>
+                                            </div>
+                                            <div>
+                                                <p class="font-semibold text-gray-900">完成图书</p>
+                                                <p class="text-sm text-gray-600">本月已完成</p>
+                                            </div>
+                                        </div>
+                                        <div class="text-2xl font-bold text-blue-600">8</div>
+                                    </div>
+
+                                    <div class="flex items-center justify-between p-4 bg-green-50 rounded-2xl">
+                                        <div class="flex items-center">
+                                            <div class="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mr-4">
+                                                <i class="fas fa-clock text-white"></i>
+                                            </div>
+                                            <div>
+                                                <p class="font-semibold text-gray-900">学习时长</p>
+                                                <p class="text-sm text-gray-600">本月累计</p>
+                                            </div>
+                                        </div>
+                                        <div class="text-2xl font-bold text-green-600">42h</div>
+                                    </div>
+
+                                    <div class="flex items-center justify-between p-4 bg-purple-50 rounded-2xl">
+                                        <div class="flex items-center">
+                                            <div class="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mr-4">
+                                                <i class="fas fa-trophy text-white"></i>
+                                            </div>
+                                            <div>
+                                                <p class="font-semibold text-gray-900">测试得分</p>
+                                                <p class="text-sm text-gray-600">平均分数</p>
+                                            </div>
+                                        </div>
+                                        <div class="text-2xl font-bold text-purple-600">92</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Recent Activities -->
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">最近学习</h3>
+                                <div class="space-y-3">
+                                    <div class="flex items-center p-4 bg-gray-50 rounded-xl">
+                                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                                            <i class="fas fa-headphones text-blue-600"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <p class="font-medium text-gray-900">完成《原子习惯》语音解读</p>
+                                            <p class="text-sm text-gray-500">2小时前</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center p-4 bg-gray-50 rounded-xl">
+                                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                                            <i class="fas fa-check-circle text-green-600"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <p class="font-medium text-gray-900">完成《深度工作》知识测试</p>
+                                            <p class="text-sm text-gray-500">1天前 · 得分: 95分</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center p-4 bg-gray-50 rounded-xl">
+                                        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
+                                            <i class="fas fa-comments text-purple-600"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <p class="font-medium text-gray-900">与AI进行《思考，快与慢》问答</p>
+                                            <p class="text-sm text-gray-500">3天前</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-3xl w-full max-w-2xl">
+                <div class="p-8">
+                    <div class="flex justify-between items-center mb-8">
+                        <h3 class="text-2xl font-bold text-gray-900">上传图书</h3>
+                        <button onclick="hideUploadModal()" class="text-gray-400 hover:text-gray-600 text-2xl">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-6">
+                        <!-- File Upload Area -->
+                        <div class="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-blue-400 transition-all duration-200">
+                            <div class="mb-4">
+                                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400"></i>
+                            </div>
+                            <p class="text-lg font-medium text-gray-900 mb-2">拖拽文件到这里或点击上传</p>
+                            <p class="text-gray-500 text-sm">支持 PDF, EPUB, MOBI 格式，最大 50MB</p>
+                            <button class="mt-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all duration-200">
+                                选择文件
+                            </button>
+                        </div>
+
+                        <!-- Form Fields -->
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">图书标题</label>
+                                <input type="text" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入图书标题">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">作者</label>
+                                <input type="text" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入作者姓名">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">选择知识库</label>
+                            <select class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option>个人成长</option>
+                                <option>职场技能</option>
+                                <option>心理学</option>
+                                <option>理财投资</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">图书简介</label>
+                            <textarea rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入图书简介..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end space-x-4 mt-8">
+                        <button onclick="hideUploadModal()" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all duration-200">
+                            取消
+                        </button>
+                        <button class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all duration-200">
+                            开始上传
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 发布图书弹窗 -->
-    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden" id="publishModal">
+    <!-- Publish Modal -->
+    <div id="publishModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
         <div class="flex items-center justify-center min-h-screen">
             <div class="bg-white rounded-lg w-full max-w-3xl mx-4 overflow-hidden">
                 <div class="p-4 border-b border-gray-200 flex justify-between items-center">
@@ -618,37 +940,120 @@
                 <button class="text-red-600 hover:text-red-900">删除</button>
             `;
         }
+
+        // Tab switching functionality
+        function showTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabId).classList.remove('hidden');
+            
+            // Update tab button styles
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('bg-gradient-to-r', 'from-blue-500', 'to-purple-600', 'text-white');
+                button.classList.add('text-gray-600', 'hover:text-gray-900');
+            });
+            
+            // Set active tab button
+            event.currentTarget.classList.remove('text-gray-600', 'hover:text-gray-900');
+            event.currentTarget.classList.add('bg-gradient-to-r', 'from-blue-500', 'to-purple-600', 'text-white');
+        }
+
+        // Modal functions
+        function showUploadModal() {
+            document.getElementById('uploadModal').classList.remove('hidden');
+        }
+
+        function hideUploadModal() {
+            document.getElementById('uploadModal').classList.add('hidden');
+        }
+
+        function showPublishModal() {
+            document.getElementById('publishModal').classList.remove('hidden');
+        }
+
+        function hidePublishModal() {
+            document.getElementById('publishModal').classList.add('hidden');
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add smooth scrolling
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+
+            // Floating button effects
+            document.querySelectorAll('.floating-button').forEach(button => {
+                button.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                    this.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.15)';
+                });
+                
+                button.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = '';
+                });
+            });
+        });
     </script>
 
     <!-- 页脚 -->
-    <footer class="bg-gray-800 mt-12">
-        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-            <div class="text-center text-white">
-                <p>&copy; 2023 DocuChat 图书分享阅读平台. 保留所有权利.</p>
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div>
+                    <h4 class="text-2xl font-bold mb-4">DocuChat</h4>
+                    <p class="text-gray-400">AI伴读，让阅读更高效</p>
+                </div>
+                <div>
+                    <h5 class="font-semibold mb-4">产品</h5>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-white">语音解读</a></li>
+                        <li><a href="#" class="hover:text-white">知识脑图</a></li>
+                        <li><a href="#" class="hover:text-white">知识测试</a></li>
+                        <li><a href="#" class="hover:text-white">知识问答</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="font-semibold mb-4">支持</h5>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-white">帮助中心</a></li>
+                        <li><a href="#" class="hover:text-white">联系我们</a></li>
+                        <li><a href="#" class="hover:text-white">用户指南</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="font-semibold mb-4">关注我们</h5>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fab fa-twitter text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fab fa-weixin text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fab fa-weibo text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+                <p>&copy; 2024 DocuChat. All rights reserved.</p>
             </div>
         </div>
     </footer>
-    <script>
-        function showTab(tabId) {
-            // 隐藏所有内容
-            document.getElementById('uploads').classList.add('hidden');
-            document.getElementById('favorites').classList.add('hidden');
-
-            // 显示选中内容
-            document.getElementById(tabId).classList.remove('hidden');
-
-            // 更新标签样式
-            const buttons = document.querySelectorAll('nav button');
-            buttons.forEach(button => {
-                button.classList.remove('border-indigo-500', 'text-indigo-600');
-                button.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
-            });
-
-            // 高亮选中标签
-            const selectedButton = document.querySelector(`button[onclick="showTab('${tabId}')"]`);
-            selectedButton.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
-            selectedButton.classList.add('border-indigo-500', 'text-indigo-600');
-        }
-    </script>
 </body>
 </html>
