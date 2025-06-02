@@ -7,12 +7,16 @@ import AudioPlayer from '../components/common/AudioPlayer';
 
 function BookDetails() {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const [bookData, setBookData] = useState(null);
+  const navigate = useNavigate();  const [bookData, setBookData] = useState(null);
   const [activeTab, setActiveTab] = useState('interpretation');
   const [tabContent, setTabContent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // 内容缓存和加载状态
+  const [contentCache, setContentCache] = useState({});
+  const [tabLoading, setTabLoading] = useState(false);
+  const [tabContentLoaded, setTabContentLoaded] = useState(false); // 追踪是否已加载过内容
   
   // 音频相关状态 - 从 BookTabs 提升到这里
   const [audioUrl, setAudioUrl] = useState(null);
@@ -44,12 +48,18 @@ function BookDetails() {
       fetchBookData();
     }
   }, [id]);
-
   // 根据选中的Tab加载对应内容
   useEffect(() => {
     const fetchTabContent = async () => {
+      // 检查缓存
+      const cacheKey = `${id}-${activeTab}`;
+      if (contentCache[cacheKey]) {
+        setTabContent(contentCache[cacheKey]);
+        return;
+      }
+
       try {
-        setTabContent(null);
+        setTabLoading(true);
         let content;
         switch (activeTab) {
           case 'interpretation':
@@ -67,24 +77,30 @@ function BookDetails() {
           default:
             return;
         }
+        
         // 确保content是字符串类型
+        let processedContent;
         if (typeof content === 'string') {
-          setTabContent(content);
+          processedContent = content;
         } else {
           console.warn(`获取${activeTab}内容格式不正确:`, content);
-          setTabContent('');
+          processedContent = '';
         }
-      } catch (err) {
+          // 更新缓存和内容
+        setContentCache(prev => ({ ...prev, [cacheKey]: processedContent }));
+        setTabContent(processedContent);
+        setTabContentLoaded(true);      } catch (err) {
         console.error('Error fetching tab content:', err);
-        // 在出错时设置一个错误提示信息，而不是保持 null
-        setTabContent(`获取${activeTab}内容失败，请稍后重试`);
+        const errorContent = `获取${activeTab}内容失败，请稍后重试`;
+        setTabContent(errorContent);
+        setTabContentLoaded(true);
+      } finally {
+        setTabLoading(false);
       }
-    };
-
-    if (id && activeTab) {
+    };    if (id && activeTab) {
       fetchTabContent();
     }
-  }, [activeTab, id]);
+  }, [activeTab, id]); // 移除 contentCache 依赖避免无限循环
 
   // 检查音频状态 - 从 BookTabs 移动到这里
   useEffect(() => {
@@ -128,10 +144,14 @@ function BookDetails() {
   const handleBack = () => {
     navigate('/library');
   };
-
   // 处理选项卡切换
   const handleTabChange = (tabKey) => {
     setActiveTab(tabKey);
+    // 如果有缓存，立即更新内容，避免显示加载状态
+    const cacheKey = `${id}-${tabKey}`;
+    if (contentCache[cacheKey]) {
+      setTabContent(contentCache[cacheKey]);
+    }
   };
 
 
@@ -151,73 +171,111 @@ function BookDetails() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* 返回按钮 */}
-        <div className="mb-4">
-          <button
-            onClick={handleBack}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            <i className="fas fa-arrow-left mr-2"></i>
-            返回图书馆
-          </button>
-        </div>
-
-        {/* 图书基本信息 - 在loading状态下也显示骨架屏 */}
-        <BookInfo bookData={bookData} />
-
-        {/* 音频播放器 - 只要有音频内容就显示，或者在图书解读选项卡可以生成音频 */}
-        {bookData && ((hasAudio && audioUrl) || (activeTab === 'interpretation' && tabContent && tabContent !== '')) && (
-          <div className="mb-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                  <i className="fas fa-headphones text-indigo-600 mr-2"></i>
-                  知婷老师解读
-                </h3>
-                {!hasAudio && activeTab === 'interpretation' && tabContent && tabContent !== '' && (
-                  <button
-                    onClick={handleGenerateAudio}
-                    disabled={audioLoading}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400"
-                  >
-                    {audioLoading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        生成中...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-magic mr-2"></i>
-                        生成音频
-                      </>
-                    )}
-                  </button>
-                )}
+      <style jsx>{`
+        .gradient-bg {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+          backdrop-filter: blur(20px);
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .floating-button {
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .floating-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+      `}</style>        {/* 顶部渐变背景区域 */}
+      <div className="gradient-bg pb-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* 按钮区域 */}
+          <div className="pt-20 pb-8">
+            <div className="flex justify-between items-center">
+              <button
+                onClick={handleBack}
+                className="inline-flex items-center px-6 py-3 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full text-white hover:bg-white/30 transition-all duration-200"
+              >
+                <i className="fas fa-arrow-left mr-2"></i>
+                返回图书馆
+              </button>
+              <div className="flex space-x-4">
+                <button className="floating-button px-6 py-3 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full text-white hover:bg-white/30 transition-all duration-200">
+                  <i className="fas fa-plus mr-2"></i>
+                  加入知识库
+                </button>
+                <button className="floating-button px-6 py-3 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full text-white hover:bg-white/30 transition-all duration-200">
+                  <i className="fas fa-share mr-2"></i>
+                  分享
+                </button>
               </div>
-              
-              {audioError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                  <div className="flex">
-                    <i className="fas fa-exclamation-triangle text-red-400 mr-2 mt-0.5"></i>
-                    <span className="text-red-700 text-sm">{audioError}</span>
-                  </div>
-                </div>
-              )}
-              
-              <AudioPlayer audioUrl={audioUrl} />
             </div>
+          </div>          {/* 图书基本信息 - 在loading状态下也显示骨架屏 */}
+          <BookInfo bookData={bookData} />
+        </div>
+      </div>      {/* 主内容区域 - 统一的白色背景 */}
+      <div className="bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">          {/* 主标题 */}
+          <div className="text-center mb-8">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">AI伴读，直达书魂</h3>
+            <div className="w-24 h-1 bg-gradient-to-r from-indigo-500 to-purple-500 mx-auto rounded-full"></div>
           </div>
-        )}
 
-        {/* 内容选项卡 - 只有有基本数据后才显示 */}
-        {bookData && (
-          <BookTabs
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-            content={tabContent}
-          />
-        )}
+          {/* 音频播放器 - 放在内容选项卡上方，一直显示 */}
+          {bookData && (
+            <div className="mb-6">
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-3xl shadow-xl p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                    <i className="fas fa-headphones text-indigo-600 mr-2"></i>
+                    知婷老师解读
+                  </h3>
+                  {!hasAudio && activeTab === 'interpretation' && tabContent && tabContent !== '' && (
+                    <button
+                      onClick={handleGenerateAudio}
+                      disabled={audioLoading}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400"
+                    >
+                      {audioLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          生成中...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-magic mr-2"></i>
+                          生成音频
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+                
+                {audioError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                    <div className="flex">
+                      <i className="fas fa-exclamation-triangle text-red-400 mr-2 mt-0.5"></i>
+                      <span className="text-red-700 text-sm">{audioError}</span>
+                    </div>
+                  </div>
+                )}
+                
+                <AudioPlayer audioUrl={audioUrl} />
+              </div>
+            </div>
+          )}          {/* 内容选项卡 - 只有有基本数据后才显示 */}
+          {bookData && (
+            <div className="pb-6">
+              <BookTabs
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+                content={tabContent}
+                loading={tabLoading}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

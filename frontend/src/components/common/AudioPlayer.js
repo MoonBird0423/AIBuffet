@@ -98,13 +98,12 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
   };
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
-
   if (!audioUrl) {
     return (
-      <div className={`bg-gray-100 rounded-lg p-4 ${className}`}>
+      <div className={`bg-gray-50 rounded-2xl p-6 ${className}`}>
         <div className="text-center text-gray-500">
-          <i className="fas fa-volume-mute text-2xl mb-2"></i>
-          <p>暂无音频</p>
+          <i className="fas fa-volume-mute text-3xl mb-3"></i>
+          <p className="text-lg">暂无音频</p>
         </div>
       </div>
     );
@@ -112,25 +111,25 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
 
   if (error) {
     return (
-      <div className={`bg-red-50 border border-red-200 rounded-lg p-4 ${className}`}>
+      <div className={`bg-red-50 border border-red-200 rounded-2xl p-6 ${className}`}>
         <div className="text-center text-red-600">
-          <i className="fas fa-exclamation-triangle text-2xl mb-2"></i>
-          <p>{error}</p>
+          <i className="fas fa-exclamation-triangle text-3xl mb-3"></i>
+          <p className="text-lg">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg p-4 shadow-sm ${className}`}>
+    <div className={`bg-white/50 border border-white/30 rounded-2xl p-6 backdrop-blur-sm ${className}`}>
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
       
-      <div className="space-y-3">
+      <div className="space-y-4">
         {/* 第一行：音量控制 + 播放按钮 + 倍速控制 */}
-        <div className="flex items-center justify-center space-x-6">
+        <div className="flex items-center justify-center space-x-8">
           {/* 音量控制 */}
-          <div className="flex items-center space-x-2">
-            <i className="fas fa-volume-down text-gray-400"></i>
+          <div className="flex items-center space-x-3">
+            <i className="fas fa-volume-down text-gray-600"></i>
             <input
               type="range"
               min="0"
@@ -138,7 +137,7 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
               step="0.1"
               value={volume}
               onChange={handleVolumeChange}
-              className="w-16 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              className="w-20 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer slider"
             />
           </div>
 
@@ -146,24 +145,24 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
           <button
             onClick={togglePlay}
             disabled={isLoading}
-            className="flex items-center justify-center w-8 h-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full transition-colors disabled:bg-gray-400"
+            className="flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full transition-all duration-200 shadow-lg disabled:bg-gray-400"
           >
             {isLoading ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
             ) : isPlaying ? (
-              <i className="fas fa-pause text-sm"></i>
+              <i className="fas fa-pause text-xl"></i>
             ) : (
-              <i className="fas fa-play ml-0.5 text-sm"></i>
+              <i className="fas fa-play ml-1 text-xl"></i>
             )}
           </button>
 
           {/* 播放速度控制 */}
-          <div className="flex items-center space-x-2">
-            <i className="fas fa-tachometer-alt text-gray-400"></i>
+          <div className="flex items-center space-x-3">
+            <i className="fas fa-tachometer-alt text-gray-600"></i>
             <select
               value={playbackRate}
               onChange={handlePlaybackRateChange}
-              className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="0.5">0.5x</option>
               <option value="0.75">0.75x</option>
@@ -176,29 +175,51 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
         </div>
 
         {/* 第二行：时间 + 进度条 + 时间 */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-4">
           {/* 当前时间 */}
-          <span className="text-sm text-gray-500 min-w-[40px]">
+          <span className="text-sm text-gray-600 min-w-[45px] font-mono">
             {formatTime(currentTime)}
           </span>
           
           {/* 进度条 */}
           <div
-            className="flex-1 h-2 bg-gray-200 rounded-full cursor-pointer"
+            className="flex-1 h-3 bg-gray-200 rounded-full cursor-pointer overflow-hidden"
             onClick={handleProgressClick}
           >
             <div
-              className="h-full bg-indigo-600 rounded-full transition-all duration-100"
+              className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-100"
               style={{ width: `${progressPercentage}%` }}
             ></div>
           </div>
 
           {/* 总时间 */}
-          <span className="text-sm text-gray-500 min-w-[40px]">
+          <span className="text-sm text-gray-600 min-w-[45px] font-mono">
             {formatTime(duration)}
           </span>
         </div>
       </div>
+
+      <style jsx>{`
+        .slider::-webkit-slider-thumb {
+          appearance: none;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+          cursor: pointer;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .slider::-moz-range-thumb {
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+          cursor: pointer;
+          border: none;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+      `}</style>
     </div>
   );
 };
