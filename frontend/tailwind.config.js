@@ -4,8 +4,7 @@ module.exports = {
     "./src/**/*.{js,jsx,ts,tsx}",
     "./public/index.html"
   ],
-  darkMode: 'class',
-  theme: {
+  darkMode: 'class',  theme: {
     extend: {
       colors: {
         blue: {
@@ -20,6 +19,10 @@ module.exports = {
           800: '#1e40af',
           900: '#1e3a8a',
         },
+        'apple-gray': '#f5f5f7',
+      },
+      fontFamily: {
+        'sf': ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       keyframes: {
         float: {

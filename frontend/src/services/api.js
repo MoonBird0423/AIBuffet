@@ -598,9 +598,11 @@ export const retryProcessing = async (documentId) => {
 };
 
 // 获取文档分块
-export const getDocumentChunks = async (documentId) => {
+export const getDocumentChunks = async (documentId, page = 0, size = 10) => {
   try {
-    const response = await apiClient.get(`/documents/${documentId}/chunks`);
+    const response = await apiClient.get(`/documents/${documentId}/chunks`, {
+      params: { page, size }
+    });
     return response.data;
   } catch (error) {
     console.error('获取文档分块失败:', error);

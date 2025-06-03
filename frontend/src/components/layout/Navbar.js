@@ -39,7 +39,7 @@ function Navbar() {
                   location.pathname === '/my-knowledge' ? 'bg-white/20 rounded-lg' : ''
                 }`}
               >
-                我的学习
+                我的知识库
               </Link>
             </div>
             <div className="flex items-center">

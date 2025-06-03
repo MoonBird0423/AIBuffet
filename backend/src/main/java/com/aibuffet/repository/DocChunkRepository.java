@@ -1,6 +1,10 @@
 package com.aibuffet.repository;
 
 import com.aibuffet.model.DocChunk;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -28,9 +32,11 @@ public interface DocChunkRepository extends JpaRepository<DocChunk, Long> {
     @Modifying
     @Query("UPDATE DocChunk c SET c.vectorId = :vectorId, c.vectorStatus = :status, c.vectorError = NULL WHERE c.id = :chunkId")
     void setVectorComplete(Long chunkId, String vectorId, String status);
-    
-    // 修正方法名称以匹配实体类中的字段名
+      // 修正方法名称以匹配实体类中的字段名
     List<DocChunk> findByFileIdOrderByChunkIndexAsc(Long fileId);
+    
+    // 分页查询文档分块
+    Page<DocChunk> findByFileIdOrderByChunkIndexAsc(Long fileId, Pageable pageable);
     
     @Query("""
         SELECT NEW map(

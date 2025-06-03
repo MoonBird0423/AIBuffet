@@ -28,7 +28,9 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -340,14 +342,47 @@ public class DocumentServiceImpl implements DocumentService {
         if (!relation.getCreatedBy().equals(userId)) {
             logger.warn("用户无权限查看该文档的分块: docId={}, userId={}", docId, userId);
             throw new IllegalArgumentException("No permission to view document chunks");
-        }
-
-        List<DocChunk> chunks = docChunkRepository.findByFileIdOrderByChunkIndexAsc(docId);
+        }        List<DocChunk> chunks = docChunkRepository.findByFileIdOrderByChunkIndexAsc(docId);
         logger.info("成功获取文档分块: docId={}, 分块数量={}", docId, chunks.size());
         return chunks;
     }
 
-    private String getFileExtension(String filename) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getDocumentChunks(Long docId, Long userId, int page, int size) {
+        logger.info("开始分页获取文档分块: docId={}, userId={}, page={}, size={}", docId, userId, page, size);
+        DocFile docFile = docFileRepository.findById(docId)
+                .orElseThrow(() -> {
+                    logger.warn("文档不存在: docId={}", docId);
+                    return new ResourceNotFoundException("Document not found");
+                });
+
+        // 检查用户权限
+        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileId(docId)
+                .orElseThrow(() -> {
+                    logger.warn("文档未关联到任何知识库: docId={}", docId);
+                    return new ResourceNotFoundException("Document is not associated with any knowledge base");
+                });
+
+        if (!relation.getCreatedBy().equals(userId)) {
+            logger.warn("用户无权限查看该文档的分块: docId={}, userId={}", docId, userId);
+            throw new IllegalArgumentException("No permission to view document chunks");
+        }
+
+        Page<DocChunk> chunksPage = docChunkRepository.findByFileIdOrderByChunkIndexAsc(docId, PageRequest.of(page, size));
+        
+        // 构建返回结果
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", chunksPage.getContent());
+        result.put("page", chunksPage.getNumber());
+        result.put("size", chunksPage.getSize());
+        result.put("totalPages", chunksPage.getTotalPages());
+        result.put("totalElements", chunksPage.getTotalElements());
+        
+        logger.info("成功分页获取文档分块: docId={}, 当前页={}, 每页大小={}, 总页数={}, 总条数={}", 
+            docId, chunksPage.getNumber(), chunksPage.getSize(), chunksPage.getTotalPages(), chunksPage.getTotalElements());
+        return result;
+    }    private String getFileExtension(String filename) {
         int lastDotPos = filename.lastIndexOf('.');
         return lastDotPos == -1 ? "" : filename.substring(lastDotPos).toLowerCase();
     }

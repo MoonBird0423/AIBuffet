@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { deleteDocument, getDocumentChunks, updateDocumentPublishStatus } from '../../services/api';
+import { useNavigate } from 'react-router-dom';
+import { deleteDocument, updateDocumentPublishStatus } from '../../services/api';
 import { ToastManager } from '../common/Toast';
-import { TrashIcon, DocumentIcon, ChevronLeftIcon, ChevronRightIcon, ViewfinderCircleIcon, ExclamationCircleIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, ChevronRightIcon, ExclamationCircleIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline';
 import Tooltip from '../common/Tooltip';
 import Popover from '../common/Popover';
 import Modal from '../common/Modal';
@@ -18,6 +19,7 @@ const FileList = ({
   total = 0, 
   onPageChange 
 }) => {
+  const navigate = useNavigate();
   const [deletingId, setDeletingId] = useState(null);
   const [selectedFileId, setSelectedFileId] = useState(null);
   const [showChunkModal, setShowChunkModal] = useState(false);
@@ -32,7 +34,6 @@ const FileList = ({
     }
     return fileName;
   };
-
   const handlePublish = (fileId, fileName) => {
     setPublishingFileId(fileId);
     setShowPublishModal(true);
@@ -41,6 +42,15 @@ const FileList = ({
   const handleUnpublish = (fileId) => {
     setPublishingFileId(fileId);
     setShowUnpublishModal(true);
+  };
+
+  const handleLearn = (fileId) => {
+    navigate(`/book/${fileId}`);
+  };
+
+  const handleViewDetails = (fileId) => {
+    setSelectedFileId(fileId);
+    setShowChunkModal(true);
   };
 
   const handlePublishSuccess = () => {
@@ -70,25 +80,7 @@ const FileList = ({
       'COMPLETED': '完成',
       'FAILED': '错误'
     };
-    return statusMap[status] || status;
-  };
-
-  const getStatusClass = (status) => {
-    const classes = {
-      'PENDING': 'text-yellow-700 bg-yellow-50 border border-yellow-200',
-      'EXTRACTING_TEXT': 'text-blue-700 bg-blue-50 border border-blue-200',
-      'CHUNKING': 'text-blue-700 bg-blue-50 border border-blue-200',
-      'VECTORIZING': 'text-blue-700 bg-blue-50 border border-blue-200',
-      'COMPLETED': 'text-green-700 bg-green-50 border border-green-200',
-      'FAILED': 'text-red-700 bg-red-50 border border-red-200'
-    };
-    return (classes[status] || 'text-gray-700 bg-gray-50 border border-gray-200') + ' inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium';
-  };
-
-  const handleViewChunks = async (id) => {
-    setSelectedFileId(id);
-    setShowChunkModal(true);
-  };
+    return statusMap[status] || status;  };
 
   const handleDelete = async (id) => {
     if (!window.confirm('确定要删除这个文档吗？')) {
@@ -134,12 +126,21 @@ const FileList = ({
         还没有上传任何文档
       </div>
     );
-  }
-
-  const Pagination = () => {
+  }  const Pagination = () => {
     const totalPages = Math.ceil(total / pageSize);
     const pageNumbers = [];
-    const maxPageButtons = 5;
+    
+    // 添加调试日志
+    console.log('Pagination Debug:', {
+      page,
+      pageSize,
+      total,
+      totalPages,
+      files: files?.length,
+      calculatedTotalPages: Math.ceil(total / pageSize),
+      startRecord: page * pageSize + 1,
+      endRecord: Math.min((page + 1) * pageSize, total)
+    });
     
     // 计算显示哪些页码按钮
     for (let i = Math.max(0, page - 2); i < Math.min(totalPages, page + 3); i++) {
@@ -147,102 +148,148 @@ const FileList = ({
     }
     
     return (
-      <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 sm:px-6 mt-4">
-        <div className="overflow-visible">
-          <p className="text-sm text-gray-700">
-            显示 <span className="font-medium">{page * pageSize + 1}</span> 到 
-            <span className="font-medium">{Math.min((page + 1) * pageSize, total)}</span> 条,
-            共 <span className="font-medium">{total}</span> 条结果
-          </p>
+      <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 sm:px-6 mt-6">
+        <div className="flex-1 flex justify-between sm:hidden">
+          <button 
+            onClick={() => onPageChange(page - 1)}
+            disabled={page === 0}
+            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+          >
+            上一页
+          </button>
+          <button 
+            onClick={() => onPageChange(page + 1)}
+            disabled={page >= totalPages - 1}
+            className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+          >
+            下一页
+          </button>
         </div>
-        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-end">
-          <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-            <button
-              onClick={() => onPageChange(page - 1)}
-              disabled={page === 0}
-              className={`relative inline-flex items-center px-2 py-2 rounded-l-md border text-sm font-medium
-                ${page === 0 
-                  ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
-                }`}
-            >
-              <span className="sr-only">上一页</span>
-              <ChevronLeftIcon className="h-5 w-5" />
-            </button>
-            {pageNumbers.map(number => (
+        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-gray-700">
+              显示 <span className="font-medium">{page * pageSize + 1}</span> 到 
+              <span className="font-medium">{Math.min((page + 1) * pageSize, total)}</span> 条，
+              共 <span className="font-medium">{total}</span> 条结果
+            </p>
+          </div>
+          <div>
+            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
               <button
-                key={number}
-                onClick={() => onPageChange(number)}
-                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium
-                  ${page === number 
-                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' 
-                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                onClick={() => onPageChange(page - 1)}
+                disabled={page === 0}
+                className={`relative inline-flex items-center px-2 py-2 rounded-l-md border text-sm font-medium
+                  ${page === 0 
+                    ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
                   }`}
               >
-                {number + 1}
+                <span className="sr-only">上一页</span>
+                <ChevronLeftIcon className="h-5 w-5" />
               </button>
-            ))}
-            <button
-              onClick={() => onPageChange(page + 1)}
-              disabled={page >= totalPages - 1}
-              className={`relative inline-flex items-center px-2 py-2 rounded-r-md border text-sm font-medium
-                ${page >= totalPages - 1
-                  ? 'border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed'
-                  : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
-                }`}
-            >
-              <span className="sr-only">下一页</span>
-              <ChevronRightIcon className="h-5 w-5" />
-            </button>
-          </nav>
+              {pageNumbers.map(number => (
+                <button
+                  key={number}
+                  onClick={() => onPageChange(number)}
+                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium
+                    ${page === number 
+                      ? 'bg-blue-50 border-blue-500 text-blue-600' 
+                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                    }`}
+                >
+                  {number + 1}
+                </button>
+              ))}
+              {totalPages > 5 && page < totalPages - 3 && (
+                <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                  ...
+                </span>
+              )}
+              {totalPages > 5 && page < totalPages - 3 && (
+                <button
+                  onClick={() => onPageChange(totalPages - 1)}
+                  className="bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+                >
+                  {totalPages}
+                </button>
+              )}
+              <button
+                onClick={() => onPageChange(page + 1)}
+                disabled={page >= totalPages - 1}
+                className={`relative inline-flex items-center px-2 py-2 rounded-r-md border text-sm font-medium
+                  ${page >= totalPages - 1
+                    ? 'border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed'
+                    : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+                  }`}
+              >
+                <span className="sr-only">下一页</span>
+                <ChevronRightIcon className="h-5 w-5" />
+              </button>
+            </nav>
+          </div>
         </div>
       </div>
     );
-  };
-
-  return (
+  };    return (
     <div style={{ overflow: 'visible' }}>
-      <div style={{ overflow: 'visible' }}>
+      {/* 图书表格 */}      <div className="bg-white rounded-2xl border border-gray-200" style={{ overflow: 'visible' }}>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                文档名称
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                处理状态
+                图书信息
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 发布状态
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                处理状态
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 操作
               </th>
             </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          </thead>          <tbody className="bg-white divide-y divide-gray-200">
             {files.map((file) => (
               <tr key={file.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">
-                  <div className="flex items-center space-x-3">
-                    <DocumentIcon className="h-5 w-5 text-gray-400" />
-                    <div className="flex flex-col max-w-[180px] min-w-0">
-                      <div className="font-medium text-gray-900">
+                  <div className="flex items-center">
+                    <img 
+                      src={file.coverUrl || "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=80&h=100&fit=crop"} 
+                      alt={file.fileName} 
+                      className="w-12 h-16 object-cover rounded-lg"
+                      onError={(e) => {
+                        e.target.src = "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=80&h=100&fit=crop";
+                      }}
+                    />
+                    <div className="ml-4">
+                      <h3 className="text-lg font-semibold text-gray-900">
                         <Tooltip content={file.fileName} position="top">
                           <span className="truncate block hover:text-blue-600 transition-colors">
                             {truncateFileName(file.fileName)}
                           </span>
                         </Tooltip>
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {file.fileType}
-                      </div>
+                      </h3>
+                      <p className="text-gray-600">{file.author || "暂无作者"}</p>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                <td className="px-6 py-4">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
+                    ${file.publishStatus === 'PUBLISHED' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-gray-100 text-gray-800'}`}
+                  >
+                    {file.publishStatus === 'PUBLISHED' ? '已发布' : '未发布'}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
                   <div className="flex items-center">
-                    <span className={getStatusClass(file.processing_status)}>
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                      file.processing_status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
+                      file.processing_status === 'FAILED' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
                       {getStatusText(file.processing_status)}
                     </span>
                     {file.processing_status === 'FAILED' && file.error_message && (
@@ -251,57 +298,72 @@ const FileList = ({
                       </Tooltip>
                     )}
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                    ${file.publishStatus === 'PUBLISHED' 
-                      ? 'text-indigo-600 bg-indigo-50 border border-indigo-200' 
-                      : 'text-gray-500 bg-gray-50 border border-gray-200'}`}
-                  >
-                    {file.publishStatus === 'PUBLISHED' ? '已发布' : '未发布'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex items-center justify-start space-x-2">
-                    {file.publishStatus === 'PUBLISHED' ? (
-                      <button
-                        onClick={() => handleUnpublish(file.id)}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        取消发布
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handlePublish(file.id, file.fileName)}
-                        className="text-indigo-600 hover:text-indigo-900"
-                      >
-                        发布
-                      </button>
-                    )}
+                </td>                <td className="px-6 py-4">
+                  <div className="relative">
                     <Popover
                       trigger={
-                        <button className="text-gray-400 hover:text-gray-600">
+                        <button className="text-gray-400 hover:text-gray-600 p-2">
                           <EllipsisVerticalIcon className="h-5 w-5" />
                         </button>
-                      }
-                      content={
+                      }                      content={
                         <div className="py-1">
-                          <button
-                            onClick={() => handleViewChunks(file.id)}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                          >
-                            <ViewfinderCircleIcon className="h-4 w-4 mr-2" />
-                            查看分块
-                          </button>
-                          <button
-                            onClick={() => handleDelete(file.id)}
-                            disabled={deletingId === file.id}
-                            className={`w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center
-                              ${deletingId === file.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          >
-                            <TrashIcon className="h-4 w-4 mr-2" />
-                            <span>{deletingId === file.id ? '删除中...' : '删除'}</span>
-                          </button>
+                          {file.publishStatus === 'PUBLISHED' ? (
+                            // 已发布状态：显示学习、处理详情、取消发布
+                            <>
+                              <button
+                                onClick={() => handleLearn(file.id)}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                              >
+                                <i className="fas fa-graduation-cap mr-2"></i>学习
+                              </button>
+                              <button
+                                onClick={() => handleViewDetails(file.id)}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                              >
+                                <i className="fas fa-info-circle mr-2"></i>处理详情
+                              </button>
+                              <button
+                                onClick={() => handleUnpublish(file.id)}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                              >
+                                <i className="fas fa-times mr-2"></i>取消发布
+                              </button>
+                            </>
+                          ) : (
+                            // 未发布状态：显示发布、处理详情、删除
+                            <>
+                              {file.processing_status === 'COMPLETED' ? (
+                                <button
+                                  onClick={() => handlePublish(file.id, file.fileName)}
+                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                >
+                                  <i className="fas fa-upload mr-2"></i>发布
+                                </button>
+                              ) : (
+                                <button
+                                  disabled
+                                  className="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed flex items-center"
+                                >
+                                  <i className="fas fa-upload mr-2"></i>发布（处理中）
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleViewDetails(file.id)}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                              >
+                                <i className="fas fa-info-circle mr-2"></i>处理详情
+                              </button>
+                              <button
+                                onClick={() => handleDelete(file.id)}
+                                disabled={deletingId === file.id}
+                                className={`w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center
+                                  ${deletingId === file.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              >
+                                <i className="fas fa-trash mr-2"></i>
+                                <span>{deletingId === file.id ? '删除中...' : '删除'}</span>
+                              </button>
+                            </>
+                          )}
                         </div>
                       }
                       position="bottom"
@@ -313,7 +375,9 @@ const FileList = ({
           </tbody>
         </table>
       </div>
-      {total > pageSize && <Pagination />}
+      
+      {/* 始终显示分页器 */}
+      <Pagination />
       
       <ChunkViewModal
         isOpen={showChunkModal}

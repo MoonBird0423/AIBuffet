@@ -42,12 +42,10 @@ function Popover({ trigger, content, position = 'bottom' }) {
         className="cursor-pointer"
       >
         {trigger}
-      </div>
-
-      {isOpen && (
+      </div>      {isOpen && (
         <div
           ref={popoverRef}
-          className={`absolute z-50 min-w-[120px] ${getPositionClasses()}`}
+          className={`absolute z-[60] min-w-[120px] ${getPositionClasses()}`}
         >
           <div className="bg-white rounded-lg shadow-lg border border-gray-200 py-1">
             {content}

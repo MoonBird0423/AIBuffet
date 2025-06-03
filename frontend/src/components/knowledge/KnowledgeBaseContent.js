@@ -14,6 +14,7 @@ function KnowledgeBaseContent({ knowledgeBase }) {
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
+  const [activeTab, setActiveTab] = useState('uploads'); // 新增选项卡状态
 
   // 获取文件列表
   const fetchFiles = async () => {
@@ -41,87 +42,171 @@ function KnowledgeBaseContent({ knowledgeBase }) {
     const chatUrl = `/chat?knowledgeBaseId=${knowledgeBase.id}&knowledgeBaseName=${encodeURIComponent(knowledgeBase.name)}`;
     window.open(chatUrl, '_blank');
   };
-
   if (!knowledgeBase) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-4 text-center text-gray-500">
+      <div className="bg-white rounded-3xl shadow-xl p-8 text-center text-gray-500">
         <p>请选择一个知识库</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* 知识库信息 */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
+    <div className="space-y-6">
+      {/* 知识库标题栏 */}
+      <div className="bg-white rounded-2xl shadow-sm p-4">
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-medium text-gray-900">{knowledgeBase.name}</h2>
+            <h2 className="text-xl font-semibold text-gray-900" id="selectedKnowledgeBaseName">{knowledgeBase.name}</h2>
           </div>
           <button
             onClick={handleChatClick}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none"
+            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all duration-200"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4-4-4z" />
-            </svg>
+            <i className="fas fa-comments mr-2"></i>
             知识库问答
           </button>
         </div>
       </div>
 
-      {/* 上传文档区 */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-medium text-gray-900">我的上传</h2>
-          <div className="flex space-x-2">
-            <button
-              onClick={fetchFiles}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              <ArrowPathIcon className="h-5 w-5 mr-2"/>
-              刷新
-            </button>
-            <button
-              onClick={() => setIsUploadModalOpen(true)}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-              上传图书
-            </button>
+      {/* 统一选项卡容器 */}
+      <div className="bg-white rounded-3xl shadow-xl">
+        {/* 选项卡导航 */}
+        <div className="flex justify-center p-6 pb-0">
+          <div className="bg-gray-100 rounded-2xl p-2">
+            <div className="flex space-x-2">
+              <button 
+                className={`tab-button px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  activeTab === 'uploads' 
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('uploads')}
+              >
+                <i className="fas fa-upload mr-2"></i>
+                我的上传
+              </button>
+              <button 
+                className={`tab-button px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  activeTab === 'collections' 
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('collections')}
+              >
+                <i className="fas fa-heart mr-2"></i>
+                我的收藏
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* 文件列表 */}
-        {error ? (
-          <div className="text-center py-4">
-            <p className="text-red-600">{error}</p>
-            <button
-              onClick={() => setError(null)}
-              className="mt-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              重试
-            </button>
+        {/* 我的上传选项卡 */}
+        {activeTab === 'uploads' && (
+          <div className="tab-content p-8">
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900">我的上传</h2>
+                <p className="text-gray-600 mt-1">管理您上传的图书内容</p>
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={fetchFiles}
+                  className="floating-button bg-gray-100 text-gray-700 px-6 py-3 rounded-2xl font-medium hover:bg-gray-200 transition-all duration-200"
+                >
+                  <i className="fas fa-refresh mr-2"></i>
+                  刷新
+                </button>                <button
+                  onClick={() => setIsUploadModalOpen(true)}
+                  className="floating-button bg-gray-100 text-gray-700 px-6 py-3 rounded-2xl font-medium hover:bg-gray-200 transition-all duration-200"
+                >
+                  <i className="fas fa-plus mr-2"></i>
+                  上传图书
+                </button>
+              </div>
+            </div>
+
+            {/* 文件列表 */}
+            {error ? (
+              <div className="text-center py-8">
+                <p className="text-red-600 mb-4">{error}</p>
+                <button
+                  onClick={() => setError(null)}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+                >
+                  重试
+                </button>
+              </div>
+            ) : (
+              <FileList 
+                files={files}
+                isLoading={isLoading}
+                knowledgeBaseId={knowledgeBase.id}
+                onError={setError}
+                page={page}
+                pageSize={20}
+                total={total}
+                onPageChange={setPage}
+                onRefresh={fetchFiles}
+                onPublish={(file) => {
+                  setSelectedFile(file);
+                  setIsPublishModalOpen(true);
+                }}
+              />
+            )}
           </div>
-        ) : (
-          <FileList 
-            files={files}
-            isLoading={isLoading}
-            knowledgeBaseId={knowledgeBase.id}
-            onError={setError}
-            page={page}
-            pageSize={20}
-            total={total}
-            onPageChange={setPage}
-            onRefresh={fetchFiles}
-            onPublish={(file) => {
-              // 每次点击发布时都是新的发布流程
-              setSelectedFile(file);
-              setIsPublishModalOpen(true);
-            }}
-          />
+        )}
+
+        {/* 我的收藏选项卡 */}
+        {activeTab === 'collections' && (
+          <div className="tab-content p-8">
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">我的收藏</h2>
+              <p className="text-gray-600">您收藏的精选图书</p>
+            </div>
+
+            <div className="space-y-4">
+              {/* 收藏示例数据 - 暂不开发实际功能 */}
+              <div className="flex items-center p-6 bg-gray-50 rounded-2xl hover:shadow-lg transition-all duration-200">
+                <img 
+                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=100&fit=crop" 
+                  alt="刻意练习" 
+                  className="w-16 h-20 object-cover rounded-lg"
+                />
+                <div className="flex-1 ml-6">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-1">刻意练习</h3>
+                  <p className="text-gray-600 mb-2">安德斯·艾利克森</p>
+                </div>
+                <div className="flex space-x-3">
+                  <button className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-medium hover:bg-blue-200 transition-all duration-200">
+                    学习
+                  </button>
+                  <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200">
+                    取消收藏
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center p-6 bg-gray-50 rounded-2xl hover:shadow-lg transition-all duration-200">
+                <img 
+                  src="https://images.unsplash.com/photo-1516414447565-b14be0adf13e?w=80&h=100&fit=crop" 
+                  alt="非暴力沟通" 
+                  className="w-16 h-20 object-cover rounded-lg"
+                />
+                <div className="flex-1 ml-6">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-1">非暴力沟通</h3>
+                  <p className="text-gray-600 mb-2">马歇尔·卢森堡</p>
+                </div>
+                <div className="flex space-x-3">
+                  <button className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-medium hover:bg-blue-200 transition-all duration-200">
+                    学习
+                  </button>
+                  <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200">
+                    取消收藏
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 

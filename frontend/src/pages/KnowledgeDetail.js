@@ -41,12 +41,18 @@ function KnowledgeDetail() {
     }
     
     loadKnowledgeBase();
-  }, [id, isAuthenticated, navigate]);
-
-  const loadDocuments = useCallback(async (page = 0) => {
+  }, [id, isAuthenticated, navigate]);  const loadDocuments = useCallback(async (page = 0) => {
     try {
       setDocumentsLoading(true);
-      const response = await getDocuments(id, page, 20);
+      const response = await getDocuments(page, 20, { knowledgeBaseId: id });
+      console.log('KnowledgeDetail: API Response:', response);
+      console.log('KnowledgeDetail: Response data:', response.data);
+      console.log('KnowledgeDetail: Response data type:', typeof response.data);
+      console.log('KnowledgeDetail: Content:', response.data?.content);
+      console.log('KnowledgeDetail: Content length:', response.data?.content?.length);
+      console.log('KnowledgeDetail: TotalElements:', response.data?.totalElements);
+      console.log('KnowledgeDetail: TotalPages:', response.data?.totalPages);
+      
       setDocuments(response.data.content);
       setTotalPages(response.data.totalPages);
       setTotalElements(response.data.totalElements);
@@ -58,10 +64,13 @@ function KnowledgeDetail() {
       setDocumentsLoading(false);
     }
   }, [id]);
-
   useEffect(() => {
     loadDocuments(currentPage);
   }, [currentPage, loadDocuments]);
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+  };
 
   const loadKnowledgeBase = async () => {
     try {
@@ -216,16 +225,15 @@ function KnowledgeDetail() {
             />
           </div>
 
-          {/* 文档列表 */}
-          <FileList 
+          {/* 文档列表 */}          <FileList 
             files={documents}
             isLoading={documentsLoading}
-            onDelete={handleDocumentDelete}
+            onRefresh={() => loadDocuments(currentPage)}
             knowledgeBaseId={id}
             page={currentPage}
             total={totalElements}
             pageSize={20}
-            onPageChange={setCurrentPage}
+            onPageChange={handlePageChange}
           />
         </div>
       </main>

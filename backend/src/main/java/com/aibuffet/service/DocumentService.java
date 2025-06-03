@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 public interface DocumentService {
     /**
@@ -32,6 +33,7 @@ public interface DocumentService {
      * @param keyword 搜索关键词，可选，用于搜索文档名称
      * @param category 文档分类，可选
      * @param page 页码，从0开始
+          * @param page 页码，从0开始
      * @param size 每页大小
      * @return 分页的文档列表
      */
@@ -43,7 +45,12 @@ public interface DocumentService {
     void retryProcessing(Long docId, Long userId);
 
     /**
-     * 获取文档的分块列表
+     * 获取文档的分块列表（分页）
+     */
+    Map<String, Object> getDocumentChunks(Long docId, Long userId, int page, int size);
+
+    /**
+     * 获取文档的分块列表（全部）
      */
     List<DocChunk> getDocumentChunks(Long docId, Long userId);
 

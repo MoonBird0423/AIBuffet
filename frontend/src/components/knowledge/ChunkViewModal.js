@@ -1,28 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { getDocumentChunks } from '../../services/api';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { ToastManager } from '../common/Toast';
 
 const ChunkViewModal = ({ isOpen, onClose, fileId }) => {
   const [chunks, setChunks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
 
   useEffect(() => {
     if (isOpen && fileId) {
-      loadChunks();
+      setCurrentPage(0);
+      loadChunks(0);
     } else {
       setChunks([]);
+      setCurrentPage(0);
+      setTotalPages(0);
+      setTotalElements(0);
     }
   }, [isOpen, fileId]);
 
-  const loadChunks = async () => {
+  const loadChunks = async (page = currentPage) => {
     try {
-      const response = await getDocumentChunks(fileId);
-      setChunks(response.data);
+      setLoading(true);
+      const response = await getDocumentChunks(fileId, page, pageSize);
+      setChunks(response.data.data || []);
+      setCurrentPage(response.data.page || 0);
+      setTotalPages(response.data.totalPages || 0);
+      setTotalElements(response.data.totalElements || 0);
     } catch (error) {
       ToastManager.error('加载分块数据失败：' + (error.response?.data?.message || '系统错误'));
+      setChunks([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePageChange = (page) => {
+    if (page >= 0 && page < totalPages) {
+      setCurrentPage(page);
+      loadChunks(page);
     }
   };
 
@@ -56,6 +76,64 @@ const ChunkViewModal = ({ isOpen, onClose, fileId }) => {
     }
   };
 
+  const Pagination = ({ className = '' }) => {
+    const renderPageNumbers = () => {
+      const pages = [];
+      const maxVisiblePages = 5;
+      let startPage = Math.max(0, currentPage - Math.floor(maxVisiblePages / 2));
+      let endPage = Math.min(totalPages - 1, startPage + maxVisiblePages - 1);
+      
+      if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(0, endPage - maxVisiblePages + 1);
+      }
+
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(
+          <button
+            key={i}
+            onClick={() => handlePageChange(i)}
+            className={`px-3 py-1 text-sm border rounded-md mx-1 ${
+              i === currentPage
+                ? 'bg-blue-500 text-white border-blue-500'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {i + 1}
+          </button>
+        );
+      }
+      return pages;
+    };
+
+    if (totalPages <= 1) return null;
+
+    return (
+      <div className={`flex items-center justify-center space-x-2 ${className}`}>
+        <button
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 0}
+          className="p-1 text-gray-500 hover:text-gray-700 disabled:text-gray-300 disabled:cursor-not-allowed"
+        >
+          <ChevronLeftIcon className="h-5 w-5" />
+        </button>
+        
+        {renderPageNumbers()}
+        
+        <button
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage >= totalPages - 1}
+          className="p-1 text-gray-500 hover:text-gray-700 disabled:text-gray-300 disabled:cursor-not-allowed"
+        >
+          <ChevronRightIcon className="h-5 w-5" />
+        </button>
+        
+        <span className="text-sm text-gray-500 ml-4">
+          共 {totalElements} 条，第 {currentPage + 1} 页，共 {totalPages} 页
+        </span>
+      </div>
+    );
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -70,6 +148,9 @@ const ChunkViewModal = ({ isOpen, onClose, fileId }) => {
             <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
+
+        {/* 顶部分页器 */}
+        <Pagination className="mb-4" />
 
         <div className="flex-1 overflow-y-auto">
           {loading ? (
@@ -110,6 +191,9 @@ const ChunkViewModal = ({ isOpen, onClose, fileId }) => {
             </div>
           )}
         </div>
+
+        {/* 底部分页器 */}
+        <Pagination className="mt-4" />
       </div>
     </div>
   );

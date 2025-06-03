@@ -205,20 +205,20 @@ public class DocumentController {
             logger.error("重试文档处理失败，系统错误: ", e);
             return ApiResponse.error(ErrorCode.SYSTEM_ERROR, "系统错误，请稍后重试");
         }
-    }
-
-    @GetMapping("/{id}/chunks")
-    public ApiResponse<List<DocChunk>> getDocumentChunks(
+    }    @GetMapping("/{id}/chunks")
+    public ApiResponse<Map<String, Object>> getDocumentChunks(
             @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
             @AuthenticationPrincipal User user) {
         try {
-            List<DocChunk> chunks = documentService.getDocumentChunks(id, user.getId());
-            return ApiResponse.success(chunks);
+            Map<String, Object> result = documentService.getDocumentChunks(id, user.getId(), page, size);
+            return ApiResponse.success(result);
         } catch (ResourceNotFoundException e) {
-            logger.warn("获取文档分块失败，文档不存在: docId={}, userId={}", id, user.getId());
+            logger.warn("获取文档分块失败，文档不存在: docId={}, userId={}, page={}, size={}", id, user.getId(), page, size);
             return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
         } catch (IllegalArgumentException e) {
-            logger.warn("获取文档分块失败，无权限: docId={}, userId={}", id, user.getId());
+            logger.warn("获取文档分块失败，无权限: docId={}, userId={}, page={}, size={}", id, user.getId(), page, size);
             return ApiResponse.error(ErrorCode.PERMISSION_DENIED, e.getMessage());
         } catch (Exception e) {
             logger.error("获取文档分块失败，系统错误: ", e);
