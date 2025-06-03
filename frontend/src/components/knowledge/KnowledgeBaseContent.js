@@ -24,7 +24,7 @@ function KnowledgeBaseContent({ knowledgeBase }) {
     try {
       const response = await getDocuments(page, 20, { knowledgeBaseId: knowledgeBase.id });
       setFiles(response.data.content);
-      setTotal(response.data.total);
+      setTotal(response.data.totalElements);
     } catch (error) {
       setError(error.message);
     } finally {
