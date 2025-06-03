@@ -6,101 +6,119 @@ function Home() {
   const slides = [
     {
       id: 0,
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=600&fit=crop&crop=face",
+      image: "/语音解读.png",
       title: "语音解读",
       description: "深度语音解读体验"
     },
     {
       id: 1,
-      image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&h=600&fit=crop",
+      image: "/知识脑图.png",
       title: "知识脑图",
       description: "系统化知识结构"
     },
     {
       id: 2,
-      image: "https://images.unsplash.com/photo-1606868306217-dbf5046868d2?w=800&h=600&fit=crop",
+      image: "/知识测试.png",
       title: "知识测试",
       description: "智能测试验证"
     },
     {
       id: 3,
-      image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop",
+      image: "/知识问答.png",
       title: "知识问答",
       description: "互动问答体验"
     }
   ];
-
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 2000);
+    }, 4000);
     return () => clearInterval(interval);
   }, [slides.length]);
 
   const showSlide = (index) => {
     setCurrentSlide(index);
-  };
-
-  return (    <div className="font-sf">
-      {/* Hero Section */}      <section className="min-h-screen flex items-center justify-center" style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+  };  return (    <div className="font-sf">      {/* Hero Section */}
+      <section className="min-h-screen py-32 pb-32 flex flex-col items-center justify-center relative overflow-hidden" style={{
+        background: 'linear-gradient(180deg, #667eea 0%, #764ba2 50%, #667eea 100%)',
+        minHeight: '120vh'
       }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-5 gap-12 items-center">
-            {/* Left Content */}
-            <div className="lg:col-span-2 text-center lg:text-left">
-              <h1 className="text-5xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-                问书答意<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-pink-400">懂你所惑</span>
-              </h1>
-              <p className="text-xl lg:text-2xl text-white/90 mb-8 leading-relaxed">
-                通过 DocuChat 获取深度语音文字解读、知识脑图、知识测试、知识问答，跨入高效阅读时代。
-              </p>
-              <button className="bg-white text-blue-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg">
-                <i className="fas fa-book-open mr-2"></i>
-                <Link to="/library" className="text-blue-600">浏览图书馆</Link>
-              </button>
-            </div>
+        {/* Floating Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
 
-            {/* Right Carousel */}
-            <div className="lg:col-span-3 relative">
-              <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20">
-                <div className="relative h-[500px] rounded-2xl overflow-hidden">
-                  {slides.map((slide, index) => (
-                    <div 
-                      key={slide.id}
-                      className={`absolute inset-0 transition-opacity duration-500 ${
-                        index === currentSlide ? 'opacity-100' : 'opacity-0'
-                      }`}
-                    >
+        <div className="relative z-10 w-full mx-auto px-4 sm:px-6 lg:px-8 text-center">          {/* Main Title */}
+          <div className="mb-8 mt-8 max-w-6xl mx-auto">
+            <h1 className="text-5xl lg:text-7xl font-bold text-white mb-4 leading-tight tracking-tight">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-300">
+                问书答意，懂你所惑
+              </span>
+            </h1>
+          </div>
+
+          {/* CTA Button */}
+          <div className="mb-12 max-w-6xl mx-auto">
+            <Link to="/library">
+              <button className="group relative bg-white/10 backdrop-blur-xl text-white px-12 py-6 rounded-full text-xl font-semibold border border-white/20 hover:bg-white/20 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-white/20">
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 rounded-full transform -skew-x-12 group-hover:animate-pulse"></div>
+                <span className="relative flex items-center justify-center">
+                  <i className="fas fa-book-open mr-3 text-yellow-300"></i>
+                  浏览图书馆
+                </span>
+              </button>
+            </Link>
+          </div> 
+                   
+          {/* Subtitle */}
+          <div className="mb-32 max-w-6xl mx-auto">
+            <p className="text-xl lg:text-2xl text-white/90 leading-relaxed max-w-4xl mx-auto font-light">
+              获取图书深度语音解读、知识脑图、知识测试、知识问答，跨入高效阅读时代。
+            </p>
+          </div>
+
+          {/* Product Interface Carousel */}
+          <div className="relative max-w-7xl mx-auto mb-24 flex items-center px-8">
+            {/* Left Arrow */}
+            <button 
+              onClick={() => setCurrentSlide(currentSlide === 0 ? slides.length - 1 : currentSlide - 1)}
+              className="flex-shrink-0 mr-10 bg-white/10 backdrop-blur-xl text-white p-4 rounded-full border border-white/20 hover:bg-white/20 transition-all duration-300 shadow-xl hover:shadow-white/20 hover:scale-110 z-20"
+            >
+              <i className="fas fa-chevron-left text-xl"></i>
+            </button>
+
+            {/* Image Container */}
+            <div className="relative min-h-[450px] flex items-center justify-center flex-1">{slides.map((slide, index) => (
+                <div 
+                  key={slide.id}
+                  className={`absolute inset-0 transition-all duration-700 ease-in-out ${
+                    index === currentSlide ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+                  }`}
+                >                  {/* Direct Image with Enhanced Effects */}
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <div className="relative w-full max-w-5xl">
                       <img 
                         src={slide.image}
                         alt={slide.title}
-                        className="w-full h-full object-cover rounded-2xl"
+                        className="w-full h-auto object-contain rounded-3xl shadow-2xl"
+                        style={{ 
+                          filter: 'drop-shadow(0 30px 50px rgba(0, 0, 0, 0.25)) drop-shadow(0 0 35px rgba(255, 255, 255, 0.12))'
+                        }}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-2xl"></div>
-                      <div className="absolute bottom-6 left-6">
-                        <h3 className="text-white text-2xl font-bold">{slide.title}</h3>
-                        <p className="text-white/80">{slide.description}</p>
-                      </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
-
-                {/* Carousel Controls */}
-                <div className="flex justify-center space-x-3 mt-6">
-                  {slides.map((_, index) => (
-                    <button 
-                      key={index}
-                      className={`w-3 h-3 rounded-full bg-white transition-opacity ${
-                        index === currentSlide ? 'opacity-100' : 'opacity-30'
-                      }`}
-                      onClick={() => showSlide(index)}
-                    />
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
+
+            {/* Right Arrow */}
+            <button 
+              onClick={() => setCurrentSlide((currentSlide + 1) % slides.length)}
+              className="flex-shrink-0 ml-10 bg-white/10 backdrop-blur-xl text-white p-4 rounded-full border border-white/20 hover:bg-white/20 transition-all duration-300 shadow-xl hover:shadow-white/20 hover:scale-110 z-20"
+            >
+              <i className="fas fa-chevron-right text-xl"></i>
+            </button>
           </div>
         </div>
       </section>
