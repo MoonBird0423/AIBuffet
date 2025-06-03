@@ -21,7 +21,7 @@ import java.util.Optional;
 public class VerificationCodeService {
     private final VerificationCodeRepository verificationCodeRepository;
     private final CaptchaRecordRepository captchaRecordRepository;
-    private static final int SMS_RATE_LIMIT_PER_MINUTE = 1;
+    private static final int SMS_RATE_LIMIT_PER_MINUTE = 3; // 每分钟最多发送3条验证码
     private final Random random = new Random();
 
     // 创建阿里云短信客户端
@@ -61,8 +61,8 @@ public class VerificationCodeService {
         long recentCount = verificationCodeRepository.countRecentCodes(phone, oneMinuteAgo);
         System.out.println("最近一分钟发送次数: " + recentCount);
         if (recentCount >= SMS_RATE_LIMIT_PER_MINUTE) {
-            System.out.println("发送频率超限");
-            throw new RuntimeException(ErrorCode.SMS_RATE_LIMIT.getMessage());
+            System.out.println("发送频率超限 - 最近一分钟发送次数: " + recentCount);
+            throw new RuntimeException("短信发送过于频繁，每分钟最多发送" + SMS_RATE_LIMIT_PER_MINUTE + "条，请稍后重试");
         }
 
         // 生成验证码
@@ -110,18 +110,43 @@ public class VerificationCodeService {
 
     // 验证验证码
     public boolean verifyCode(String phone, String code) {
+        System.out.println("开始验证短信验证码 - phone: " + phone);
+        
         if (phone == null || code == null) {
+            System.out.println("验证失败：手机号或验证码为空");
             return false;
         }
 
+        LocalDateTime now = LocalDateTime.now();
+        System.out.println("当前时间: " + now);
+        
         return verificationCodeRepository.findValidCode(
             phone, 
             code, 
-            LocalDateTime.now()
+            now
         ).map(record -> {
+            System.out.println("找到验证码记录:");
+            System.out.println("- 创建时间: " + record.getCreatedAt());
+            System.out.println("- 过期时间: " + record.getExpiredAt());
+            System.out.println("- 当前状态: " + (record.getStatus() == 0 ? "未使用" : "已使用"));
+            
+            if (record.getStatus() != 0) {
+                System.out.println("验证失败：验证码已被使用");
+                return false;
+            }
+            
+            if (now.isAfter(record.getExpiredAt())) {
+                System.out.println("验证失败：验证码已过期");
+                return false;
+            }
+            
+            System.out.println("验证通过，标记验证码为已使用");
             record.setStatus(1); // 标记为已使用
             verificationCodeRepository.save(record);
             return true;
-        }).orElse(false);
+        }).orElseGet(() -> {
+            System.out.println("验证失败：未找到匹配的有效验证码记录");
+            return false;
+        });
     }
 }

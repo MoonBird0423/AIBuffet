@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -24,6 +23,9 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
@@ -73,33 +75,32 @@ public class AuthenticationFilter extends OncePerRequestFilter {
                 logger.debug("Removed Bearer prefix, token: {}", token);
             }
             
-            // 确保token格式正确
-            String[] parts = token.split("_");
-            if (parts.length != 2) {
-                logger.warn("Invalid token format, expected: phone_timestamp, got: {}", token);
+            // 验证token
+            if (!jwtUtil.validateToken(token)) {
+                logger.warn("Token validation failed");
                 return false;
             }
-            
-            // 从token中提取手机号
-            String phone = parts[0];
-            String timestamp = parts[1];  // 可以用于未来的token过期检查
-            
-            logger.debug("Extracted phone: {}, timestamp: {}", phone, timestamp);
-            
-            User user = userRepository.findByPhone(phone).orElse(null);
 
-            if (user != null) {
+            // 从token中获取用户信息
+            String phone = jwtUtil.getPhoneFromToken(token);
+            Long userId = jwtUtil.getUserIdFromToken(token);
+            
+            logger.debug("Extracted phone: {}, userId: {}", phone, userId);
+            
+            User user = userRepository.findById(userId).orElse(null);
+
+            if (user != null && user.getPhone().equals(phone)) {
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                    user, // 直接使用User对象作为Principal
+                    user,
                     null,
                     user.getAuthorities()
                 );
                 SecurityContextHolder.getContext().setAuthentication(auth);
-                logger.debug("Successfully authenticated user with phone: {}, userId: {}", phone, user.getId());
+                logger.debug("Successfully authenticated user with phone: {}, userId: {}", phone, userId);
                 return true;
             }
             
-            logger.warn("User not found for phone: {}", phone);
+            logger.warn("User not found or phone number mismatch for userId: {}, phone: {}", userId, phone);
             SecurityContextHolder.clearContext();
             return false;
         } catch (Exception e) {

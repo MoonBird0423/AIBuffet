@@ -5,6 +5,7 @@ import com.aibuffet.common.ErrorCode;
 import com.aibuffet.model.User;
 import com.aibuffet.repository.UserRepository;
 import com.aibuffet.service.UserService;
+import com.aibuffet.security.JwtUtil;
 import com.aibuffet.service.VerificationCodeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,29 +26,42 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private VerificationCodeService verificationCodeService;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
     @Override
     @Transactional
     public ApiResponse loginWithPhone(String phone, String code) {
+        System.out.println("开始手机登录流程 - phone: " + phone);
+        
         // 验证验证码
+        System.out.println("开始验证短信验证码...");
         if (!verificationCodeService.verifyCode(phone, code)) {
+            System.out.println("短信验证码验证失败");
             return ApiResponse.error(ErrorCode.SMS_CODE_INVALID);
         }
+        System.out.println("短信验证码验证通过");
 
         try {
-            // 查找或创建用户
+            System.out.println("开始查找用户信息...");
             User user = userRepository.findByPhone(phone)
                     .orElseGet(() -> {
+                        System.out.println("用户不存在，开始创建新用户");
                         User newUser = new User();
                         newUser.setPhone(phone);
-                        newUser.setUsername("用户" + phone.substring(7)); // 使用手机号后4位作为默认用户名
+                        String defaultUsername = "用户" + phone.substring(7);
+                        newUser.setUsername(defaultUsername);
+                        System.out.println("创建新用户 - 默认用户名: " + defaultUsername);
                         return userRepository.save(newUser);
                     });
+            System.out.println("用户信息获取成功 - userId: " + user.getId());
 
             // 更新最后登录时间
+            System.out.println("更新用户最后登录时间");
             user.setLastLoginTime(LocalDateTime.now());
             userRepository.save(user);
 
-            // 设置认证信息
+            System.out.println("设置用户认证信息");
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                 user,
                 null,
@@ -55,10 +69,12 @@ public class UserServiceImpl implements UserService {
             );
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            // 生成token（使用手机号而不是用户名）
-            String token = phone + "_" + System.currentTimeMillis();
+            // 使用JwtUtil生成token
+            System.out.println("生成JWT Token");
+            String token = jwtUtil.generateToken(phone, user.getId());
+            System.out.println("JWT Token生成成功");
 
-            // 返回用户信息
+            System.out.println("准备返回用户信息");
             Map<String, Object> data = new HashMap<>();
             data.put("userId", user.getId());
             data.put("username", user.getUserDisplayName());
@@ -66,8 +82,11 @@ public class UserServiceImpl implements UserService {
             data.put("avatar", user.getAvatar());
             data.put("token", token);
 
+            System.out.println("登录成功 - userId: " + user.getId());
             return ApiResponse.success(data);
         } catch (Exception e) {
+            System.out.println("登录过程发生异常: " + e.getMessage());
+            e.printStackTrace();
             return ApiResponse.error(ErrorCode.LOGIN_FAILED);
         }
     }

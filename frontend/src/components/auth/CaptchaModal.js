@@ -71,7 +71,13 @@ function CaptchaModal({ isOpen, onClose, onSuccess, phone }) {
 
           } catch (smsError) {
             // 短信发送失败
-            ToastManager.error(smsError.message || '短信发送失败');
+            const errorMessage = smsError.message;
+            ToastManager.error(errorMessage || '短信发送失败，请稍后重试');
+            // 如果是频率限制错误，清空验证码并刷新图片
+            if (errorMessage && errorMessage.includes('短信发送过于频繁')) {
+              setCaptchaCode('');
+              loadCaptcha();
+            }
           }
         } catch (captchaError) {
           // 图形验证码验证失败
