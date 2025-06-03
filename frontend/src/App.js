@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Library from './pages/Library';
 import MyKnowledge from './pages/MyKnowledge';
@@ -9,6 +9,7 @@ import BookDetails from './pages/BookDetails';
 import MainLayout from './components/layout/MainLayout';
 import ToastContainer from './components/common/Toast';
 import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // 导入Tailwind CSS样式
 import './index.css';
@@ -18,17 +19,33 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          {/* 不使用MainLayout的路由 */}
-          <Route path="/chat" element={<Chat />} />
+          {/* 登录页面 */}
           <Route path="/login" element={<Login />} />
           
-          {/* 使用MainLayout的路由 */}
+          {/* 需要登录的独立页面 */}
+          <Route path="/chat" element={
+            <ProtectedRoute>
+              <Chat />
+            </ProtectedRoute>
+          } />
+          
+          {/* MainLayout下的路由 */}
           <Route element={<MainLayout />}>
+            {/* 公开页面 */}
             <Route path="/" element={<Home />} />
             <Route path="/library" element={<Library />} />
             <Route path="/book/:id" element={<BookDetails />} />
-            <Route path="/my-knowledge" element={<MyKnowledge />} />
+            
+            {/* 需要登录的页面 */}
+            <Route path="/my-knowledge" element={
+              <ProtectedRoute>
+                <MyKnowledge />
+              </ProtectedRoute>
+            } />
           </Route>
+
+          {/* 404重定向 */}
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
         <ToastContainer />
       </Router>
