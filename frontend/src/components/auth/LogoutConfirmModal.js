@@ -1,8 +1,16 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 
 function LogoutConfirmModal({ isOpen, onClose, onConfirm, loading }) {
+  const navigate = useNavigate();
+
   if (!isOpen) return null;
+
+  const handleConfirm = async () => {
+    await onConfirm();
+    navigate('/login');
+  };
 
   return createPortal(
     <div className="fixed inset-0 z-50">
@@ -19,7 +27,7 @@ function LogoutConfirmModal({ isOpen, onClose, onConfirm, loading }) {
             取消
           </button>
           <button
-            onClick={onConfirm}
+            onClick={handleConfirm}
             disabled={loading}
             className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
           >
