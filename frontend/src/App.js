@@ -18,16 +18,16 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Chat路由独立，不使用MainLayout */}
+          {/* 不使用MainLayout的路由 */}
           <Route path="/chat" element={<Chat />} />
+          <Route path="/login" element={<Login />} />
           
-          {/* 其他路由使用MainLayout */}
+          {/* 使用MainLayout的路由 */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/library" element={<Library />} />
             <Route path="/book/:id" element={<BookDetails />} />
             <Route path="/my-knowledge" element={<MyKnowledge />} />
-            <Route path="/login" element={<Login />} />
           </Route>
         </Routes>
         <ToastContainer />
