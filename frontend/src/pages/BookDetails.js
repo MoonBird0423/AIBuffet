@@ -171,33 +171,16 @@ function BookDetails() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <style jsx>{`
-        .gradient-bg {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .glass-effect {
-          backdrop-filter: blur(20px);
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        .floating-button {
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .floating-button:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-        }
-      `}</style>
 
       {/* 顶部渐变背景区域 */}
-      <div className="gradient-bg pb-6">
+      <div className="bg-gradient-to-tr from-[#667eea] to-[#764ba2] pb-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* 按钮区域 */}
           <div className="pt-20 pb-8">
             <div className="flex justify-between items-center">
               <button
                 onClick={handleBack}
-                className="inline-flex items-center px-6 py-3 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full text-white hover:bg-white/30 transition-all duration-200"
+                className="inline-flex items-center px-6 py-3 backdrop-blur-xl bg-white/10 border border-white/20 rounded-full text-white hover:bg-white/30 transition-all duration-200"
               >
                 <i className="fas fa-arrow-left mr-2"></i>
                 返回图书馆
@@ -205,12 +188,12 @@ function BookDetails() {
               <div className="flex space-x-4">
                 <button
                   onClick={() => setShowFavoriteModal(true)}
-                  className="floating-button px-6 py-3 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full text-white hover:bg-white/30 transition-all duration-200"
+                  className="transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/15 px-6 py-3 backdrop-blur-xl bg-white/10 border border-white/20 rounded-full text-white hover:bg-white/30"
                 >
                   <i className="fas fa-heart mr-2"></i>
                   收藏到知识库
                 </button>
-                <button className="floating-button px-6 py-3 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full text-white hover:bg-white/30 transition-all duration-200">
+                <button className="transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/15 px-6 py-3 backdrop-blur-xl bg-white/10 border border-white/20 rounded-full text-white hover:bg-white/30">
                   <i className="fas fa-share mr-2"></i>
                   分享
                 </button>

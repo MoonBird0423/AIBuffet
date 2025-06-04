@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { FaMobile, FaLock } from 'react-icons/fa';
 import CaptchaModal from './CaptchaModal';
 import authApi from '../../services/auth';
+import { ToastManager } from '../common/Toast';
 
 function LoginForm() {
   const [phone, setPhone] = useState('');
@@ -63,10 +64,12 @@ function LoginForm() {
       // 登录成功，直接使用API返回的完整用户数据
       login(userData);
 
+      // 显示登录成功提示
+      ToastManager.success('登录成功');
+
       // 如果是新用户，显示欢迎消息
       if (userData.newUser) {
-        // 使用toast或alert显示欢迎消息
-        alert(`欢迎加入AI自助餐！您的默认用户名为：${userData.username}`);
+        ToastManager.info(`欢迎加入AI自助餐！您的默认用户名为：${userData.username}`);
       }
       
       // 智能跳转逻辑：检查是否有来源页面，否则跳转到首页

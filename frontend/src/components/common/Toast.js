@@ -94,7 +94,7 @@ const ToastContainer = () => {
     <div
       aria-live="polite"
       aria-atomic="true"
-      className="fixed top-4 right-4 z-50 flex flex-col items-end space-y-2"
+      className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center space-y-2"
     >
       {toasts.map(toast => (
         <ToastMessage
