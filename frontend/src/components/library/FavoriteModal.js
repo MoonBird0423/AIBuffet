@@ -40,12 +40,23 @@ const FavoriteModal = ({ bookId, isOpen, onClose }) => {
 
     setIsLoading(true);
     try {
-      await favoriteBook(bookId, selectedKnowledgeBase);
+      const result = await favoriteBook(bookId, selectedKnowledgeBase);
+      
+      // 检查API返回的状态码
+      if (result.code !== 200) {
+        ToastManager.warning(result.message || '收藏失败，请重试', 3000);
+        return;
+      }
+
       ToastManager.success('收藏成功');
       onClose();
     } catch (error) {
-      console.error('收藏失败:', error);
-      ToastManager.warning(error.response?.data?.message || '收藏失败，请重试');
+      console.error('[FavoriteModal] 收藏失败:', {
+        error,
+        message: error.message,
+        stack: error.stack
+      });
+      ToastManager.warning(error.message, 3000);
     } finally {
       setIsLoading(false);
     }

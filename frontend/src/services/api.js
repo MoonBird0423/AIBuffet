@@ -36,11 +36,8 @@ apiClient.interceptors.response.use(null, async (error) => {
     if (config.retryCount < config.retry) {
       config.retryCount += 1;
       
-      // 延迟重试
+      // 延迟重试并继续
       await new Promise(resolve => setTimeout(resolve, config.retryDelay));
-      console.log(`重试请求 (${config.retryCount}/${config.retry}):`, config.url);
-      
-      // 重试请求
       return apiClient(config);
     }
   }
@@ -50,9 +47,6 @@ apiClient.interceptors.response.use(null, async (error) => {
 
 // 添加请求拦截器来处理认证
 apiClient.interceptors.request.use((config) => {
-  console.log('Request Interceptor: URL', config.url);
-  console.log('Request Interceptor: Method', config.method);
-  
   // 保存原有的Content-Type
   const originalContentType = config.headers['Content-Type'];
 
@@ -60,29 +54,16 @@ apiClient.interceptors.request.use((config) => {
   config.headers = config.headers || {};
 
   // 从localStorage获取认证信息
-  console.log('Request Interceptor: Getting auth from localStorage');
   const authUser = localStorage.getItem('auth_user');
   if (authUser) {
     try {
-      console.log('Request Interceptor: Auth data found in localStorage');
       const user = JSON.parse(authUser);
-      console.log('Request Interceptor: Parsed user data:', { 
-        ...user, 
-        token: user.token ? '***' : undefined 
-      });
-      
       if (user.token) {
-        // 设置认证头
-        console.log('Request Interceptor: Setting Authorization header');
         config.headers['Authorization'] = `Bearer ${user.token}`;
-      } else {
-        console.log('Request Interceptor: No token found in user data');
       }
     } catch (e) {
       console.error('Request Interceptor: Failed to parse auth data:', e);
     }
-  } else {
-    console.log('Request Interceptor: No auth data in localStorage');
   }
 
   // 如果是文件上传，设置正确的Content-Type，但保留其他headers
@@ -155,13 +136,10 @@ apiClient.interceptors.response.use(
   response => response,
   async error => {
     if (isAuthenticationError(error)) {
-      // 记录当前token
       const authUser = localStorage.getItem('auth_user');
       if (authUser) {
-        console.log('检测到认证错误，准备清除用户状态');
         // 确保用户不在登录页面才清除状态和跳转
         if (!window.location.pathname.includes('/login')) {
-          console.log('清除用户状态并跳转登录页');
           localStorage.removeItem('auth_user');
           window.location.href = '/login';
         }
@@ -225,7 +203,6 @@ export const updateChatSession = async (sessionId, messages, retryCount = 3) => 
         console.error('Error updating chat session:', error);
         throw error;
       }
-      console.log(`Retrying update chat session (${i + 1}/${retryCount})...`);
       // 等待后重试，每次等待时间递增
       await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
     }
@@ -326,7 +303,6 @@ export const invokeModel = ({ messages, onMessage, onError, onFinish, signal }) 
           if (!line.trim()) continue;
           
           if (line.trim() === 'data: [DONE]') {
-            console.log('[SSE Debug] Stream completion signal received');
             await markAsCompleted();
             return;
           }
@@ -354,7 +330,6 @@ export const invokeModel = ({ messages, onMessage, onError, onFinish, signal }) 
       try {
         const { value, done } = await reader.read();
         if (done) {
-          console.log('[SSE Debug] Stream naturally completed');
           await markAsCompleted();
           return;
         }
@@ -508,14 +483,27 @@ export const favoriteBook = async (documentId, knowledgeBaseId) => {
     const response = await apiClient.post(`/documents/${documentId}/favorite`, null, {
       params: { knowledgeBaseId }
     });
+
+    // 检查业务状态码
+    if (response.data.code !== 200) {
+      throw new Error(response.data.message || '收藏失败，请重试');
+    }
+
     return response.data;
   } catch (error) {
-    console.error('收藏图书失败:', {
-      error,
-      errorMessage: error.message,
-      errorResponse: error.response?.data,
-      errorStack: error.stack
+    console.error('[API:favoriteBook] 收藏失败:', {
+      name: error.name,
+      message: error.message,
+      responseStatus: error.response?.status,
+      responseData: error.response?.data
     });
+
+    // 如果是HTTP错误并且有响应数据
+    if (error.response?.data) {
+      throw new Error(error.response.data.message || '收藏失败，请重试');
+    }
+
+    // 其他错误（网络错误等）
     throw error;
   }
 };
@@ -586,10 +574,7 @@ export const uploadDocuments = async (files, knowledgeBaseId, onProgress) => {
       }
     });
 
-    // 返回上传结果
-    console.log('Upload API response:', response.data);
-    
-    // 正确提取 API 返回的数据结构
+    // 提取 API 返回的数据结构
     const responseData = response.data.data || {};
     return {
       results: responseData.results || [],

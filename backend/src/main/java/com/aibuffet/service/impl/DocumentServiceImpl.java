@@ -6,6 +6,7 @@ import com.aibuffet.model.*;
 import com.aibuffet.repository.DocFileRepository;
 import com.aibuffet.repository.DocChunkRepository;
 import com.aibuffet.repository.KnowledgeBaseFileRepository;
+import com.aibuffet.repository.KnowledgeBaseRepository;
 import com.aibuffet.service.*;
 import com.aibuffet.service.processing.*;
 import com.aibuffet.service.processing.stages.*;
@@ -45,6 +46,9 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Autowired
     private KnowledgeBaseFileRepository knowledgeBaseFileRepository;
+
+    @Autowired
+    private KnowledgeBaseRepository knowledgeBaseRepository;
 
     @Autowired
     private OSSService ossService;
@@ -630,12 +634,28 @@ public class DocumentServiceImpl implements DocumentService {
         // 检查文档是否存在且为激活状态
         DocFile docFile = docFileRepository.findByIdAndStatus(docId, DocFile.Status.ACTIVE)
                 .orElseThrow(() -> {
-                    logger.warn("文档不存在或已删除: docId={}", docId);
+                    logger.warn("文档不存在或已删除: docId={}, status=ACTIVE", docId);
                     return new ResourceNotFoundException("Document not found or deleted");
                 });
+        logger.debug("检查文档完成: docId={}, fileName={}, status={}", docId, docFile.getFileName(), docFile.getStatus());
+
+        // 检查知识库权限
+        KnowledgeBase kb = knowledgeBaseRepository.findById(knowledgeBaseId)
+                .orElseThrow(() -> {
+                    logger.warn("知识库不存在: knowledgeBaseId={}", knowledgeBaseId);
+                    return new ResourceNotFoundException("知识库不存在");
+                });
+        if (!kb.getCreatedBy().equals(userId)) {
+            logger.warn("用户无权访问该知识库: knowledgeBaseId={}, userId={}, createdBy={}", 
+                knowledgeBaseId, userId, kb.getCreatedBy());
+            throw new IllegalArgumentException("无权访问该知识库");
+        }
+        logger.debug("检查知识库权限完成: knowledgeBaseId={}, createdBy={}", knowledgeBaseId, kb.getCreatedBy());
 
         // 检查文档是否已在知识库中
-        if (knowledgeBaseFileRepository.findByKbIdAndFileId(knowledgeBaseId, docId).isPresent()) {
+        boolean exists = knowledgeBaseFileRepository.findByKbIdAndFileId(knowledgeBaseId, docId).isPresent();
+        logger.debug("检查文档是否存在: docId={}, knowledgeBaseId={}, exists={}", docId, knowledgeBaseId, exists);
+        if (exists) {
             logger.warn("文档已存在于知识库中: docId={}, knowledgeBaseId={}", docId, knowledgeBaseId);
             throw new IllegalStateException("图书已经存在于知识库中");
         }

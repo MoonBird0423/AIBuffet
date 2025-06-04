@@ -15,14 +15,10 @@ export function AuthProvider({ children }) {
 
   // 用户数据变化时保存到localStorage
   useEffect(() => {
-    console.log('Storage Sync: User state changed:', user);
-    console.log('Storage Sync: Previous localStorage:', localStorage.getItem(AUTH_STORAGE_KEY));
     if (user) {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      console.log('Storage Sync: Updated localStorage:', localStorage.getItem(AUTH_STORAGE_KEY));
     } else {
       localStorage.removeItem(AUTH_STORAGE_KEY);
-      console.log('Storage Sync: Cleared localStorage');
     }
   }, [user]);
 
@@ -58,16 +54,12 @@ export function AuthProvider({ children }) {
       console.error('Login data is missing token:', userData);
       return;
     }
-
-    console.log('Login: Received user data:', userData);
     
     // 构造完整的用户数据
     const completeUserData = {
       ...userData,
       token: userData.token  // 确保token存在
     };
-    
-    console.log('Login: Setting complete user data:', completeUserData);
     
     // 保存到状态
     setUser(completeUserData);
@@ -122,9 +114,6 @@ export function AuthProvider({ children }) {
       // API返回的是直接的用户名字符串
       const updatedUsername = response;
 
-      console.log('Previous user state:', user);
-      console.log('New username from API:', updatedUsername);
-      
       // 确保更新用户名时保留所有现有用户数据
       const updatedUser = {
         ...user,
@@ -132,7 +121,6 @@ export function AuthProvider({ children }) {
         token: user.token  // 显式保留token
       };
       
-      console.log('Updated user state:', updatedUser);
       setUser(updatedUser);
     } catch (err) {
       console.error('Update username error:', err);
