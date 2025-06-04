@@ -17,6 +17,51 @@ import jakarta.transaction.Transactional;
 
 @Repository
 public interface DocFileRepository extends JpaRepository<DocFile, Long> {
+
+    // 根据关系类型查询知识库文档
+    @Query(value = """
+        SELECT d.* FROM doc_files d 
+        INNER JOIN knowledge_base_files kbf ON d.id = kbf.file_id 
+        WHERE kbf.kb_id = :knowledgeBaseId 
+        AND d.status = 'ACTIVE'
+        AND kbf.relation_type = :relationType
+        ORDER BY d.uploaded_at DESC
+        """, 
+        countQuery = """
+            SELECT COUNT(DISTINCT d.id) FROM doc_files d
+            INNER JOIN knowledge_base_files kbf ON d.id = kbf.file_id
+            WHERE kbf.kb_id = :knowledgeBaseId 
+            AND d.status = 'ACTIVE'
+            AND kbf.relation_type = :relationType
+            """,
+        nativeQuery = true)
+    Page<DocFile> findByKbIdAndRelationType(Long knowledgeBaseId, String relationType, Pageable pageable);
+
+    // 根据关系类型和关键词查询知识库文档
+    @Query(value = """
+        SELECT d.* FROM doc_files d 
+        INNER JOIN knowledge_base_files kbf ON d.id = kbf.file_id 
+        WHERE kbf.kb_id = :knowledgeBaseId 
+        AND d.status = 'ACTIVE'
+        AND kbf.relation_type = :relationType
+        AND d.file_name LIKE %:keyword%
+        ORDER BY d.uploaded_at DESC
+        """, 
+        countQuery = """
+            SELECT COUNT(DISTINCT d.id) FROM doc_files d
+            INNER JOIN knowledge_base_files kbf ON d.id = kbf.file_id
+            WHERE kbf.kb_id = :knowledgeBaseId 
+            AND d.status = 'ACTIVE'
+            AND kbf.relation_type = :relationType
+            AND d.file_name LIKE %:keyword%
+            """,
+        nativeQuery = true)
+    Page<DocFile> findByKbIdAndRelationTypeAndFileNameContaining(
+        Long knowledgeBaseId,
+        String relationType,
+        String keyword,
+        Pageable pageable);
+
     DocFile findByFileUrl(String fileUrl);
     
     DocFile findByMd5Hash(String md5Hash);

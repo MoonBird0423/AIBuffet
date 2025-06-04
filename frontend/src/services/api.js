@@ -501,6 +501,43 @@ export const deleteKnowledgeBase = async (id) => {
 };
 
 // 文档相关API
+
+// 收藏图书
+export const favoriteBook = async (documentId, knowledgeBaseId) => {
+  try {
+    const response = await apiClient.post(`/documents/${documentId}/favorite`, null, {
+      params: { knowledgeBaseId }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('收藏图书失败:', {
+      error,
+      errorMessage: error.message,
+      errorResponse: error.response?.data,
+      errorStack: error.stack
+    });
+    throw error;
+  }
+};
+
+// 取消收藏
+export const unfavoriteBook = async (documentId, knowledgeBaseId) => {
+  try {
+    const response = await apiClient.delete(`/documents/${documentId}/favorite`, {
+      params: { knowledgeBaseId }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('取消收藏失败:', {
+      error,
+      errorMessage: error.message,
+      errorResponse: error.response?.data,
+      errorStack: error.stack
+    });
+    throw error;
+  }
+};
+
 export const getDocuments = async (page = 0, size = 20, params = {}) => {
   try {
     const response = await apiClient.get('/documents', {

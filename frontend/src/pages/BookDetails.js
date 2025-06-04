@@ -4,10 +4,12 @@ import { getDocument, incrementDocumentLearnerCount, getInterpretation, getMindm
 import BookInfo from '../components/library/BookInfo';
 import BookTabs from '../components/library/BookTabs';
 import AudioPlayer from '../components/common/AudioPlayer';
+import FavoriteModal from '../components/library/FavoriteModal';
 
 function BookDetails() {
   const { id } = useParams();
-  const navigate = useNavigate();  const [bookData, setBookData] = useState(null);
+  const navigate = useNavigate();
+  const [bookData, setBookData] = useState(null);
   const [activeTab, setActiveTab] = useState('interpretation');
   const [tabContent, setTabContent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,13 +18,16 @@ function BookDetails() {
   // 内容缓存和加载状态
   const [contentCache, setContentCache] = useState({});
   const [tabLoading, setTabLoading] = useState(false);
-  const [tabContentLoaded, setTabContentLoaded] = useState(false); // 追踪是否已加载过内容
+  const [tabContentLoaded, setTabContentLoaded] = useState(false);
   
-  // 音频相关状态 - 从 BookTabs 提升到这里
+  // 音频相关状态
   const [audioUrl, setAudioUrl] = useState(null);
   const [hasAudio, setHasAudio] = useState(false);
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError] = useState(null);
+  
+  // 收藏相关状态
+  const [showFavoriteModal, setShowFavoriteModal] = useState(false);
 
   // 获取图书基本信息并增加学习人数
   useEffect(() => {
@@ -33,7 +38,6 @@ function BookDetails() {
         const data = await getDocument(id);
         if (data) {
           setBookData(data);
-          // 增加学习人数
           await incrementDocumentLearnerCount(id);
         }
       } catch (err) {
@@ -48,10 +52,10 @@ function BookDetails() {
       fetchBookData();
     }
   }, [id]);
+
   // 根据选中的Tab加载对应内容
   useEffect(() => {
     const fetchTabContent = async () => {
-      // 检查缓存
       const cacheKey = `${id}-${activeTab}`;
       if (contentCache[cacheKey]) {
         setTabContent(contentCache[cacheKey]);
@@ -78,31 +82,29 @@ function BookDetails() {
             return;
         }
         
-        // 确保content是字符串类型
-        let processedContent;
-        if (typeof content === 'string') {
-          processedContent = content;
-        } else {
+        let processedContent = typeof content === 'string' ? content : '';
+        if (!processedContent) {
           console.warn(`获取${activeTab}内容格式不正确:`, content);
-          processedContent = '';
         }
-          // 更新缓存和内容
+        
         setContentCache(prev => ({ ...prev, [cacheKey]: processedContent }));
         setTabContent(processedContent);
-        setTabContentLoaded(true);      } catch (err) {
+        setTabContentLoaded(true);
+      } catch (err) {
         console.error('Error fetching tab content:', err);
-        const errorContent = `获取${activeTab}内容失败，请稍后重试`;
-        setTabContent(errorContent);
+        setTabContent(`获取${activeTab}内容失败，请稍后重试`);
         setTabContentLoaded(true);
       } finally {
         setTabLoading(false);
       }
-    };    if (id && activeTab) {
+    };
+
+    if (id && activeTab) {
       fetchTabContent();
     }
-  }, [activeTab, id]); // 移除 contentCache 依赖避免无限循环
+  }, [activeTab, id]);
 
-  // 检查音频状态 - 从 BookTabs 移动到这里
+  // 检查音频状态
   useEffect(() => {
     if (activeTab === 'interpretation' && id && tabContent && tabContent !== '') {
       checkAudioStatus();
@@ -144,16 +146,14 @@ function BookDetails() {
   const handleBack = () => {
     navigate('/library');
   };
-  // 处理选项卡切换
+
   const handleTabChange = (tabKey) => {
     setActiveTab(tabKey);
-    // 如果有缓存，立即更新内容，避免显示加载状态
     const cacheKey = `${id}-${tabKey}`;
     if (contentCache[cacheKey]) {
       setTabContent(contentCache[cacheKey]);
     }
   };
-
 
   if (error) {
     return (
@@ -187,7 +187,9 @@ function BookDetails() {
           transform: translateY(-2px);
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
         }
-      `}</style>        {/* 顶部渐变背景区域 */}
+      `}</style>
+
+      {/* 顶部渐变背景区域 */}
       <div className="gradient-bg pb-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* 按钮区域 */}
@@ -201,9 +203,12 @@ function BookDetails() {
                 返回图书馆
               </button>
               <div className="flex space-x-4">
-                <button className="floating-button px-6 py-3 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full text-white hover:bg-white/30 transition-all duration-200">
-                  <i className="fas fa-plus mr-2"></i>
-                  加入知识库
+                <button
+                  onClick={() => setShowFavoriteModal(true)}
+                  className="floating-button px-6 py-3 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full text-white hover:bg-white/30 transition-all duration-200"
+                >
+                  <i className="fas fa-heart mr-2"></i>
+                  收藏到知识库
                 </button>
                 <button className="floating-button px-6 py-3 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full text-white hover:bg-white/30 transition-all duration-200">
                   <i className="fas fa-share mr-2"></i>
@@ -211,18 +216,23 @@ function BookDetails() {
                 </button>
               </div>
             </div>
-          </div>          {/* 图书基本信息 - 在loading状态下也显示骨架屏 */}
+          </div>
+
+          {/* 图书基本信息 */}
           <BookInfo bookData={bookData} />
         </div>
-      </div>      {/* 主内容区域 - 统一的白色背景 */}
+      </div>
+
+      {/* 主内容区域 */}
       <div className="bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">          {/* 主标题 */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          {/* 主标题 */}
           <div className="text-center mb-8">
             <h3 className="text-2xl font-bold text-gray-900 mb-2">AI伴读，直达书魂</h3>
             <div className="w-24 h-1 bg-gradient-to-r from-indigo-500 to-purple-500 mx-auto rounded-full"></div>
           </div>
 
-          {/* 音频播放器 - 放在内容选项卡上方，一直显示 */}
+          {/* 音频播放器 */}
           {bookData && (
             <div className="mb-6">
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-3xl shadow-xl p-8">
@@ -264,7 +274,9 @@ function BookDetails() {
                 <AudioPlayer audioUrl={audioUrl} />
               </div>
             </div>
-          )}          {/* 内容选项卡 - 只有有基本数据后才显示 */}
+          )}
+
+          {/* 内容选项卡 */}
           {bookData && (
             <div className="pb-6">
               <BookTabs
@@ -277,6 +289,13 @@ function BookDetails() {
           )}
         </div>
       </div>
+
+      {/* 收藏弹窗 */}
+      <FavoriteModal
+        bookId={id}
+        isOpen={showFavoriteModal}
+        onClose={() => setShowFavoriteModal(false)}
+      />
     </div>
   );
 }

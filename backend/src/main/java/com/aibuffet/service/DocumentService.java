@@ -32,12 +32,12 @@ public interface DocumentService {
      * @param knowledgeBaseId 知识库ID，可选
      * @param keyword 搜索关键词，可选，用于搜索文档名称
      * @param category 文档分类，可选
+     * @param relationType 关联关系类型，可选，用于区分上传和收藏
      * @param page 页码，从0开始
-          * @param page 页码，从0开始
      * @param size 每页大小
      * @return 分页的文档列表
      */
-    Page<DocFile> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, int page, int size);
+    Page<DocFile> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, String relationType, int page, int size);
 
     /**
      * 重新处理文档
@@ -80,4 +80,26 @@ public interface DocumentService {
      * @throws IllegalArgumentException 当用户无权限访问该文档时
      */
     DocFile getDocument(Long docId, Long userId);
+
+    /**
+     * 收藏文档到知识库
+     * 
+     * @param docId 文档ID
+     * @param knowledgeBaseId 知识库ID
+     * @param userId 用户ID
+     * @throws com.aibuffet.common.ResourceNotFoundException 当文档或知识库不存在时
+     * @throws IllegalArgumentException 当用户无权限访问该知识库时
+     */
+    void favoriteDocument(Long docId, Long knowledgeBaseId, Long userId);
+
+    /**
+     * 取消收藏文档
+     * 
+     * @param docId 文档ID
+     * @param knowledgeBaseId 知识库ID
+     * @param userId 用户ID
+     * @throws com.aibuffet.common.ResourceNotFoundException 当文档或知识库不存在时
+     * @throws IllegalArgumentException 当用户无权限访问该知识库时
+     */
+    void unfavoriteDocument(Long docId, Long knowledgeBaseId, Long userId);
 }

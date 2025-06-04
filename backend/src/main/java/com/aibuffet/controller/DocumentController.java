@@ -152,12 +152,13 @@ public class DocumentController {
             @RequestParam(required = false) Long knowledgeBaseId,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) DocFile.Category category,
+            @RequestParam(required = false) String relationType,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         try {
-            logger.info("DocumentController: 接收到查询请求: knowledgeBaseId={}, keyword={}, category={}, page={}, size={}", 
-                knowledgeBaseId, keyword, category, page, size);
-            Page<DocFile> documents = documentService.getDocuments(knowledgeBaseId, keyword, category, page, size);
+            logger.info("DocumentController: 接收到查询请求: knowledgeBaseId={}, keyword={}, category={}, relationType={}, page={}, size={}", 
+                knowledgeBaseId, keyword, category, relationType, page, size);
+            Page<DocFile> documents = documentService.getDocuments(knowledgeBaseId, keyword, category, relationType, page, size);
             logger.info("DocumentController: 查询完成，返回结果数量: {}", documents.getContent().size());
             return ApiResponse.success(documents);
         } catch (Exception e) {
@@ -267,6 +268,43 @@ public class DocumentController {
         } catch (Exception e) {
             logger.error("更新发布状态失败: ", e);
             return ApiResponse.error(ErrorCode.SYSTEM_ERROR, "系统错误，请稍后重试");
+        }
+    }
+
+    @PostMapping("/{id}/favorite")
+    public ApiResponse<Void> favoriteDocument(
+            @PathVariable Long id,
+            @RequestParam Long knowledgeBaseId,
+            @AuthenticationPrincipal User user) {
+        try {
+            documentService.favoriteDocument(id, knowledgeBaseId, user.getId());
+            return ApiResponse.success(null);
+        } catch (ResourceNotFoundException e) {
+            return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
+        } catch (IllegalStateException e) {
+            // 处理已存在的情况
+            return ApiResponse.error(ErrorCode.INVALID_REQUEST, "图书已经存在于知识库中");
+        } catch (Exception e) {
+            logger.error("收藏文档失败: ", e);
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR, "收藏失败，请稍后重试");
+        }
+    }
+
+    @DeleteMapping("/{id}/favorite")
+    public ApiResponse<Void> unfavoriteDocument(
+            @PathVariable Long id,
+            @RequestParam Long knowledgeBaseId,
+            @AuthenticationPrincipal User user) {
+        try {
+            documentService.unfavoriteDocument(id, knowledgeBaseId, user.getId());
+            return ApiResponse.success(null);
+        } catch (ResourceNotFoundException e) {
+            return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ApiResponse.error(ErrorCode.PERMISSION_DENIED, e.getMessage());
+        } catch (Exception e) {
+            logger.error("取消收藏失败: ", e);
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR, "取消收藏失败，请稍后重试");
         }
     }
 

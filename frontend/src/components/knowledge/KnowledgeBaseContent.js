@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import FileList from './FileList';
 import FileUploadModal from './FileUploadModal';
 import PublishModal from './PublishModal';
+import FavoriteList from './FavoriteList';
 import { getDocuments } from '../../services/api';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 
@@ -22,7 +23,10 @@ function KnowledgeBaseContent({ knowledgeBase }) {
     
     setIsLoading(true);
     try {
-      const response = await getDocuments(page, 20, { knowledgeBaseId: knowledgeBase.id });
+      const response = await getDocuments(page, 20, { 
+        knowledgeBaseId: knowledgeBase.id,
+        relationType: 'UPLOAD'
+      });
       setFiles(response.data.content);
       setTotal(response.data.totalElements);
     } catch (error) {
@@ -159,53 +163,7 @@ function KnowledgeBaseContent({ knowledgeBase }) {
         {/* 我的收藏选项卡 */}
         {activeTab === 'collections' && (
           <div className="tab-content p-8">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">我的收藏</h2>
-              <p className="text-gray-600">您收藏的精选图书</p>
-            </div>
-
-            <div className="space-y-4">
-              {/* 收藏示例数据 - 暂不开发实际功能 */}
-              <div className="flex items-center p-6 bg-gray-50 rounded-2xl hover:shadow-lg transition-all duration-200">
-                <img 
-                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=100&fit=crop" 
-                  alt="刻意练习" 
-                  className="w-16 h-20 object-cover rounded-lg"
-                />
-                <div className="flex-1 ml-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-1">刻意练习</h3>
-                  <p className="text-gray-600 mb-2">安德斯·艾利克森</p>
-                </div>
-                <div className="flex space-x-3">
-                  <button className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-medium hover:bg-blue-200 transition-all duration-200">
-                    学习
-                  </button>
-                  <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200">
-                    取消收藏
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center p-6 bg-gray-50 rounded-2xl hover:shadow-lg transition-all duration-200">
-                <img 
-                  src="https://images.unsplash.com/photo-1516414447565-b14be0adf13e?w=80&h=100&fit=crop" 
-                  alt="非暴力沟通" 
-                  className="w-16 h-20 object-cover rounded-lg"
-                />
-                <div className="flex-1 ml-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-1">非暴力沟通</h3>
-                  <p className="text-gray-600 mb-2">马歇尔·卢森堡</p>
-                </div>
-                <div className="flex space-x-3">
-                  <button className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-medium hover:bg-blue-200 transition-all duration-200">
-                    学习
-                  </button>
-                  <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200">
-                    取消收藏
-                  </button>
-                </div>
-              </div>
-            </div>
+            <FavoriteList knowledgeBaseId={knowledgeBase.id} />
           </div>
         )}
       </div>

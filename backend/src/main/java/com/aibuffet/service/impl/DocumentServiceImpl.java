@@ -233,32 +233,56 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<DocFile> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, int page, int size) {
-        logger.info("DocumentService: 开始查询文档列表: knowledgeBaseId={}, keyword={}, category={}, page={}, size={}", 
-            knowledgeBaseId, keyword, category, page, size);
+    public Page<DocFile> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, String relationType, int page, int size) {
+        logger.info("DocumentService: 开始查询文档列表: knowledgeBaseId={}, keyword={}, category={}, relationType={}, page={}, size={}", 
+            knowledgeBaseId, keyword, category, relationType, page, size);
         // 清除一级缓存
         entityManager.clear();
         
         Page<DocFile> result;
         if (knowledgeBaseId != null) {
             logger.info("DocumentService: 使用知识库查询分支");
-            // 如果指定了知识库ID，则搜索该知识库下的文档
-            if (keyword != null && category != null) {
-                logger.info("DocumentService: 执行知识库下的关键词+分类查询");
-                result = docFileRepository.findByKbIdAndFileNameContainingAndCategory(
-                    knowledgeBaseId, keyword, category.name(), PageRequest.of(page, size));
-            } else if (keyword != null) {
-                logger.info("DocumentService: 执行知识库下的关键词查询");
-                result = docFileRepository.findByKbIdAndFileNameContaining(
-                    knowledgeBaseId, keyword, PageRequest.of(page, size));
-            } else if (category != null) {
-                logger.info("DocumentService: 执行知识库下的分类查询");
-                result = docFileRepository.findByKbIdAndCategory(
-                    knowledgeBaseId, category.name(), PageRequest.of(page, size));
+            // 如果指定了关系类型，优先使用关系类型查询
+            if (relationType != null) {
+                // 将字符串转换为枚举类型
+                KnowledgeBaseFile.RelationType relationTypeEnum;
+                try {
+                    relationTypeEnum = KnowledgeBaseFile.RelationType.valueOf(relationType.toUpperCase());
+                    logger.info("DocumentService: 关系类型转换成功: {}", relationTypeEnum);
+                    
+                    if (keyword != null) {
+                        logger.info("DocumentService: 执行知识库下的关系类型+关键词查询");
+                        result = docFileRepository.findByKbIdAndRelationTypeAndFileNameContaining(
+                            knowledgeBaseId, relationTypeEnum.name(), keyword, PageRequest.of(page, size));
+                    } else {
+                        logger.info("DocumentService: 执行知识库下的关系类型查询");
+                        result = docFileRepository.findByKbIdAndRelationType(
+                            knowledgeBaseId, relationTypeEnum.name(), PageRequest.of(page, size));
+                    }
+                } catch (IllegalArgumentException e) {
+                    logger.warn("DocumentService: 无效的关系类型: {}", relationType);
+                    // 如果转换失败，返回空结果
+                    return Page.empty(PageRequest.of(page, size));
+                }
             } else {
-                logger.info("DocumentService: 执行知识库下的全部查询");
-                result = docFileRepository.findByKbId(
-                    knowledgeBaseId, PageRequest.of(page, size));
+                // 处理没有 relationType 的普通查询逻辑
+                if (keyword != null && category != null) {
+                    logger.info("DocumentService: 执行知识库下的关键词+分类查询");
+                    result = docFileRepository.findByKbIdAndFileNameContainingAndCategory(
+                        knowledgeBaseId, keyword, category.name(), PageRequest.of(page, size));
+                } else if (keyword != null) {
+                    logger.info("DocumentService: 执行知识库下的关键词查询");
+                    result = docFileRepository.findByKbIdAndFileNameContaining(
+                        knowledgeBaseId, keyword, PageRequest.of(page, size));
+                } else if (category != null) {
+                    logger.info("DocumentService: 执行知识库下的分类查询");
+                    result = docFileRepository.findByKbIdAndCategory(
+                        knowledgeBaseId, category.name(), PageRequest.of(page, size));
+                } else {
+                    logger.info("DocumentService: 执行知识库下的全部查询");
+                    result = docFileRepository.findByKbId(
+                        knowledgeBaseId, PageRequest.of(page, size));
+                }
             }
         } else {
             logger.info("DocumentService: 使用公共图书馆查询分支");
@@ -596,6 +620,61 @@ public class DocumentServiceImpl implements DocumentService {
 
         logger.info("获取文档详情成功: docId={}", docId);
         return docFile;
+    }
+
+    @Override
+    @Transactional
+    public void favoriteDocument(Long docId, Long knowledgeBaseId, Long userId) {
+        logger.info("开始收藏文档: docId={}, knowledgeBaseId={}, userId={}", docId, knowledgeBaseId, userId);
+        
+        // 检查文档是否存在且为激活状态
+        DocFile docFile = docFileRepository.findByIdAndStatus(docId, DocFile.Status.ACTIVE)
+                .orElseThrow(() -> {
+                    logger.warn("文档不存在或已删除: docId={}", docId);
+                    return new ResourceNotFoundException("Document not found or deleted");
+                });
+
+        // 检查文档是否已在知识库中
+        if (knowledgeBaseFileRepository.findByKbIdAndFileId(knowledgeBaseId, docId).isPresent()) {
+            logger.warn("文档已存在于知识库中: docId={}, knowledgeBaseId={}", docId, knowledgeBaseId);
+            throw new IllegalStateException("图书已经存在于知识库中");
+        }
+
+        // 创建收藏关系
+        KnowledgeBaseFile favorite = new KnowledgeBaseFile(knowledgeBaseId, docId, userId, KnowledgeBaseFile.RelationType.FAVORITE);
+        knowledgeBaseFileRepository.save(favorite);
+        
+        logger.info("文档收藏成功: docId={}, knowledgeBaseId={}", docId, knowledgeBaseId);
+    }
+
+    @Override
+    @Transactional
+    public void unfavoriteDocument(Long docId, Long knowledgeBaseId, Long userId) {
+        logger.info("开始取消收藏文档: docId={}, knowledgeBaseId={}, userId={}", docId, knowledgeBaseId, userId);
+        
+        // 查找并验证收藏关系
+        KnowledgeBaseFile favorite = knowledgeBaseFileRepository.findByKbIdAndFileId(knowledgeBaseId, docId)
+                .orElseThrow(() -> {
+                    logger.warn("未找到收藏关系: docId={}, knowledgeBaseId={}", docId, knowledgeBaseId);
+                    return new ResourceNotFoundException("Favorite relationship not found");
+                });
+
+        // 验证用户权限
+        if (!favorite.getCreatedBy().equals(userId)) {
+            logger.warn("用户无权限取消收藏: docId={}, knowledgeBaseId={}, userId={}", docId, knowledgeBaseId, userId);
+            throw new IllegalArgumentException("No permission to unfavorite this document");
+        }
+
+        // 验证是否为收藏关系
+        if (favorite.getRelationType() != KnowledgeBaseFile.RelationType.FAVORITE) {
+            logger.warn("不是收藏关系: docId={}, knowledgeBaseId={}, relationType={}", 
+                docId, knowledgeBaseId, favorite.getRelationType());
+            throw new IllegalArgumentException("Not a favorite relationship");
+        }
+
+        // 删除收藏关系
+        knowledgeBaseFileRepository.deleteByKbIdAndFileId(knowledgeBaseId, docId);
+        logger.info("取消收藏成功: docId={}, knowledgeBaseId={}", docId, knowledgeBaseId);
     }
 
     @Override

@@ -28,9 +28,23 @@ public class KnowledgeBaseFile {
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
+    @Column(name = "relation_type", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private RelationType relationType = RelationType.UPLOAD;
+
+    public enum RelationType {
+        UPLOAD,
+        FAVORITE
+    }
+
     public KnowledgeBaseFile(Long kbId, Long fileId, Long createdBy) {
+        this(kbId, fileId, createdBy, RelationType.UPLOAD);
+    }
+
+    public KnowledgeBaseFile(Long kbId, Long fileId, Long createdBy, RelationType relationType) {
         this.kbId = kbId;
         this.fileId = fileId;
         this.createdBy = createdBy;
+        this.relationType = relationType;
     }
 }
