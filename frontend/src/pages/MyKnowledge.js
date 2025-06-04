@@ -70,7 +70,7 @@ function MyKnowledge() {
   }  return (
     <div className="min-h-screen bg-gray-50 font-sans">
       {/* 英雄区 */}
-      <section className="pt-20 pb-12" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}}>
+      <section className="pt-32 pb-6" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4">
@@ -79,45 +79,6 @@ function MyKnowledge() {
             <p className="text-xl text-white opacity-90">
               管理您的学习内容，构建个人知识体系
             </p>
-          </div>
-          
-          {/* 统计卡片 */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-white bg-opacity-20 backdrop-blur-lg rounded-2xl p-6 border border-white border-opacity-30">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white opacity-70 text-sm">上传图书</p>
-                  <p className="text-white text-3xl font-bold">12</p>
-                </div>
-                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                  <i className="fas fa-upload text-white text-xl"></i>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white bg-opacity-20 backdrop-blur-lg rounded-2xl p-6 border border-white border-opacity-30">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white opacity-70 text-sm">收藏图书</p>
-                  <p className="text-white text-3xl font-bold">28</p>
-                </div>
-                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                  <i className="fas fa-heart text-white text-xl"></i>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white bg-opacity-20 backdrop-blur-lg rounded-2xl p-6 border border-white border-opacity-30">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white opacity-70 text-sm">知识库</p>
-                  <p className="text-white text-3xl font-bold">{knowledgeBases.length}</p>
-                </div>
-                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                  <i className="fas fa-folder text-white text-xl"></i>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>

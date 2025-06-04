@@ -54,7 +54,7 @@ function Library() {
   return (
     <div className="min-h-screen flex flex-col font-sf">
       {/* Hero Search Section */}
-      <section className="pt-20 pb-12" style={{
+      <section className="pt-20 pb-6" style={{
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

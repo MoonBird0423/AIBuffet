@@ -6,9 +6,9 @@ function Navbar() {
   const location = useLocation();
   return (
     <nav className="fixed top-0 left-0 right-0 z-50" style={{
-      backdropFilter: 'blur(20px)',
-      background: 'rgba(0, 0, 0, 0.3)',
-      border: '1px solid rgba(255, 255, 255, 0.1)'
+      backdropFilter: 'blur(30px)',
+      background: 'rgba(255, 255, 255, 0.08)',
+      border: '1px solid rgba(255, 255, 255, 0.2)'
     }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">        <div className="flex justify-between items-center h-16">
           <div className="flex items-center flex-1">

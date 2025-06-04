@@ -52,8 +52,10 @@ function Home() {
         <div className="relative z-10 w-full mx-auto px-4 sm:px-6 lg:px-8 text-center">          {/* Main Title */}
           <div className="mb-8 mt-8 max-w-6xl mx-auto">
             <h1 className="text-5xl lg:text-7xl font-bold text-white mb-4 leading-tight tracking-tight">
+              <span className="text-white">问书答意</span>
+              <span>，</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-300">
-                问书答意，懂你所惑
+                懂你所惑
               </span>
             </h1>
           </div>
