@@ -2,8 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDocuments, unfavoriteBook } from '../../services/api';
 import { ToastManager } from '../common/Toast';
+import Tooltip from '../common/Tooltip';
 
 const FavoriteList = ({ knowledgeBaseId }) => {
+  const truncateFileName = (fileName) => {
+    if (fileName.length > 20) {
+      const ext = fileName.split('.').pop();
+      const name = fileName.substring(0, 17);
+      return `${name}...${ext}`;
+    }
+    return fileName;
+  };
+
   const navigate = useNavigate();
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -49,7 +59,7 @@ const FavoriteList = ({ knowledgeBaseId }) => {
 
   // 处理学习按钮点击
   const handleLearn = (bookId) => {
-    navigate(`/books/${bookId}`);
+    navigate(`/book/${bookId}`);
   };
 
   if (loading && books.length === 0) {
@@ -84,7 +94,13 @@ const FavoriteList = ({ knowledgeBaseId }) => {
                 className="w-16 h-20 object-cover rounded-lg"
               />
               <div className="flex-1 ml-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-1">{book.fileName}</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-1">
+                  <Tooltip content={book.fileName} position="top">
+                    <span className="truncate block hover:text-blue-600 transition-colors">
+                      {truncateFileName(book.fileName)}
+                    </span>
+                  </Tooltip>
+                </h3>
                 <p className="text-gray-600 mb-2">{book.author || '未知作者'}</p>
               </div>
               <div className="flex space-x-3">

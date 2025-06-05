@@ -5,12 +5,8 @@ import '../../styles/markmap.css';
 
 const parseAndConvertToMarkdown = (data) => {
   try {
-    //console.log('传入的数据:', data);
-    // 提取content字段（包含脑图数据）
     const content = data?.content || data;
-    // 确保content是字符串
     if (typeof content === 'string') {
-      //console.log('处理后的markdown内容:', content);
       return content;
     }
     throw new Error('Invalid content format: content must be a string');
@@ -34,17 +30,23 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
       const container = containerRef.current;
       svg.innerHTML = '';
       
-      // 设置初始尺寸
+      const transformer = new Transformer();  // 使用默认配置，不传入任何参数
+
       const { width, height } = container.getBoundingClientRect();
       svg.setAttribute('width', width);
       svg.setAttribute('height', height);
 
       const markdownContent = parseAndConvertToMarkdown(content);
-      //console.log('准备渲染的markdown内容:', markdownContent);
-      
-      const transformer = new Transformer();
-      const { root: transformedRoot } = transformer.transform(markdownContent);
-      
+
+      let transformedRoot;
+      try {
+        const result = transformer.transform(markdownContent);
+        transformedRoot = result.root;
+      } catch (error) {
+        console.error('转换脑图数据失败:', error);
+        throw new Error('脑图数据转换失败');
+      }
+
       // 初始化时展开所有节点
       const expandAll = (node) => {
         if (node.children) {
@@ -57,7 +59,7 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
       // 创建Markmap实例前确保SVG尺寸已设置
       const mm = Markmap.create(svg, {
         duration: 500,
-        maxWidth: Math.max(300, width * 0.8), // 根据容器宽度调整
+        maxWidth: Math.max(300, width * 0.8),
         color: (node) => {
           const colors = [
             '#2196f3',  // 蓝色
@@ -76,10 +78,9 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
         nodeMinHeight: 16,
         spacingHorizontal: 80,
         spacingVertical: 16,
-        autoFit: false, // 禁用自动缩放
+        autoFit: false,
         fitRatio: 0.95,
-        initialExpandLevel: 3, // 设置为-1表示完全展开
-        // 添加节点样式
+        initialExpandLevel: 4,
         nodeStyle: (node) => {
           const colors = [
             '#2196f3',  // 蓝色
@@ -100,7 +101,6 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
             ry: 5
           };
         },
-        // 添加连接线样式
         linkStyle: {
           stroke: '#666',
           strokeWidth: '2px',
@@ -108,7 +108,6 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
           strokeLinecap: 'round',
           strokeLinejoin: 'round'
         },
-        // 添加文本样式
         textStyle: {
           fill: '#333',
           fontSize: '14px',
@@ -119,31 +118,38 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
           }
         },
-        // 添加连接线配置
         curveRadius: 5,
         renderOptions: {
-          linkMiddleArc: true, // 启用中心弧线连接
-          linkVerticalOffset: 8, // 添加一些垂直偏移使连接线更自然
-          linkShape: 'diagonal', // 使用对角线形状的连接线
-          linkWidth: 2 // 保持连接线宽度一致
+          linkMiddleArc: true,
+          linkVerticalOffset: 8,
+          linkShape: 'diagonal',
+          linkWidth: 2
         },
-        spacingVertical: 24 // 增加垂直间距以适应新的连接线样式
+        spacingVertical: 24
       }, transformedRoot);
 
       markmapRef.current = mm;
 
-      // 使用ResizeObserver监听容器尺寸变化
       const resizeObserver = new ResizeObserver(() => {
         const { width, height } = container.getBoundingClientRect();
         svg.setAttribute('width', width);
         svg.setAttribute('height', height);
-        // 不再调用 mm.fit() 以避免自动缩放
       });
 
       resizeObserver.observe(container);
       return () => resizeObserver.disconnect();
     } catch (error) {
       console.error('渲染脑图失败:', error);
+      // 显示错误信息在SVG中
+      if (svgRef.current) {
+        const errorText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        errorText.setAttribute('x', '50%');
+        errorText.setAttribute('y', '50%');
+        errorText.setAttribute('text-anchor', 'middle');
+        errorText.setAttribute('fill', '#666');
+        errorText.textContent = '脑图渲染失败，请检查数据格式';
+        svgRef.current.appendChild(errorText);
+      }
     }
   }, [content]);
 
