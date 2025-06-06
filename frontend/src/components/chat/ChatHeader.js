@@ -10,7 +10,7 @@ function ChatHeader({ questionTarget, showNoTargetHint }) {
         {questionTarget ? (
           <div className="flex items-center bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
             <span className="text-sm text-gray-600 mr-2">提问对象：</span>
-            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">
+            <span className="bg-blue-100 text-blue-800 text-lg font-medium px-2 py-1 rounded">
               【{questionTarget.type === 'book' ? '图书' : '知识库'}】{questionTarget.name}
             </span>
           </div>

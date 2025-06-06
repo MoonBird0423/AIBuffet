@@ -110,7 +110,7 @@ function KnowledgeBaseContent({ knowledgeBase }) {
             <div className="flex justify-between items-center mb-8">
               <div>
                 <h2 className="text-3xl font-bold text-gray-900">我的上传</h2>
-                <p className="text-gray-600 mt-1">管理您上传的图书内容</p>
+                <p className="text-gray-600 mt-1">上传图书进行智能解读和对话</p>
               </div>
               <div className="flex space-x-3">
                 <button
