@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import '../../styles/audioPlayer.css';
 
 const AudioPlayer = ({ audioUrl, className = '' }) => {
   const audioRef = useRef(null);
@@ -98,6 +99,7 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
   };
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
+  
   if (!audioUrl) {
     return (
       <div className={`bg-gray-50 rounded-2xl p-6 ${className}`}>
@@ -125,9 +127,7 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
       
       <div className="space-y-4">
-        {/* 第一行：音量控制 + 播放按钮 + 倍速控制 */}
         <div className="flex items-center justify-center space-x-8">
-          {/* 音量控制 */}
           <div className="flex items-center space-x-3">
             <i className="fas fa-volume-down text-gray-600"></i>
             <input
@@ -137,11 +137,10 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
               step="0.1"
               value={volume}
               onChange={handleVolumeChange}
-              className="w-20 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer slider"
+              className="w-20 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer audio-slider"
             />
           </div>
 
-          {/* 播放/暂停按钮 */}
           <button
             onClick={togglePlay}
             disabled={isLoading}
@@ -156,7 +155,6 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
             )}
           </button>
 
-          {/* 播放速度控制 */}
           <div className="flex items-center space-x-3">
             <i className="fas fa-tachometer-alt text-gray-600"></i>
             <select
@@ -174,14 +172,11 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
           </div>
         </div>
 
-        {/* 第二行：时间 + 进度条 + 时间 */}
         <div className="flex items-center space-x-4">
-          {/* 当前时间 */}
           <span className="text-sm text-gray-600 min-w-[45px] font-mono">
             {formatTime(currentTime)}
           </span>
           
-          {/* 进度条 */}
           <div
             className="flex-1 h-3 bg-gray-200 rounded-full cursor-pointer overflow-hidden"
             onClick={handleProgressClick}
@@ -192,34 +187,11 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
             ></div>
           </div>
 
-          {/* 总时间 */}
           <span className="text-sm text-gray-600 min-w-[45px] font-mono">
             {formatTime(duration)}
           </span>
         </div>
       </div>
-
-      <style jsx>{`
-        .slider::-webkit-slider-thumb {
-          appearance: none;
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-          cursor: pointer;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-        
-        .slider::-moz-range-thumb {
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-          cursor: pointer;
-          border: none;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-      `}</style>
     </div>
   );
 };
