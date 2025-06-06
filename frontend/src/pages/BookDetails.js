@@ -5,6 +5,7 @@ import BookInfo from '../components/library/BookInfo';
 import BookTabs from '../components/library/BookTabs';
 import AudioPlayer from '../components/common/AudioPlayer';
 import FavoriteModal from '../components/library/FavoriteModal';
+import { ToastManager } from '../components/common/Toast';
 
 function BookDetails() {
   const { id } = useParams();
@@ -143,6 +144,17 @@ function BookDetails() {
     }
   };
 
+  const handleShare = async () => {
+    try {
+      const shareUrl = `${window.location.origin}/book/${id}`;
+      await navigator.clipboard.writeText(shareUrl);
+      ToastManager.success('图书地址复制成功，快去分享吧！');
+    } catch (err) {
+      ToastManager.error('复制链接失败，请稍后重试');
+      console.error('复制链接失败:', err);
+    }
+  };
+
   const handleBack = () => {
     navigate('/library');
   };
@@ -193,7 +205,10 @@ function BookDetails() {
                   <i className="fas fa-heart mr-2"></i>
                   收藏到知识库
                 </button>
-                <button className="transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/15 px-6 py-3 backdrop-blur-xl bg-white/10 border border-white/20 rounded-full text-white hover:bg-white/30">
+                <button 
+                  onClick={handleShare}
+                  className="transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/15 px-6 py-3 backdrop-blur-xl bg-white/10 border border-white/20 rounded-full text-white hover:bg-white/30"
+                >
                   <i className="fas fa-share mr-2"></i>
                   分享
                 </button>
