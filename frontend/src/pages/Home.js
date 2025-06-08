@@ -39,7 +39,7 @@ function Home() {
   const showSlide = (index) => {
     setCurrentSlide(index);
   };  return (    <div className="font-sf">      {/* Hero Section */}
-      <section className="min-h-screen py-32 pb-32 flex flex-col items-center justify-center relative overflow-hidden" style={{
+      <section className="min-h-screen py-8 flex flex-col items-center justify-center relative overflow-hidden" style={{
         background: 'linear-gradient(180deg, #667eea 0%, #764ba2 50%, #667eea 100%)',
         minHeight: '120vh'
       }}>
@@ -47,11 +47,9 @@ function Home() {
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-20 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        </div>
-
-        <div className="relative z-10 w-full mx-auto px-4 sm:px-6 lg:px-8 text-center">          {/* Main Title */}
-          <div className="mb-8 mt-8 max-w-6xl mx-auto">
-            <h1 className="text-5xl lg:text-7xl font-bold text-white mb-4 leading-tight tracking-tight">
+        </div>        <div className="relative z-10 w-full mx-auto px-4 sm:px-6 lg:px-8 text-center">          {/* Main Title */}
+          <div className="mb-4 mt-8 max-w-6xl mx-auto">
+            <h1 className="text-5xl lg:text-7xl font-bold text-white leading-tight tracking-tight">
               <span className="text-white">问书答意</span>
               <span>，</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-300">
@@ -59,68 +57,120 @@ function Home() {
               </span>
             </h1>
           </div>
-
-          {/* CTA Button */}
-          <div className="mb-12 max-w-6xl mx-auto">
-            <Link to="/library">
-              <button className="group relative bg-white/10 backdrop-blur-xl text-white px-12 py-6 rounded-full text-xl font-semibold border border-white/20 hover:bg-white/20 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-white/20">
-                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 rounded-full transform -skew-x-12 group-hover:animate-pulse"></div>
-                <span className="relative flex items-center justify-center">
-                  <i className="fas fa-book-open mr-3 text-yellow-300"></i>
-                  浏览图书馆
-                </span>
-              </button>
-            </Link>
-          </div> 
-                   
+          
           {/* Subtitle */}
-          <div className="mb-32 max-w-6xl mx-auto">
-            <p className="text-xl lg:text-2xl text-white/90 leading-relaxed max-w-4xl mx-auto font-light">
+          <div className="mb-4 max-w-5xl mx-auto">
+            <p className="text-xl lg:text-2xl text-white/90 leading-relaxed mx-auto font-light">
               获取图书深度语音解读、知识脑图、知识测试、知识问答，跨入高效阅读时代。
             </p>
           </div>
 
-          {/* Product Interface Carousel */}
-          <div className="relative max-w-7xl mx-auto mb-24 flex items-center px-8">
-            {/* Left Arrow */}
+          {/* CTA Buttons */}
+          <div className="mb-8 max-w-6xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+              {/* Primary Button - 浏览图书馆 */}
+              <Link to="/library">
+                <button className="bg-white text-blue-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg">
+                  <i className="fas fa-book-open mr-2 text-blue-600"></i>
+                  浏览图书
+                </button>
+              </Link>
+              
+              {/* Secondary Button - 上传图书 */}
+              <Link to="/my-knowledge">
+                <button className="group relative bg-white/10 backdrop-blur-xl text-white px-8 py-4 rounded-full text-lg font-semibold border border-white/20 hover:bg-white/20 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-white/20">
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 rounded-full transform -skew-x-12 group-hover:animate-pulse"></div>
+                  <span className="relative flex items-center justify-center">
+                    <i className="fas fa-upload mr-2 text-yellow-300"></i>
+                    上传图书
+                  </span>
+                </button>
+              </Link>
+            </div>
+          </div>          {/* Product Interface Carousel */}
+          <div className="relative max-w-7xl mx-auto mb-8">
+            {/* Navigation Arrows */}
             <button 
               onClick={() => setCurrentSlide(currentSlide === 0 ? slides.length - 1 : currentSlide - 1)}
-              className="flex-shrink-0 mr-10 bg-white/10 backdrop-blur-xl text-white p-4 rounded-full border border-white/20 hover:bg-white/20 transition-all duration-300 shadow-xl hover:shadow-white/20 hover:scale-110 z-20"
+              className="absolute left-8 top-1/2 transform -translate-y-1/2 z-30 bg-white/10 backdrop-blur-xl text-white p-3 rounded-full border border-white/20 hover:bg-white/20 transition-all duration-300 shadow-xl hover:shadow-white/20 hover:scale-110"
             >
               <i className="fas fa-chevron-left text-xl"></i>
             </button>
-
-            {/* Image Container */}
-            <div className="relative min-h-[450px] flex items-center justify-center flex-1">{slides.map((slide, index) => (
-                <div 
-                  key={slide.id}
-                  className={`absolute inset-0 transition-all duration-700 ease-in-out ${
-                    index === currentSlide ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-                  }`}
-                >                  {/* Direct Image with Enhanced Effects */}
-                  <div className="relative w-full h-full flex items-center justify-center">
-                    <div className="relative w-full max-w-5xl">
-                      <img 
-                        src={slide.image}
-                        alt={slide.title}
-                        className="w-full h-auto object-contain rounded-3xl shadow-2xl"
-                        style={{ 
-                          filter: 'drop-shadow(0 30px 50px rgba(0, 0, 0, 0.25)) drop-shadow(0 0 35px rgba(255, 255, 255, 0.12))'
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Right Arrow */}
+            
             <button 
               onClick={() => setCurrentSlide((currentSlide + 1) % slides.length)}
-              className="flex-shrink-0 ml-10 bg-white/10 backdrop-blur-xl text-white p-4 rounded-full border border-white/20 hover:bg-white/20 transition-all duration-300 shadow-xl hover:shadow-white/20 hover:scale-110 z-20"
+              className="absolute right-8 top-1/2 transform -translate-y-1/2 z-30 bg-white/10 backdrop-blur-xl text-white p-3 rounded-full border border-white/20 hover:bg-white/20 transition-all duration-300 shadow-xl hover:shadow-white/20 hover:scale-110"
             >
               <i className="fas fa-chevron-right text-xl"></i>
             </button>
+
+            {/* Carousel Container */}
+            <div className="relative h-[640px] flex items-center justify-center overflow-hidden">
+              {slides.map((slide, index) => {
+                const isActive = index === currentSlide;
+                const isPrev = index === (currentSlide === 0 ? slides.length - 1 : currentSlide - 1);
+                const isNext = index === (currentSlide + 1) % slides.length;
+                
+                let transformClass = '';
+                let zIndexClass = '';
+                let opacityClass = '';
+                let scaleClass = '';
+                
+                if (isActive) {
+                  transformClass = 'translate-x-0';
+                  zIndexClass = 'z-20';
+                  opacityClass = 'opacity-100';
+                  scaleClass = 'scale-100';
+                } else if (isPrev) {
+                  transformClass = '-translate-x-32';
+                  zIndexClass = 'z-10';
+                  opacityClass = 'opacity-60';
+                  scaleClass = 'scale-90';
+                } else if (isNext) {
+                  transformClass = 'translate-x-32';
+                  zIndexClass = 'z-10';
+                  opacityClass = 'opacity-60';
+                  scaleClass = 'scale-90';
+                } else {
+                  transformClass = 'translate-x-0';
+                  zIndexClass = 'z-0';
+                  opacityClass = 'opacity-0';
+                  scaleClass = 'scale-75';
+                }
+
+                return (
+                  <div 
+                    key={slide.id}
+                    className={`absolute inset-0 transition-all duration-700 ease-in-out transform ${transformClass} ${zIndexClass} ${opacityClass} ${scaleClass}`}
+                  >
+                    <div className="relative w-full h-full flex items-center justify-center px-16">
+                      <div className="relative w-full max-w-5xl">
+                        <img 
+                          src={slide.image}
+                          alt={slide.title}
+                          className="w-full h-auto object-contain rounded-3xl"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Slide Indicators */}
+            <div className="flex justify-center mt-8 space-x-3">
+              {slides.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    index === currentSlide 
+                      ? 'bg-white shadow-lg scale-125' 
+                      : 'bg-white/40 hover:bg-white/60'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>
