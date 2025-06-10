@@ -70,10 +70,16 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
     Optional<DocFile> findByIdAndStatus(Long id, DocFile.Status status);
     
     @Query(value = """
-        SELECT d.* FROM doc_files d 
+        SELECT d.*, COUNT(CASE WHEN kbf2.relation_type = 'FAVORITE' THEN 1 END) as learner_count 
+        FROM doc_files d 
         INNER JOIN knowledge_base_files kbf ON d.id = kbf.file_id 
+        LEFT JOIN knowledge_base_files kbf2 ON d.id = kbf2.file_id
         WHERE kbf.kb_id = :knowledgeBaseId 
         AND d.status = 'ACTIVE'
+        GROUP BY d.id, d.file_name, d.file_type, d.file_size, d.file_url, d.uploaded_by,
+                d.uploaded_at, d.status, d.md5_hash, d.error_message, d.processing_status,
+                d.cover_url, d.category, d.author, d.publish_status, d.description,
+                d.extracted_text, d.openai_file_id
         ORDER BY d.uploaded_at DESC
         """, 
         countQuery = """
@@ -128,11 +134,17 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
 
     // 带分类的知识库文档查询
     @Query(value = """
-        SELECT d.* FROM doc_files d 
+        SELECT d.*, COUNT(CASE WHEN kbf2.relation_type = 'FAVORITE' THEN 1 END) as learner_count 
+        FROM doc_files d 
         INNER JOIN knowledge_base_files kbf ON d.id = kbf.file_id 
+        LEFT JOIN knowledge_base_files kbf2 ON d.id = kbf2.file_id
         WHERE kbf.kb_id = :knowledgeBaseId 
         AND d.status = 'ACTIVE'
         AND d.category = :category
+        GROUP BY d.id, d.file_name, d.file_type, d.file_size, d.file_url, d.uploaded_by,
+                d.uploaded_at, d.status, d.md5_hash, d.error_message, d.processing_status,
+                d.cover_url, d.category, d.author, d.publish_status, d.description,
+                d.extracted_text, d.openai_file_id
         ORDER BY d.uploaded_at DESC
         """, 
         countQuery = """
@@ -149,11 +161,17 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
     
     // 按名称和分类查询已发布文档
     @Query(value = """
-        SELECT d.* FROM doc_files d 
+        SELECT d.*, COUNT(CASE WHEN kbf.relation_type = 'FAVORITE' THEN 1 END) as learner_count 
+        FROM doc_files d 
+        LEFT JOIN knowledge_base_files kbf ON d.id = kbf.file_id 
         WHERE d.status = 'ACTIVE'
         AND d.publish_status = :publishStatus
         AND d.file_name LIKE %:keyword%
         AND d.category = :category
+        GROUP BY d.id, d.file_name, d.file_type, d.file_size, d.file_url, d.uploaded_by,
+                d.uploaded_at, d.status, d.md5_hash, d.error_message, d.processing_status,
+                d.cover_url, d.category, d.author, d.publish_status, d.description,
+                d.extracted_text, d.openai_file_id
         ORDER BY d.uploaded_at DESC
         """, 
         nativeQuery = true)
@@ -162,10 +180,16 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
 
     // 按名称查询已发布文档
     @Query(value = """
-        SELECT d.* FROM doc_files d 
+        SELECT d.*, COUNT(CASE WHEN kbf.relation_type = 'FAVORITE' THEN 1 END) as learner_count 
+        FROM doc_files d 
+        LEFT JOIN knowledge_base_files kbf ON d.id = kbf.file_id 
         WHERE d.status = 'ACTIVE'
         AND d.publish_status = :publishStatus
         AND d.file_name LIKE %:keyword%
+        GROUP BY d.id, d.file_name, d.file_type, d.file_size, d.file_url, d.uploaded_by,
+                d.uploaded_at, d.status, d.md5_hash, d.error_message, d.processing_status,
+                d.cover_url, d.category, d.author, d.publish_status, d.description,
+                d.extracted_text, d.openai_file_id
         ORDER BY d.uploaded_at DESC
         """, 
         nativeQuery = true)
@@ -174,10 +198,16 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
 
     // 按分类查询已发布文档
     @Query(value = """
-        SELECT d.* FROM doc_files d 
+        SELECT d.*, COUNT(CASE WHEN kbf.relation_type = 'FAVORITE' THEN 1 END) as learner_count 
+        FROM doc_files d 
+        LEFT JOIN knowledge_base_files kbf ON d.id = kbf.file_id 
         WHERE d.status = 'ACTIVE'
         AND d.publish_status = :publishStatus
         AND d.category = :category
+        GROUP BY d.id, d.file_name, d.file_type, d.file_size, d.file_url, d.uploaded_by,
+                d.uploaded_at, d.status, d.md5_hash, d.error_message, d.processing_status,
+                d.cover_url, d.category, d.author, d.publish_status, d.description,
+                d.extracted_text, d.openai_file_id
         ORDER BY d.uploaded_at DESC
         """, 
         nativeQuery = true)
@@ -186,9 +216,15 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
 
     // 查询所有已发布文档
     @Query(value = """
-        SELECT d.* FROM doc_files d 
+        SELECT d.*, COUNT(CASE WHEN kbf.relation_type = 'FAVORITE' THEN 1 END) as learner_count 
+        FROM doc_files d 
+        LEFT JOIN knowledge_base_files kbf ON d.id = kbf.file_id 
         WHERE d.status = 'ACTIVE'
         AND d.publish_status = :publishStatus
+        GROUP BY d.id, d.file_name, d.file_type, d.file_size, d.file_url, d.uploaded_by,
+                d.uploaded_at, d.status, d.md5_hash, d.error_message, d.processing_status,
+                d.cover_url, d.category, d.author, d.publish_status, d.description,
+                d.extracted_text, d.openai_file_id
         ORDER BY d.uploaded_at DESC
         """, 
         nativeQuery = true)
@@ -199,10 +235,6 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
     @Query("UPDATE DocFile d SET d.processingStatus = :status WHERE d.id = :id")
     void updateProcessingStatus(Long id, DocFile.ProcessingStatus status);
 
-    @Modifying
-    @Transactional
-    @Query("UPDATE DocFile d SET d.learnerCount = d.learnerCount + 1 WHERE d.id = :id AND d.status = 'ACTIVE' AND d.publishStatus = 'PUBLISHED'")
-    int incrementLearnerCount(Long id);
     
     @Modifying
     @Transactional

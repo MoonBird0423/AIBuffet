@@ -734,22 +734,6 @@ export const updateDocumentPublishStatus = async (documentId, status) => {
   }
 };
 
-// 增加文档学习人数
-export const incrementDocumentLearnerCount = async (documentId) => {
-  try {
-    const response = await apiClient.post(`/documents/${documentId}/increment-learner`);
-    return response.data;
-  } catch (error) {
-    console.error('增加文档学习人数失败:', {
-      error,
-      errorMessage: error.message,
-      errorResponse: error.response?.data,
-      errorStack: error.stack
-    });
-    throw error;
-  }
-};
-
 // 解读相关API
 export const generateInterpretation = async (docId) => {
   try {

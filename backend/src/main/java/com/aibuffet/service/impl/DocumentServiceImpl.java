@@ -304,11 +304,17 @@ public class DocumentServiceImpl implements DocumentService {
                 logger.info("DocumentService: 执行公共图书馆分类查询");
                 result = docFileRepository.findByCategoryAndPublishStatus(
                     category.name(), publishStatusStr, PageRequest.of(page, size));
-            } else {
-                logger.info("DocumentService: 执行公共图书馆全部查询");
+            } else {                logger.info("DocumentService: 执行公共图书馆全部查询");
                 result = docFileRepository.findByPublishStatus(
                     publishStatusStr, PageRequest.of(page, size));
             }
+        }
+        
+        // 为每个文档计算收藏次数
+        for (DocFile document : result.getContent()) {
+            long favoriteCount = knowledgeBaseFileRepository.countByFileIdAndRelationType(
+                document.getId(), KnowledgeBaseFile.RelationType.FAVORITE);
+            document.setLearnerCount((int) favoriteCount);
         }
         
         logger.info("DocumentService: 文档列表查询完成: 总数={}, 总页数={}, 当前页数据量={}", 
@@ -622,6 +628,11 @@ public class DocumentServiceImpl implements DocumentService {
             }
         }
 
+        // 计算收藏数量
+        long favoriteCount = knowledgeBaseFileRepository.countByFileIdAndRelationType(docId, KnowledgeBaseFile.RelationType.FAVORITE);
+        docFile.setLearnerCount((int) favoriteCount);
+        logger.debug("文档收藏数量: docId={}, favoriteCount={}", docId, favoriteCount);
+
         logger.info("获取文档详情成功: docId={}", docId);
         return docFile;
     }
@@ -697,34 +708,4 @@ public class DocumentServiceImpl implements DocumentService {
         logger.info("取消收藏成功: docId={}, knowledgeBaseId={}", docId, knowledgeBaseId);
     }
 
-    @Override
-    @Transactional
-    public void incrementLearnerCount(Long docId) {
-        logger.info("开始增加文档学习人数: docId={}", docId);
-        
-        // 使用原子操作更新学习人数
-        int updatedRows = docFileRepository.incrementLearnerCount(docId);
-        
-        // 检查更新结果
-        if (updatedRows == 0) {
-            // 如果更新失败，检查文档是否存在且状态正确
-            DocFile docFile = docFileRepository.findById(docId)
-                    .orElseThrow(() -> {
-                        logger.warn("文档不存在: docId={}", docId);
-                        return new ResourceNotFoundException("Document not found");
-                    });
-
-            if (docFile.getStatus() != DocFile.Status.ACTIVE) {
-                logger.warn("文档已删除: docId={}", docId);
-                throw new ResourceNotFoundException("Document is deleted");
-            }
-
-            if (docFile.getPublishStatus() != DocFile.PublishStatus.PUBLISHED) {
-                logger.warn("文档未发布: docId={}", docId);
-                throw new IllegalArgumentException("Document is not published");
-            }
-        }
-        
-        logger.info("文档学习人数更新成功: docId={}", docId);
-    }
 }

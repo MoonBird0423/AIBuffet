@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getDocument, incrementDocumentLearnerCount, getInterpretation, getMindmap, getQuiz, synthesizeAudio, getAudioStatus } from '../services/api';
+import { getDocument, getInterpretation, getMindmap, getQuiz, synthesizeAudio, getAudioStatus } from '../services/api';
 import BookInfo from '../components/library/BookInfo';
 import BookTabs from '../components/library/BookTabs';
 import AudioPlayer from '../components/common/AudioPlayer';
@@ -30,7 +30,7 @@ function BookDetails() {
   // 收藏相关状态
   const [showFavoriteModal, setShowFavoriteModal] = useState(false);
 
-  // 获取图书基本信息并增加学习人数
+  // 获取图书基本信息
   useEffect(() => {
     const fetchBookData = async () => {
       try {
@@ -39,7 +39,6 @@ function BookDetails() {
         const data = await getDocument(id);
         if (data) {
           setBookData(data);
-          await incrementDocumentLearnerCount(id);
         }
       } catch (err) {
         setError('获取图书信息失败');

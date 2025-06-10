@@ -59,7 +59,7 @@ public class DocFile {
     @Enumerated(EnumType.STRING)
     private Category category;
 
-    @Column(name = "learner_count")
+    @Transient
     private Integer learnerCount = 0;
 
     @Column(name = "author")

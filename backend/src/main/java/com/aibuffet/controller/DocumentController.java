@@ -329,16 +329,4 @@ public class DocumentController {
         }
     }
 
-    @PostMapping("/{id}/increment-learner")
-    public ApiResponse<Void> incrementLearner(@PathVariable Long id) {
-        try {
-            documentService.incrementLearnerCount(id);
-            return ApiResponse.success(null);
-        } catch (ResourceNotFoundException e) {
-            return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
-        } catch (Exception e) {
-            logger.error("增加学习人数失败: ", e);
-            return ApiResponse.error(ErrorCode.SYSTEM_ERROR, "系统错误，请稍后重试");
-        }
-    }
 }

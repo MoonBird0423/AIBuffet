@@ -66,11 +66,6 @@ public interface DocumentService {
     void updatePublishStatus(Long docId, Long userId, DocFile.PublishStatus status);
 
     /**
-     * 增加学习人数
-     */
-    void incrementLearnerCount(Long docId);
-
-    /**
      * 获取单个文档详情
      * 
      * @param docId 文档ID
