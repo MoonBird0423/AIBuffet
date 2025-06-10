@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import SearchBar from '../components/library/SearchBar';
 import CategoryFilter from '../components/library/CategoryFilter';
 import BookCard from '../components/library/BookCard';
@@ -10,46 +10,78 @@ function Library() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const pageSize = 24;  // 每次加载24本图书
+  const [lastElementRef, setLastElementRef] = useState(null);
+  const observer = useRef(null);
 
   const categories = [
     { id: 'all', name: '全部分类' },
     ...Object.entries(DocumentCategory).map(([id, name]) => ({ id, name }))
   ];
 
+  // 实现Intersection Observer监测
   useEffect(() => {
-    const fetchDocuments = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const params = {
-          keyword: searchKeyword || undefined
-        };
-        if (selectedCategory !== 'all') {
-          params.category = selectedCategory;
-        }
-        console.log('Library: 发送请求参数:', { page: currentPage, size: 20, ...params });
-        const response = await getDocuments(currentPage, 6, params);
-        console.log('Library: 接收到响应:', response);
-        console.log('Library: 设置文档数据:', response.data?.content);
-        setDocuments(response.data?.content || []);
-        setTotalPages(response.data?.totalPages || 1);
-      } catch (err) {
-        setError('获取图书列表失败');
-        console.error('Error fetching documents:', err);
-      } finally {
-        setLoading(false);
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore && !loading) {
+        fetchMoreDocuments();
       }
-    };
+    });
+    
+    if (lastElementRef) {
+      observer.current.observe(lastElementRef);
+    }
+    
+    return () => observer.current?.disconnect();
+  }, [lastElementRef, hasMore, loading]);
 
-    const debounceTimer = setTimeout(fetchDocuments, 300);
-    return () => clearTimeout(debounceTimer);
-  }, [searchKeyword, selectedCategory, currentPage]);
-
-  const handlePageChange = (newPage) => {
-    setCurrentPage(newPage);
+  // 获取文档的方法
+  const fetchDocuments = async (isInitial = false) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const params = {
+        keyword: searchKeyword || undefined
+      };
+      if (selectedCategory !== 'all') {
+        params.category = selectedCategory;
+      }
+      
+      // 计算当前页码
+      const currentPage = isInitial ? 0 : Math.floor(documents.length / pageSize);
+      
+      console.log('Library: 发送请求参数:', { page: currentPage, size: pageSize, ...params });
+      const response = await getDocuments(currentPage, pageSize, params);
+      console.log('Library: 接收到响应:', response);
+      const newDocuments = response.data?.content || [];
+      
+      // 更新文档列表
+      setDocuments(prev => isInitial ? newDocuments : [...prev, ...newDocuments]);
+      
+      // 检查是否还有更多数据
+      setHasMore(newDocuments.length === pageSize);
+    } catch (err) {
+      setError('获取图书列表失败');
+      console.error('Error fetching documents:', err);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // 加载更多文档的方法
+  const fetchMoreDocuments = () => {
+    if (!loading && hasMore) {
+      fetchDocuments(false);
+    }
+  };
+
+  // 在搜索关键词或分类变化时重置列表
+  useEffect(() => {
+    setDocuments([]);
+    setHasMore(true);
+    const debounceTimer = setTimeout(() => fetchDocuments(true), 300);
+    return () => clearTimeout(debounceTimer);
+  }, [searchKeyword, selectedCategory]);
 
   return (
     <div className="min-h-screen flex flex-col font-sf">
@@ -72,7 +104,6 @@ function Library() {
             <SearchBar
               value={searchKeyword}
               onChange={(value) => {
-                setCurrentPage(0);
                 setSearchKeyword(value);
               }}
             />
@@ -89,7 +120,6 @@ function Library() {
               <CategoryFilter
                 selectedCategory={selectedCategory}
                 onSelectCategory={(category) => {
-                  setCurrentPage(0);
                   setSelectedCategory(category);
                 }}
               />
@@ -100,7 +130,7 @@ function Library() {
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">
-                    {selectedCategory === 'all' ? '热门图书' : categories.find(c => c.id === selectedCategory)?.name}
+                    {selectedCategory === 'all' ? '全部图书' : categories.find(c => c.id === selectedCategory)?.name}
                   </h2>
                   <p className="text-gray-600 mt-1">共找到 {documents.length} 本图书</p>
                 </div>
@@ -119,51 +149,26 @@ function Library() {
               ) : documents.length > 0 ? (
                 <>
                   <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
-                  {documents.map(document => (
-                    <BookCard key={document.id} document={document} />
-                  ))}
+                    {documents.map((document, index) => (
+                      <div 
+                        key={document.id}
+                        ref={index === documents.length - 1 ? setLastElementRef : null}
+                      >
+                        <BookCard document={document} />
+                      </div>
+                    ))}
                   </div>
                   
-                  {/* Pagination */}
-                  <div className="flex justify-center mt-12">
-                      <nav className="flex items-center space-x-2">
-                        <button 
-                          onClick={() => handlePageChange(currentPage - 1)}
-                          disabled={currentPage === 0}
-                          className={`px-4 py-2 rounded-xl shadow-sm border border-gray-200 
-                            ${currentPage === 0 
-                              ? 'text-gray-300 cursor-not-allowed' 
-                              : 'text-gray-500 hover:bg-gray-50'}`}
-                        >
-                          <i className="fas fa-chevron-left"></i>
-                        </button>
-
-                        {Array.from({ length: totalPages }, (_, i) => (
-                          <button
-                            key={i}
-                            onClick={() => handlePageChange(i)}
-                            className={`px-4 py-2 rounded-xl font-medium transition-all duration-200
-                              ${currentPage === i
-                                ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-                                : 'text-gray-700 bg-white hover:bg-gray-50 shadow-sm border border-gray-200'
-                              }`}
-                          >
-                            {i + 1}
-                          </button>
-                        ))}
-
-                        <button 
-                          onClick={() => handlePageChange(currentPage + 1)}
-                          disabled={currentPage === totalPages - 1}
-                          className={`px-4 py-2 rounded-xl shadow-sm border border-gray-200 
-                            ${currentPage === totalPages - 1
-                              ? 'text-gray-300 cursor-not-allowed' 
-                              : 'text-gray-500 hover:bg-gray-50'}`}
-                        >
-                          <i className="fas fa-chevron-right"></i>
-                        </button>
-                      </nav>
+                  {loading && (
+                    <div className="flex justify-center items-center h-20 mt-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                     </div>
+                  )}
+                  {!loading && !hasMore && documents.length > 0 && (
+                    <div className="text-center text-gray-500 mt-8">
+                      没有更多图书了
+                    </div>
+                  )}
                   </>
               ) : (
                 <div className="text-center text-gray-500 py-12">
