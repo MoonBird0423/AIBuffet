@@ -2,8 +2,10 @@ package com.aibuffet.service.impl;
 
 import com.aibuffet.common.ApiResponse;
 import com.aibuffet.common.ErrorCode;
+import com.aibuffet.dto.CreateKnowledgeBaseRequest;
 import com.aibuffet.model.User;
 import com.aibuffet.repository.UserRepository;
+import com.aibuffet.service.KnowledgeBaseService;
 import com.aibuffet.service.UserService;
 import com.aibuffet.security.JwtUtil;
 import com.aibuffet.service.VerificationCodeService;
@@ -29,6 +31,9 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private KnowledgeBaseService knowledgeBaseService;
+
     @Override
     @Transactional
     public ApiResponse loginWithPhone(String phone, String code) {
@@ -52,7 +57,16 @@ public class UserServiceImpl implements UserService {
                         String defaultUsername = "用户" + phone.substring(7);
                         newUser.setUsername(defaultUsername);
                         System.out.println("创建新用户 - 默认用户名: " + defaultUsername);
-                        return userRepository.save(newUser);
+                        User savedUser = userRepository.save(newUser);
+
+                        // 为新用户创建默认知识库
+                        System.out.println("开始创建默认知识库");
+                        CreateKnowledgeBaseRequest request = new CreateKnowledgeBaseRequest();
+                        request.setName("我的知识库");
+                        knowledgeBaseService.createKnowledgeBase(request, savedUser.getId());
+                        System.out.println("默认知识库创建完成");
+
+                        return savedUser;
                     });
             System.out.println("用户信息获取成功 - userId: " + user.getId());
 
