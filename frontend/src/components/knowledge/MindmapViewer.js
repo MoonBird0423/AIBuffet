@@ -22,7 +22,6 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
   const svgRef = useRef();
   const markmapRef = useRef();
   const containerRef = useRef();
-  const transformedRootRef = useRef(null);
 
   // 全屏功能
   const toggleFullscreen = () => {

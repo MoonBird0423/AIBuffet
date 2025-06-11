@@ -3,14 +3,12 @@ import Modal from '../common/Modal';
 import Popover from '../common/Popover';
 import { createKnowledgeBase, updateKnowledgeBase, deleteKnowledgeBase } from '../../services/api';
 
-function KnowledgeBaseList({ knowledgeBases = [], selectedKnowledgeBase, onSelect, onListChange }) {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+function KnowledgeBaseList({ knowledgeBases = [], selectedKnowledgeBase, onSelect, onListChange }) {  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingKnowledgeBase, setEditingKnowledgeBase] = useState(null);
   const [newKnowledgeBaseName, setNewKnowledgeBaseName] = useState('');
   const [error, setError] = useState('');
-  const [openPopoverId, setOpenPopoverId] = useState(null);
 
   const handleCreate = async () => {
     if (!newKnowledgeBaseName.trim()) {
@@ -68,16 +66,17 @@ function KnowledgeBaseList({ knowledgeBases = [], selectedKnowledgeBase, onSelec
       setError(err.message);
     }
   };
-
   const handleEditClick = (knowledgeBase) => {
     setEditingKnowledgeBase(knowledgeBase);
     setNewKnowledgeBaseName(knowledgeBase.name);
     setIsEditModalOpen(true);
+    setError(''); // 清除之前的错误信息
   };
 
   const handleDeleteClick = (knowledgeBase) => {
     setEditingKnowledgeBase(knowledgeBase);
     setIsDeleteModalOpen(true);
+    setError(''); // 清除之前的错误信息
   };
   return (
     <div className="bg-white rounded-3xl p-6 shadow-xl sticky top-24">
@@ -135,35 +134,25 @@ function KnowledgeBaseList({ knowledgeBases = [], selectedKnowledgeBase, onSelec
                       {knowledgeBase.name}
                     </h3>
                   </div>
-                </div>
-                <div onClick={(e) => e.stopPropagation()}>
+                </div>                <div onClick={(e) => e.stopPropagation()}>
                   <Popover
-                    isOpen={openPopoverId === knowledgeBase.id}
                     trigger={
                       <button 
-                        onClick={() => setOpenPopoverId(openPopoverId === knowledgeBase.id ? null : knowledgeBase.id)}
                         className="p-2 w-8 h-8 rounded-full text-gray-400 hover:text-gray-600 hover:bg-white"
                       >
                         <i className="fas fa-ellipsis-v"></i>
                       </button>
                     }
-                    content={
-                    <div className="py-1">
+                    content={                    <div className="py-1">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditClick(knowledgeBase);
-                        }}
+                        onClick={() => handleEditClick(knowledgeBase)}
                         className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
                         <i className="fas fa-edit mr-2"></i>
                         编辑
                       </button>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteClick(knowledgeBase);
-                        }}
+                        onClick={() => handleDeleteClick(knowledgeBase)}
                         className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                       >
                         <i className="fas fa-trash mr-2"></i>

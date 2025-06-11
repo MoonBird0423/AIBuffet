@@ -19,13 +19,14 @@ const FileList = ({
   total = 0, 
   onPageChange 
 }) => {
-  const navigate = useNavigate();
-  const [deletingId, setDeletingId] = useState(null);
+  const navigate = useNavigate();  const [deletingId, setDeletingId] = useState(null);
   const [selectedFileId, setSelectedFileId] = useState(null);
   const [showChunkModal, setShowChunkModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [publishingFileId, setPublishingFileId] = useState(null);
   const [showUnpublishModal, setShowUnpublishModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingFile, setDeletingFile] = useState(null);
 
   const truncateFileName = (fileName) => {
     if (fileName.length > 20) {
@@ -84,16 +85,20 @@ const FileList = ({
     };
     return statusMap[status] || status;
   };
+  const handleDelete = (file) => {
+    setDeletingFile(file);
+    setShowDeleteModal(true);
+  };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('确定要删除这个文档吗？')) {
-      return;
-    }
+  const handleDeleteConfirm = async () => {
+    if (!deletingFile) return;
 
-    setDeletingId(id);
+    setDeletingId(deletingFile.id);
     try {
-      await deleteDocument(id, knowledgeBaseId);
+      await deleteDocument(deletingFile.id, knowledgeBaseId);
       onRefresh();
+      setShowDeleteModal(false);
+      setDeletingFile(null);
     } catch (error) {
       const errorCode = error.response?.data?.code;
       const message = error.response?.data?.message || '删除失败';
@@ -109,6 +114,8 @@ const FileList = ({
         default:
           ToastManager.error('系统错误，请稍后重试');
       }
+      setShowDeleteModal(false);
+      setDeletingFile(null);
     } finally {
       setDeletingId(null);
     }
@@ -228,9 +235,8 @@ const FileList = ({
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     >
                       <i className="fas fa-info-circle mr-2"></i>处理详情
-                    </button>
-                    <button
-                      onClick={() => handleDelete(file.id)}
+                    </button>                    <button
+                      onClick={() => handleDelete(file)}
                       disabled={deletingId === file.id}
                       className={`w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center
                         ${deletingId === file.id ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -405,9 +411,43 @@ const FileList = ({
           </button>
         </>}
       >
-        <div className="p-6">
-          <p className="text-gray-500">确定要取消发布此文档吗？取消发布后，其他用户将无法查看此文档。</p>
+        <div className="p-6">          <p className="text-gray-500">确定要取消发布此文档吗？取消发布后，其他用户将无法查看此文档。</p>
         </div>
+      </Modal>
+
+      {/* 删除确认弹窗 */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeletingFile(null);
+        }}
+        title="删除文档"
+        footer={
+          <>
+            <button
+              onClick={handleDeleteConfirm}
+              disabled={deletingId !== null}
+              className="inline-flex justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ml-3 disabled:opacity-50"
+            >
+              {deletingId !== null ? '删除中...' : '确认'}
+            </button>
+            <button
+              onClick={() => {
+                setShowDeleteModal(false);
+                setDeletingFile(null);
+              }}
+              disabled={deletingId !== null}
+              className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+            >
+              取消
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-gray-500">
+          确定要删除文档"{deletingFile?.fileName}"吗？此操作不可恢复。
+        </p>
       </Modal>
     </div>
   );
