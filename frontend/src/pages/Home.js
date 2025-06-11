@@ -6,27 +6,27 @@ function Home() {
   const slides = [
     {
       id: 0,
+      image: "/知识问答.png",
+      title: "知识问答",
+      description: "互动问答体验"
+    },
+    {
+      id: 1,
       image: "/语音解读.png",
       title: "语音解读",
       description: "深度语音解读体验"
     },
     {
-      id: 1,
+      id: 2,
       image: "/知识脑图.png",
       title: "知识脑图",
       description: "系统化知识结构"
     },
     {
-      id: 2,
+      id: 3,
       image: "/知识测试.png",
       title: "知识测试",
       description: "智能测试验证"
-    },
-    {
-      id: 3,
-      image: "/知识问答.png",
-      title: "知识问答",
-      description: "互动问答体验"
     }
   ];
   useEffect(() => {
