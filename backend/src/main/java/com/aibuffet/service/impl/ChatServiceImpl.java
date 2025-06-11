@@ -278,7 +278,7 @@ public class ChatServiceImpl implements ChatService {
             
             SearchRequest searchRequest = new SearchRequest();
             searchRequest.setQuery(query);
-            searchRequest.setLimit(5); // 检索5个相关块
+            searchRequest.setLimit(10); // 检索10个相关块
             searchRequest.setSimilarityThreshold(0.7f);
             
             if ("book".equals(type)) {
