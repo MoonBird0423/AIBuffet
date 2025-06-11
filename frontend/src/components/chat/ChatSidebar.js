@@ -164,6 +164,9 @@ const ChatSidebar = React.forwardRef(({ onNewChat, onDeleteSuccess }, ref) => {
       const sessions = await getChatSessions();
       if (!Array.isArray(sessions)) return;
 
+      // 按时间戳降序排序
+      sessions.sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
+
       // 构建新的Map
       const newMap = new Map();
       sessions.forEach(session => {
@@ -184,7 +187,7 @@ const ChatSidebar = React.forwardRef(({ onNewChat, onDeleteSuccess }, ref) => {
       sessions.forEach(chat => {
         if (!chat || !chat.lastMessageAt) return;
         const category = findCategoryByDate(new Date(chat.lastMessageAt));
-        newCategories[category].unshift(chat.sessionId);
+        newCategories[category].push(chat.sessionId);
       });
 
       setCategories(newCategories);
