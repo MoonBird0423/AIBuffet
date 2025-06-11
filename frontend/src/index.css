@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 聊天消息容器样式 */
+.message-container {
+  min-height: 200px;
+  height: calc(100vh - 160px); /* 减去头部和输入框的高度 */
+  overflow-y: auto;
+  will-change: transform; /* 优化滚动性能 */
+}
+
+.message-bubble {
+  min-width: 100px;
+  will-change: transform; /* 优化渲染性能 */
+  transform: translateZ(0); /* 强制GPU加速 */
+}
+
 /* 导入markdown样式 */
 @import './styles/markdown.css';
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import MarkdownIt from 'markdown-it';
 import { ToastManager } from '../common/Toast';
 import ChatGuidance from './ChatGuidance';
@@ -9,9 +9,7 @@ import {
   AiOutlineRobot,
   AiOutlineApple,
   AiOutlineBulb,
-  AiOutlineExperiment,
-  AiOutlineStar,
-  AiOutlineFileText
+  AiOutlineExperiment
 } from 'react-icons/ai';
 
 // 消息状态枚举
@@ -24,7 +22,84 @@ const MessageStatus = {
 
 function ChatMessages({ messages, partialResponse, error, messageStatus, questionTarget, onTargetSelect }) {
   const messagesEndRef = useRef(null);
-  // 初始化markdown-it实例，配置安全选项
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [justSentMessage, setJustSentMessage] = useState(false); // 追踪是否刚发送消息
+  const previousMessagesLengthRef = useRef(0); // 跟踪上一次的消息数量
+    // 检查是否在底部（用于自动滚动判断）
+  const isAtBottomForAutoScroll = (element) => {
+    const threshold = 150; // 距离底部150px以内启用自动滚动（放宽条件）
+    const distance = Math.abs((element.scrollHeight - element.scrollTop) - element.clientHeight);
+    const isAtBottom = distance < threshold;
+    
+    // 临时调试信息
+    console.log('[Auto Scroll Check]', {
+      scrollHeight: element.scrollHeight,
+      scrollTop: element.scrollTop,
+      clientHeight: element.clientHeight,
+      distance: distance,
+      threshold: threshold,
+      isAtBottom: isAtBottom
+    });
+    
+    return isAtBottom;
+  };
+  // 初始化检查滚动位置 - 当打开已有对话时自动滚动到底部
+  useEffect(() => {
+    if (!isInitialized && messagesEndRef.current) {
+      setIsInitialized(true);
+      
+      // 如果有消息，初始化时自动滚动到底部
+      if (messages.length > 0) {
+        console.log('[初始化滚动] 打开对话，自动滚动到底部，消息数量:', messages.length);
+        setTimeout(() => {
+          scrollToBottom(true);
+        }, 100); // 给一点延迟确保DOM已渲染
+      }
+    }
+  }, [isInitialized, messages.length]);
+  // 会话切换时的滚动处理 - 当从其他页面切换到现有对话时
+  useEffect(() => {
+    const currentLength = messages.length;
+    const previousLength = previousMessagesLengthRef.current;
+    
+    // 更新引用
+    previousMessagesLengthRef.current = currentLength;
+    
+    // 只在以下情况触发滚动：
+    // 1. 从0消息变为有消息（切换到已有对话）
+    // 2. 消息数量显著增加（加载更多历史消息或新消息）
+    if (isInitialized && currentLength > 0 && previousLength === 0) {
+      console.log('[会话切换] 从空对话切换到有消息的对话，滚动到底部');
+      setTimeout(() => {
+        scrollToBottom(true);
+      }, 150);
+    }
+  }, [messages, isInitialized]); // 依赖messages数组和初始化状态
+
+  // 滚动到底部
+  const scrollToBottom = (force = false) => {
+    if (!messagesEndRef.current) return;
+    
+    const container = messagesEndRef.current.parentElement;
+    
+    if (force) {
+      // 强制滚动（用户发送新消息或初始化）
+      console.log('[滚动] 强制滚动到底部');
+      container._lastProgrammaticScroll = Date.now();
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    } else {
+      // 自动滚动（仅在用户停留在底部时）
+      const atBottomForAutoScroll = isAtBottomForAutoScroll(container);
+      
+      if (atBottomForAutoScroll) {
+        console.log('[滚动] 用户在底部，自动跟随滚动');
+        container._lastProgrammaticScroll = Date.now();
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      } else {
+        console.log('[滚动] 用户不在底部，跳过自动滚动');
+      }
+    }
+  };// 初始化markdown-it实例，配置安全选项
   const md = useMemo(() => {
     const instance = new MarkdownIt({
       html: false, // 禁用HTML标签
@@ -35,18 +110,39 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
     return instance;
   }, []);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   useEffect(() => {
-    // 使用 requestAnimationFrame 来确保滚动发生在浏览器重绘之后
-    const scrollTimeout = requestAnimationFrame(() => {
-      scrollToBottom();
-    });
+    // 用户发送新消息时 - 强制滚动到底部
+    if (messages.length > 0 && messages[messages.length - 1].role === 'user') {
+      setJustSentMessage(true); // 标记刚发送消息
+      scrollToBottom(true);
+      return;
+    }
     
-    return () => cancelAnimationFrame(scrollTimeout);
-  }, [messages, partialResponse, messageStatus]);
+    // 模型正在流式输出时 - 仅在用户停留在底部时自动滚动
+    if (messageStatus === MessageStatus.STREAMING) {
+      const scrollTimeout = setTimeout(() => {
+        requestAnimationFrame(() => {
+          // 如果刚发送消息，给更长的缓冲时间让滚动动画完成
+          if (justSentMessage) {
+            scrollToBottom(true);
+            setJustSentMessage(false);
+          } else {
+            scrollToBottom();
+          }
+        });
+      }, justSentMessage ? 200 : 50); // 刚发送消息时给更长缓冲时间
+      return () => clearTimeout(scrollTimeout);
+    }
+    
+    // 消息完成时 - 如果用户在底部附近，最后滚动一次到准确位置
+    if (messageStatus === MessageStatus.COMPLETED) {
+      setJustSentMessage(false); // 重置状态
+      const container = messagesEndRef.current?.parentElement;
+      if (container && isAtBottomForAutoScroll(container)) {
+        scrollToBottom();
+      }
+    }
+  }, [messages, partialResponse, messageStatus, justSentMessage]);
   
     // 监听错误状态，显示Toast提示
     useEffect(() => {
@@ -87,14 +183,12 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
           <Icon className={`text-xl ${color} ${className}`} />
         </div>
       );
-    }
-
-    // 模型图标配置
+    }    // 模型图标配置
     const modelIcons = {
       'GPT-4': { icon: AiOutlineApple, bg: 'bg-red-100', color: 'text-red-600' },
       'Claude': { icon: AiOutlineBulb, bg: 'bg-yellow-100', color: 'text-yellow-600' },
       'Gemini': { icon: AiOutlineExperiment, bg: 'bg-green-100', color: 'text-green-600' },
-      'Llama 2': { icon: AiOutlineStar, bg: 'bg-yellow-100', color: 'text-yellow-600' }
+      'Llama 2': { icon: AiOutlineRobot, bg: 'bg-blue-100', color: 'text-blue-600' }
     };
 
     const iconConfig = modelIcons[model] || {
@@ -109,55 +203,41 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
       </div>
     );
   };
-
   // 渲染消息内容
-const renderContent = (content, isPartial = false, status) => {
-  // 如果内容为空且消息正在流式传输中，显示加载动画
-  if (!content && status === MessageStatus.STREAMING) {
-    return (
-      <div className="flex items-center space-x-2">
-        <AiOutlineLoading3Quarters className="animate-spin text-gray-400" />
-        <span className="text-gray-400">正在生成回复...</span>
-      </div>
-    );
-  }
+  const renderContent = (content, isPartial = false, status) => {
+    // 如果内容为空且消息正在流式传输中，显示加载动画
+    if (!content && status === MessageStatus.STREAMING) {
+      return (
+        <div className="flex items-center space-x-2">
+          <AiOutlineLoading3Quarters className="animate-spin text-gray-400" />
+          <span className="text-gray-400">正在生成回复...</span>
+        </div>
+      );
+    }
 
     // 处理数组格式的内容
     if (Array.isArray(content)) {
       return content.map((item, i) => {
-        switch (item.type) {
-          case 'text':
-            let html = md.render(item.text || '');
-            if (isPartial && i === content.length - 1 && status === MessageStatus.STREAMING) {
-              html += '<span class="inline-block w-2 h-4 ml-0.5 bg-gray-600 animate-pulse"></span>';
-            }
-            return (
-              <div 
-                key={i}
-                className="markdown-content"
-                dangerouslySetInnerHTML={{ __html: html }}
-              />
-            );
-          case 'image_url':
-            return (
-              <div key={i} className="mt-2">
-                <img 
-                  src={item.image_url.url} 
-                  alt="消息图片"
-                  className="max-w-full rounded-lg shadow-sm" 
-                  loading="lazy"
-                />
-              </div>
-            );
-          default:
-            return null;
+        if (item.type === 'text') {
+          let html = md.render(item.text || '');
+          if (isPartial && i === content.length - 1 && status === MessageStatus.STREAMING) {
+            html += '<span class="inline-block w-2 h-4 ml-0.5 bg-gray-600 animate-pulse"></span>';
+          }
+          return (
+            <div 
+              key={i}
+              className="markdown-content"
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          );
         }
+        // 忽略不支持的内容类型
+        return null;
       });
     }
 
     // 处理字符串格式的内容
     if (typeof content === 'string') {
-      // 如果是部分响应且正在流式输出，添加光标到HTML内容中
       let html = md.render(content || '');
       if (isPartial && status === MessageStatus.STREAMING) {
         html += '<span class="inline-block w-2 h-4 ml-0.5 bg-gray-600 animate-pulse"></span>';
@@ -171,66 +251,6 @@ const renderContent = (content, isPartial = false, status) => {
       );
     }
     
-    // 如果是包含多媒体的数组
-    if (Array.isArray(content)) {
-      return content.map((item, i) => {
-        switch (item.type) {
-          case 'text':
-            const renderedHTML = md.render(item.text);
-            const result = (
-              <div
-                key={i}
-                className="markdown-content"
-                dangerouslySetInnerHTML={{ __html: renderedHTML }}
-              />
-            );
-            if (isPartial && i === content.length - 1 && status === MessageStatus.STREAMING) {
-              const finalHTML = renderedHTML + '<span class="inline-block w-2 h-4 ml-0.5 bg-gray-600 animate-pulse"></span>';
-              return (
-                <div
-                  key={i}
-                  className="markdown-content"
-                  dangerouslySetInnerHTML={{ __html: finalHTML }}
-                />
-              );
-            }
-            return result;
-          case 'input_audio':
-            return (
-              <div key={i} className="flex items-center space-x-2">
-                <AiOutlineStar className="text-xl text-gray-500" />
-                <span>语音输入</span>
-                <audio src={item.input_audio.data} controls className="max-w-full" />
-              </div>
-            );
-          case 'image':
-            return (
-              <div key={i} className="mt-2">
-                <img 
-                  src={item.file} 
-                  alt="用户上传的图片" 
-                  className="max-w-full rounded-lg"
-                  loading="lazy"
-                />
-              </div>
-            );
-          case 'video':
-            return (
-              <div key={i} className="mt-2">
-                <video 
-                  src={item.file} 
-                  controls 
-                  className="max-w-full rounded-lg"
-                  preload="metadata"
-                />
-              </div>
-            );
-          default:
-            return <p key={i}>不支持的内容类型: {item.type}</p>;
-        }
-      });
-    }
-    
     return <p>无法显示的内容</p>;
   };
 
@@ -238,10 +258,9 @@ const renderContent = (content, isPartial = false, status) => {
   if (messages.length === 0 && !questionTarget) {
     return <ChatGuidance onTargetSelect={onTargetSelect} />;
   }
-
   return (
     <>
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar">
+      <div className="message-container relative h-[calc(100vh-160px)] overflow-y-auto px-6 pt-6 pb-24 space-y-6 scrollbar will-change-transform scroll-smooth">
         <style>
           {`
             .markdown-content {
@@ -357,8 +376,8 @@ const renderContent = (content, isPartial = false, status) => {
                 <div className="flex-shrink-0">
                   {isUser ? getMessageIcon('user') : getMessageIcon('assistant', message.model, currentStatus)}
                 </div>
-                <div
-                  className={`rounded-lg p-4 max-w-3xl ${
+              <div
+                  className={`message-bubble rounded-lg p-4 max-w-3xl ${
                     isUser 
                       ? 'bg-blue-500 text-white ml-auto'
                       : 'bg-gray-100 text-gray-800 mr-auto'
@@ -394,8 +413,7 @@ const renderContent = (content, isPartial = false, status) => {
                 </div>
               )}
             </React.Fragment>
-          );
-        })}
+          );        })}
         <div ref={messagesEndRef} />
       </div>
     </>
