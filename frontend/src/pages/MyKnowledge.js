@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 import KnowledgeBaseList from '../components/knowledge/KnowledgeBaseList';
 import KnowledgeBaseContent from '../components/knowledge/KnowledgeBaseContent';
 import { getMyKnowledgeBases } from '../services/api';
 
 function MyKnowledge() {
+  useDocumentTitle('我的知识库 | 书意');
   const [knowledgeBases, setKnowledgeBases] = useState([]);
   const [selectedKnowledgeBase, setSelectedKnowledgeBase] = useState(null);
   const [loading, setLoading] = useState(true);

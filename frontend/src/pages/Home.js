@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 function Home() {
+  useDocumentTitle('书意');
   const [currentSlide, setCurrentSlide] = useState(0);
   const slides = [
     {

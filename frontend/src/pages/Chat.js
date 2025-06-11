@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 import ChatHeader from '../components/chat/ChatHeader';
 import ChatMessages from '../components/chat/ChatMessages';
 import ChatInput from '../components/chat/ChatInput';
@@ -10,6 +11,8 @@ import { ToastManager } from '../components/common/Toast';
 function Chat() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [pageTitle, setPageTitle] = useState('AI对话 | 书意');
+  useDocumentTitle(pageTitle);
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [currentUserMessage, setCurrentUserMessage] = useState(null);
   const [messagesMap, setMessagesMap] = useState(new Map());
@@ -57,22 +60,27 @@ function Chat() {
     const knowledgeBaseName = params.get('knowledgeBaseName');
     
     if (bookId && bookName) {
-      setQuestionTarget({ 
+      const target = { 
         type: 'book', 
         id: bookId, 
         name: decodeURIComponent(bookName) 
-      });
+      };
+      setQuestionTarget(target);
       setShowNoTargetHint(false);
+      setPageTitle('AI对话 | 书意');
     } else if (knowledgeBaseId && knowledgeBaseName) {
-      setQuestionTarget({ 
+      const target = { 
         type: 'knowledge', 
         id: knowledgeBaseId, 
         name: decodeURIComponent(knowledgeBaseName) 
-      });
+      };
+      setQuestionTarget(target);
       setShowNoTargetHint(false);
+      setPageTitle('AI对话 | 书意');
     } else {
       setQuestionTarget(null);
       setShowNoTargetHint(true);
+      setPageTitle('AI对话 | 书意');
     }
   }, [location.search]);
 

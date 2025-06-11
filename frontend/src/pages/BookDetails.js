@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 import { getDocument, getInterpretation, getMindmap, getQuiz, synthesizeAudio, getAudioStatus } from '../services/api';
 import BookInfo from '../components/library/BookInfo';
 import BookTabs from '../components/library/BookTabs';
@@ -10,6 +11,7 @@ import { ToastManager } from '../components/common/Toast';
 function BookDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  useDocumentTitle('图书详情 | 书意');
   const [bookData, setBookData] = useState(null);
   const [activeTab, setActiveTab] = useState('interpretation');
   const [tabContent, setTabContent] = useState(null);

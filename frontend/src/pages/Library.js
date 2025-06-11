@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 import SearchBar from '../components/library/SearchBar';
 import CategoryFilter from '../components/library/CategoryFilter';
 import BookCard from '../components/library/BookCard';
 import { getDocuments, DocumentCategory } from '../services/api';
 
 function Library() {
+  useDocumentTitle('图书馆 | 书意');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [documents, setDocuments] = useState([]);

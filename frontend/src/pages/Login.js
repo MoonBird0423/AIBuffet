@@ -1,8 +1,10 @@
 import React from 'react';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 import Logo from '../components/common/Logo';
 import LoginForm from '../components/auth/LoginForm';
 
 function Login() {
+  useDocumentTitle('登录 | 书意');
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Apple风格渐变背景 */}
