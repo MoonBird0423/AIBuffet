@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useMemo, useState } from 'react';
 import MarkdownIt from 'markdown-it';
 import { ToastManager } from '../common/Toast';
 import ChatGuidance from './ChatGuidance';
+import { useLocation } from 'react-router-dom';
 import {
   AiOutlineLoading3Quarters,
   AiOutlineWarning,
@@ -21,13 +22,14 @@ const MessageStatus = {
 };
 
 function ChatMessages({ messages, partialResponse, error, messageStatus, questionTarget, onTargetSelect }) {
+  const location = useLocation();
   const messagesEndRef = useRef(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [justSentMessage, setJustSentMessage] = useState(false); // 追踪是否刚发送消息
-  const previousMessagesLengthRef = useRef(0); // 跟踪上一次的消息数量
-    // 检查是否在底部（用于自动滚动判断）
+  const [justSentMessage, setJustSentMessage] = useState(false);
+
+  // 检查是否在底部（用于自动滚动判断）
   const isAtBottomForAutoScroll = (element) => {
-    const threshold = 150; // 距离底部150px以内启用自动滚动（放宽条件）
+    const threshold = 250; // 距离底部250px以内启用自动滚动（放宽条件）
     const distance = Math.abs((element.scrollHeight - element.scrollTop) - element.clientHeight);
     const isAtBottom = distance < threshold;
     
@@ -43,38 +45,29 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
     
     return isAtBottom;
   };
-  // 初始化检查滚动位置 - 当打开已有对话时自动滚动到底部
+
+  // 初始化检查滚动位置
   useEffect(() => {
     if (!isInitialized && messagesEndRef.current) {
       setIsInitialized(true);
-      
-      // 如果有消息，初始化时自动滚动到底部
       if (messages.length > 0) {
         console.log('[初始化滚动] 打开对话，自动滚动到底部，消息数量:', messages.length);
         setTimeout(() => {
           scrollToBottom(true);
-        }, 100); // 给一点延迟确保DOM已渲染
+        }, 100);
       }
     }
   }, [isInitialized, messages.length]);
-  // 会话切换时的滚动处理 - 当从其他页面切换到现有对话时
+
+  // 会话切换时的滚动处理
   useEffect(() => {
-    const currentLength = messages.length;
-    const previousLength = previousMessagesLengthRef.current;
-    
-    // 更新引用
-    previousMessagesLengthRef.current = currentLength;
-    
-    // 只在以下情况触发滚动：
-    // 1. 从0消息变为有消息（切换到已有对话）
-    // 2. 消息数量显著增加（加载更多历史消息或新消息）
-    if (isInitialized && currentLength > 0 && previousLength === 0) {
-      console.log('[会话切换] 从空对话切换到有消息的对话，滚动到底部');
+    if (isInitialized) {
+      console.log('[会话切换] URL变化，滚动到底部');
       setTimeout(() => {
         scrollToBottom(true);
       }, 150);
     }
-  }, [messages, isInitialized]); // 依赖messages数组和初始化状态
+  }, [location.search, isInitialized]); 
 
   // 滚动到底部
   const scrollToBottom = (force = false) => {
@@ -82,13 +75,16 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
     
     const container = messagesEndRef.current.parentElement;
     
-    if (force) {
-      // 强制滚动（用户发送新消息或初始化）
+    // 增加优先级判断
+    const shouldForceScroll = force || 
+      !location.search || // 新对话
+      messages.length === 0; // 首条消息
+    
+    if (shouldForceScroll) {
       console.log('[滚动] 强制滚动到底部');
       container._lastProgrammaticScroll = Date.now();
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     } else {
-      // 自动滚动（仅在用户停留在底部时）
       const atBottomForAutoScroll = isAtBottomForAutoScroll(container);
       
       if (atBottomForAutoScroll) {
@@ -99,30 +95,32 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
         console.log('[滚动] 用户不在底部，跳过自动滚动');
       }
     }
-  };// 初始化markdown-it实例，配置安全选项
+  };
+
+  // 初始化markdown-it实例
   const md = useMemo(() => {
     const instance = new MarkdownIt({
-      html: false, // 禁用HTML标签
-      breaks: true, // 转换换行符为<br>
-      linkify: true, // 自动转换URL为链接
-      typographer: true, // 启用一些语言中性的替换和引号
+      html: false,
+      breaks: true,
+      linkify: true, 
+      typographer: true
     });
     return instance;
   }, []);
 
+  // 消息更新时的滚动处理
   useEffect(() => {
     // 用户发送新消息时 - 强制滚动到底部
     if (messages.length > 0 && messages[messages.length - 1].role === 'user') {
-      setJustSentMessage(true); // 标记刚发送消息
+      setJustSentMessage(true);
       scrollToBottom(true);
       return;
     }
     
-    // 模型正在流式输出时 - 仅在用户停留在底部时自动滚动
+    // 模型正在流式输出时
     if (messageStatus === MessageStatus.STREAMING) {
       const scrollTimeout = setTimeout(() => {
         requestAnimationFrame(() => {
-          // 如果刚发送消息，给更长的缓冲时间让滚动动画完成
           if (justSentMessage) {
             scrollToBottom(true);
             setJustSentMessage(false);
@@ -130,13 +128,13 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
             scrollToBottom();
           }
         });
-      }, justSentMessage ? 200 : 50); // 刚发送消息时给更长缓冲时间
+      }, justSentMessage ? 200 : 50);
       return () => clearTimeout(scrollTimeout);
     }
     
-    // 消息完成时 - 如果用户在底部附近，最后滚动一次到准确位置
+    // 消息完成时
     if (messageStatus === MessageStatus.COMPLETED) {
-      setJustSentMessage(false); // 重置状态
+      setJustSentMessage(false);
       const container = messagesEndRef.current?.parentElement;
       if (container && isAtBottomForAutoScroll(container)) {
         scrollToBottom();
@@ -144,12 +142,12 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
     }
   }, [messages, partialResponse, messageStatus, justSentMessage]);
   
-    // 监听错误状态，显示Toast提示
-    useEffect(() => {
-      if (error) {
-        ToastManager.error(error);
-      }
-    }, [error]);
+  // 监听错误状态
+  useEffect(() => {
+    if (error) {
+      ToastManager.error(error);
+    }
+  }, [error]);
 
   const getMessageIcon = (role, model, status) => {
     if (role === 'user') {
@@ -160,7 +158,6 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
       );
     }
 
-    // 状态图标配置
     const statusIcons = {
       [MessageStatus.WAITING]: {
         icon: AiOutlineLoading3Quarters,
@@ -175,7 +172,6 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
       }
     };
 
-    // 如果有特殊状态，优先显示状态图标
     if (status && statusIcons[status]) {
       const { icon: Icon, bg, color, className = '' } = statusIcons[status];
       return (
@@ -183,7 +179,8 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
           <Icon className={`text-xl ${color} ${className}`} />
         </div>
       );
-    }    // 模型图标配置
+    }
+
     const modelIcons = {
       'GPT-4': { icon: AiOutlineApple, bg: 'bg-red-100', color: 'text-red-600' },
       'Claude': { icon: AiOutlineBulb, bg: 'bg-yellow-100', color: 'text-yellow-600' },
@@ -203,9 +200,8 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
       </div>
     );
   };
-  // 渲染消息内容
+
   const renderContent = (content, isPartial = false, status) => {
-    // 如果内容为空且消息正在流式传输中，显示加载动画
     if (!content && status === MessageStatus.STREAMING) {
       return (
         <div className="flex items-center space-x-2">
@@ -215,7 +211,6 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
       );
     }
 
-    // 处理数组格式的内容
     if (Array.isArray(content)) {
       return content.map((item, i) => {
         if (item.type === 'text') {
@@ -231,12 +226,10 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
             />
           );
         }
-        // 忽略不支持的内容类型
         return null;
       });
     }
 
-    // 处理字符串格式的内容
     if (typeof content === 'string') {
       let html = md.render(content || '');
       if (isPartial && status === MessageStatus.STREAMING) {
@@ -254,10 +247,10 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
     return <p>无法显示的内容</p>;
   };
 
-  // 如果没有消息且没有提问对象，显示引导界面
   if (messages.length === 0 && !questionTarget) {
     return <ChatGuidance onTargetSelect={onTargetSelect} />;
   }
+
   return (
     <>
       <div className="message-container relative h-[calc(100vh-160px)] overflow-y-auto px-6 pt-6 pb-24 space-y-6 scrollbar will-change-transform scroll-smooth">
@@ -342,8 +335,6 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
           `}
         </style>
         {messages.map((message, index) => {
-          
-          // 确定消息状态
           const isLastMessage = index === messages.length - 1;
           const isLastAssistantMessage = message.role === 'assistant' &&
             index === messages.findLastIndex(msg => msg.role === 'assistant');
@@ -376,7 +367,7 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
                 <div className="flex-shrink-0">
                   {isUser ? getMessageIcon('user') : getMessageIcon('assistant', message.model, currentStatus)}
                 </div>
-              <div
+                <div
                   className={`message-bubble rounded-lg p-4 max-w-3xl ${
                     isUser 
                       ? 'bg-blue-500 text-white ml-auto'
@@ -413,7 +404,8 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
                 </div>
               )}
             </React.Fragment>
-          );        })}
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
     </>
