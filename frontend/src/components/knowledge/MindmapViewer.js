@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, memo } from 'react';
 import { Markmap } from 'markmap-view';
 import { Transformer } from 'markmap-lib';
+import { Toolbar } from 'markmap-toolbar';
+import 'markmap-toolbar/dist/style.css';
 import '../../styles/markmap.css';
 
 const parseAndConvertToMarkdown = (data) => {
@@ -21,6 +23,26 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
   const markmapRef = useRef();
   const containerRef = useRef();
   const transformedRootRef = useRef(null);
+
+  // 全屏功能
+  const toggleFullscreen = () => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (!document.fullscreenElement) {
+      // 进入全屏
+      container.requestFullscreen?.() ||
+      container.webkitRequestFullscreen?.() ||
+      container.mozRequestFullScreen?.() ||
+      container.msRequestFullscreen?.();
+    } else {
+      // 退出全屏
+      document.exitFullscreen?.() ||
+      document.webkitExitFullscreen?.() ||
+      document.mozCancelFullScreen?.() ||
+      document.msExitFullscreen?.();
+    }
+  };
 
   useEffect(() => {
     if (!content || !svgRef.current || !containerRef.current) return;
@@ -43,10 +65,9 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
         const result = transformer.transform(markdownContent);
         transformedRoot = result.root;
       } catch (error) {
-        console.error('转换脑图数据失败:', error);
-        throw new Error('脑图数据转换失败');
+        console.error('转换脑图数据失败:', error);        throw new Error('脑图数据转换失败');
       }
-
+      
       // 初始化时展开所有节点
       const expandAll = (node) => {
         if (node.children) {
@@ -54,90 +75,56 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
           node.children.forEach(expandAll);
         }
       };
+      
       expandAll(transformedRoot);
-
-      // 创建Markmap实例前确保SVG尺寸已设置
-      const mm = Markmap.create(svg, {
-        duration: 500,
-        maxWidth: Math.max(300, width * 0.8),
-        color: (node) => {
-          const colors = [
-            '#2196f3',  // 蓝色
-            '#4caf50',  // 绿色
-            '#ff9800',  // 橙色
-            '#e91e63',  // 粉色
-            '#9c27b0',  // 紫色
-            '#00bcd4',  // 青色
-            '#ff5722',  // 深橙色
-            '#795548'   // 棕色
-          ];
-          return colors[node.depth % colors.length];
-        },
-        paddingX: 16,
-        paddingY: 4,
-        nodeMinHeight: 16,
-        spacingHorizontal: 80,
-        spacingVertical: 16,
-        autoFit: false,
-        fitRatio: 0.95,
-        initialExpandLevel: 4,
-        nodeStyle: (node) => {
-          const colors = [
-            '#2196f3',  // 蓝色
-            '#4caf50',  // 绿色
-            '#ff9800',  // 橙色
-            '#e91e63',  // 粉色
-            '#9c27b0',  // 紫色
-            '#00bcd4',  // 青色
-            '#ff5722',  // 深橙色
-            '#795548'   // 棕色
-          ];
-          const color = colors[node.depth % colors.length];
-          return {
-            stroke: color,
-            strokeWidth: '2px',
-            fill: node.children ? (node.state?.collapsed ? '#f0f0f0' : '#fff') : '#fff',
-            rx: 5,
-            ry: 5
-          };
-        },
-        linkStyle: {
-          stroke: '#666',
-          strokeWidth: '2px',
-          fill: 'none',
-          strokeLinecap: 'round',
-          strokeLinejoin: 'round'
-        },
-        textStyle: {
-          fill: '#333',
-          fontSize: '14px',
-          dominantBaseline: 'middle',
-          textAnchor: 'start',
-          style: {
-            fontSize: '14px',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-          }
-        },
-        curveRadius: 5,
-        renderOptions: {
-          linkMiddleArc: true,
-          linkVerticalOffset: 8,
-          linkShape: 'diagonal',
-          linkWidth: 2
-        },
-        spacingVertical: 24
-      }, transformedRoot);
-
+      
+      // 创建Markmap实例，使用默认配置以确保线条正确显示
+      const mm = Markmap.create(svg, undefined, transformedRoot);
       markmapRef.current = mm;
-
-      const resizeObserver = new ResizeObserver(() => {
+      
+      // 创建工具栏并添加自定义全屏按钮
+      const toolbar = Toolbar.create(mm);
+      
+      // 创建全屏工具栏项
+      const fullscreenItem = {
+        id: 'fullscreen',
+        title: '全屏显示',
+        content: '⛶',
+        onClick: (e) => {
+          e.preventDefault();
+          toggleFullscreen();
+        }
+      };
+      
+      // 获取默认工具栏项并添加全屏按钮
+      const items = [...Toolbar.defaultItems, fullscreenItem];
+      toolbar.setItems(items);
+      
+      const toolbarEl = toolbar.render();
+      
+      // 设置工具栏样式
+      toolbarEl.style.position = 'absolute';
+      toolbarEl.style.top = '0.5rem';
+      toolbarEl.style.right = '0.5rem';
+      toolbarEl.style.zIndex = '1000';
+      
+      // 添加自定义CSS类来隐藏markmap图标
+      toolbarEl.classList.add('custom-toolbar');
+      
+      // 将工具栏添加到容器
+      container.append(toolbarEl);      const resizeObserver = new ResizeObserver(() => {
         const { width, height } = container.getBoundingClientRect();
         svg.setAttribute('width', width);
         svg.setAttribute('height', height);
       });
-
+      
       resizeObserver.observe(container);
-      return () => resizeObserver.disconnect();
+      return () => {
+        resizeObserver.disconnect();
+        if (toolbarEl && toolbarEl.parentNode) {
+          toolbarEl.parentNode.removeChild(toolbarEl);
+        }
+      };
     } catch (error) {
       console.error('渲染脑图失败:', error);
       // 显示错误信息在SVG中
@@ -156,7 +143,7 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
   return (
     <div 
       ref={containerRef}
-      className="markmap-wrapper bg-white rounded-lg p-6 shadow-sm border border-gray-200" 
+      className="markmap-wrapper bg-white rounded-lg p-6 shadow-sm border border-gray-200 relative" 
       style={{ height: height, width: '100%' }}
     >
       <svg 
