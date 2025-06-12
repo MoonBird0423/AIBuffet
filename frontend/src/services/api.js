@@ -831,6 +831,51 @@ export const getQuiz = async (docId) => {
   }
 };
 
+// 更新解读内容
+export const updateInterpretation = async (docId, content) => {
+  try {
+    const response = await apiClient.put(`/publish/docs/${docId}/interpretation`, content, {
+      headers: {
+        'Content-Type': 'text/plain'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('更新解读内容失败:', error);
+    throw error;
+  }
+};
+
+// 更新脑图内容
+export const updateMindmap = async (docId, content) => {
+  try {
+    const response = await apiClient.put(`/publish/docs/${docId}/mindmap`, content, {
+      headers: {
+        'Content-Type': 'text/plain'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('更新脑图内容失败:', error);
+    throw error;
+  }
+};
+
+// 更新测试题内容
+export const updateQuiz = async (docId, content) => {
+  try {
+    const response = await apiClient.put(`/publish/docs/${docId}/quiz`, content, {
+      headers: {
+        'Content-Type': 'text/plain'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('更新测试题内容失败:', error);
+    throw error;
+  }
+};
+
 // 音频相关API
 export const synthesizeAudio = async (docId) => {
   try {

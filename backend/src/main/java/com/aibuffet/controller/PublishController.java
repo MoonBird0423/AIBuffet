@@ -107,4 +107,52 @@ public class PublishController {
             return ApiResponse.error(ErrorCode.SYSTEM_ERROR);
         }
     }
+
+    @PutMapping("/docs/{docId}/interpretation")
+    public ApiResponse<Void> updateInterpretation(
+            @PathVariable Long docId,
+            @RequestBody String content,
+            @AuthenticationPrincipal User user) {
+        try {
+            logger.info("更新文档解读: docId={}, userId={}", docId, user.getId());
+            publishService.updateInterpretation(docId, content, user.getId()).get();
+            return ApiResponse.success();
+        } catch (Exception e) {
+            logger.error("更新文档解读失败: docId={}, userId={}, error={}", 
+                docId, user.getId(), e.getMessage(), e);
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR);
+        }
+    }
+
+    @PutMapping("/docs/{docId}/mindmap")
+    public ApiResponse<Void> updateMindmap(
+            @PathVariable Long docId,
+            @RequestBody String content,
+            @AuthenticationPrincipal User user) {
+        try {
+            logger.info("更新思维导图: docId={}, userId={}", docId, user.getId());
+            publishService.updateMindmap(docId, content, user.getId()).get();
+            return ApiResponse.success();
+        } catch (Exception e) {
+            logger.error("更新思维导图失败: docId={}, userId={}, error={}", 
+                docId, user.getId(), e.getMessage(), e);
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR);
+        }
+    }
+
+    @PutMapping("/docs/{docId}/quiz")
+    public ApiResponse<Void> updateQuiz(
+            @PathVariable Long docId,
+            @RequestBody String content,
+            @AuthenticationPrincipal User user) {
+        try {
+            logger.info("更新测试题: docId={}, userId={}", docId, user.getId());
+            publishService.updateQuiz(docId, content, user.getId()).get();
+            return ApiResponse.success();
+        } catch (Exception e) {
+            logger.error("更新测试题失败: docId={}, userId={}, error={}", 
+                docId, user.getId(), e.getMessage(), e);
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR);
+        }
+    }
 }

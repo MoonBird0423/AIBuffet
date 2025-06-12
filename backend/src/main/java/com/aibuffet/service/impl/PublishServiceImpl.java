@@ -186,27 +186,20 @@ public class PublishServiceImpl implements PublishService {
             try {
                 verifyDocAccess(docId, userId);
 
-                // 1. 先检查是否已经存在解读内容
-                DocInterpretation existingInterpretation = docInterpretationRepository.findByDocId(docId)
-                        .orElse(null);
-                if (existingInterpretation != null && existingInterpretation.getContent() != null) {
-                    log.info("已存在解读内容，直接返回，docId: {}", docId);
-                    return existingInterpretation.getContent();
-                }
-
-                // 2. 上传文件获取fileId
+                // 1. 上传文件获取fileId
                 log.info("开始为文档生成解读，docId: {}", docId);
                 String fileId = uploadFileAndGetFileId(docId, userId).get();
 
-                // 3. 调用AI生成解读内容
+                // 2. 调用AI生成解读内容
                 String content = generateContent(fileId, interpretationUserPrompt, userId).get();
 
-                // 4. 保存解读内容
-                DocInterpretation interpretation = new DocInterpretation();
+                // 3. 保存解读内容（如果已存在则覆盖）
+                DocInterpretation interpretation = docInterpretationRepository.findByDocId(docId)
+                        .orElse(new DocInterpretation());
                 interpretation.setDocId(docId);
                 interpretation.setContent(content);
                 docInterpretationRepository.save(interpretation);
-                log.info("解读内容已保存，docId: {}", docId);
+                log.info("解读内容已生成并保存，docId: {}", docId);
 
                 return content;
             } catch (Exception e) {
@@ -223,28 +216,21 @@ public class PublishServiceImpl implements PublishService {
             try {
                 verifyDocAccess(docId, userId);
 
-                // 1. 检查是否已存在脑图内容
-                DocMindmap existingMindmap = docMindmapRepository.findByDocId(docId)
-                        .orElse(null);
-                if (existingMindmap != null && existingMindmap.getContent() != null) {
-                    log.info("已存在脑图内容，直接返回，docId: {}", docId);
-                    return existingMindmap.getContent();
-                }
-
-                // 2. 上传文件获取fileId
+                // 1. 上传文件获取fileId
                 log.info("开始为文档生成脑图，docId: {}", docId);
                 String fileId = uploadFileAndGetFileId(docId, userId).get();
 
-                // 3. 调用AI生成脑图内容
+                // 2. 调用AI生成脑图内容
                 String content = generateContent(fileId, mindmapUserPrompt, userId).get();
                 log.debug("AI生成的脑图内容: {}", content);
 
-                // 4. 直接保存为markdown格式
-                DocMindmap mindmap = new DocMindmap();
+                // 3. 保存脑图内容（如果已存在则覆盖）
+                DocMindmap mindmap = docMindmapRepository.findByDocId(docId)
+                        .orElse(new DocMindmap());
                 mindmap.setDocId(docId);
                 mindmap.setContent(content);
                 docMindmapRepository.save(mindmap);
-                log.info("脑图内容已保存，docId: {}", docId);
+                log.info("脑图内容已生成并保存，docId: {}", docId);
 
                 return content;
             } catch (Exception e) {
@@ -261,25 +247,20 @@ public class PublishServiceImpl implements PublishService {
             try {
                 verifyDocAccess(docId, userId);
 
-                // 1. 检查是否已存在测试题内容
-                DocQuiz existingQuiz = docQuizRepository.findByDocId(docId)
-                        .orElse(null);
-                if (existingQuiz != null && existingQuiz.getQuestions() != null) {
-                    log.info("已存在测试题内容，直接返回，docId: {}", docId);
-                    return existingQuiz.getQuestions();
-                }
-
-                // 2. 上传文件获取fileId
+                // 1. 上传文件获取fileId
                 log.info("开始为文档生成测试题，docId: {}", docId);
                 String fileId = uploadFileAndGetFileId(docId, userId).get();
 
-                // 3. 调用AI生成测试题内容并保存
+                // 2. 调用AI生成测试题内容
                 String content = generateContent(fileId, quizUserPrompt, userId).get();
-                DocQuiz quiz = new DocQuiz();
+
+                // 3. 保存测试题内容（如果已存在则覆盖）
+                DocQuiz quiz = docQuizRepository.findByDocId(docId)
+                        .orElse(new DocQuiz());
                 quiz.setDocId(docId);
                 quiz.setQuestions(content);
                 docQuizRepository.save(quiz);
-                log.info("测试题内容已保存，docId: {}", docId);
+                log.info("测试题内容已生成并保存，docId: {}", docId);
 
                 return content;
             } catch (Exception e) {
@@ -350,6 +331,75 @@ public class PublishServiceImpl implements PublishService {
                 return true;
             } catch (Exception e) {
                 String errorMsg = String.format("删除文件失败：fileId=%s, error=%s", fileId, e.getMessage());
+                log.error(errorMsg, e);
+                throw new RuntimeException(errorMsg, e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> updateInterpretation(Long docId, String content, Long userId) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                log.info("开始更新解读内容，docId: {}, userId: {}", docId, userId);
+                verifyDocAccess(docId, userId);
+
+                DocInterpretation interpretation = docInterpretationRepository.findByDocId(docId)
+                        .orElse(new DocInterpretation());
+                
+                interpretation.setDocId(docId);
+                interpretation.setContent(content);
+                docInterpretationRepository.save(interpretation);
+                
+                log.info("解读内容更新成功，docId: {}", docId);
+            } catch (Exception e) {
+                String errorMsg = String.format("更新解读内容失败：docId=%s, error=%s", docId, e.getMessage());
+                log.error(errorMsg, e);
+                throw new RuntimeException(errorMsg, e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> updateMindmap(Long docId, String content, Long userId) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                log.info("开始更新脑图内容，docId: {}, userId: {}", docId, userId);
+                verifyDocAccess(docId, userId);
+
+                DocMindmap mindmap = docMindmapRepository.findByDocId(docId)
+                        .orElse(new DocMindmap());
+                
+                mindmap.setDocId(docId);
+                mindmap.setContent(content);
+                docMindmapRepository.save(mindmap);
+                
+                log.info("脑图内容更新成功，docId: {}", docId);
+            } catch (Exception e) {
+                String errorMsg = String.format("更新脑图内容失败：docId=%s, error=%s", docId, e.getMessage());
+                log.error(errorMsg, e);
+                throw new RuntimeException(errorMsg, e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> updateQuiz(Long docId, String content, Long userId) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                log.info("开始更新测试题内容，docId: {}, userId: {}", docId, userId);
+                verifyDocAccess(docId, userId);
+
+                DocQuiz quiz = docQuizRepository.findByDocId(docId)
+                        .orElse(new DocQuiz());
+                
+                quiz.setDocId(docId);
+                quiz.setQuestions(content);
+                docQuizRepository.save(quiz);
+                
+                log.info("测试题内容更新成功，docId: {}", docId);
+            } catch (Exception e) {
+                String errorMsg = String.format("更新测试题内容失败：docId=%s, error=%s", docId, e.getMessage());
                 log.error(errorMsg, e);
                 throw new RuntimeException(errorMsg, e);
             }

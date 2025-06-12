@@ -75,4 +75,31 @@ public interface PublishService {
      * @return 删除是否成功
      */
     CompletableFuture<Boolean> deleteFile(String fileId, Long userId);
+
+    /**
+     * 更新图书解读内容
+     * @param docId 文档ID
+     * @param content 新的解读内容
+     * @param userId 用户ID
+     * @return void
+     */
+    CompletableFuture<Void> updateInterpretation(Long docId, String content, Long userId);
+
+    /**
+     * 更新图书脑图内容
+     * @param docId 文档ID
+     * @param content 新的脑图内容
+     * @param userId 用户ID
+     * @return void
+     */
+    CompletableFuture<Void> updateMindmap(Long docId, String content, Long userId);
+
+    /**
+     * 更新图书测试题内容
+     * @param docId 文档ID
+     * @param content 新的测试题内容
+     * @param userId 用户ID
+     * @return void
+     */
+    CompletableFuture<Void> updateQuiz(Long docId, String content, Long userId);
 }

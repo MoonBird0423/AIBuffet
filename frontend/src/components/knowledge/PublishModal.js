@@ -10,7 +10,10 @@ import {
   generateMindmap,
   getMindmap,
   generateQuiz,
-  getQuiz
+  getQuiz,
+  updateInterpretation,
+  updateMindmap,
+  updateQuiz
 } from '../../services/api';
 import MindmapViewer from './MindmapViewer';
 import QuizViewer from './QuizViewer';
@@ -49,9 +52,13 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
   const [interpretation, setInterpretation] = useState('');
   const [interpretationLoading, setInterpretationLoading] = useState(false);
   const [mindmap, setMindmap] = useState('');
-  const [mindmapLoading, setMindmapLoading] = useState(false);
-  const [quiz, setQuiz] = useState('');
+  const [mindmapLoading, setMindmapLoading] = useState(false);  const [quiz, setQuiz] = useState('');
   const [quizLoading, setQuizLoading] = useState(false);
+
+  // 编辑弹窗状态
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [editType, setEditType] = useState(''); // 'interpretation', 'mindmap', 'quiz'
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
@@ -124,10 +131,62 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     if (!formData.coverFile && !formData.coverPreview) newErrors.cover = '请上传封面';
     return newErrors;
   };
+  // 重新生成解读内容
+  const regenerateInterpretation = async () => {
+    setInterpretation('');
+    setInterpretationLoading(false);
+    setProgress(prev => ({ ...prev, step2: 0 }));
+    await startInterpretation();
+  };
+
+  // 重新生成脑图内容
+  const regenerateMindmap = async () => {
+    setMindmap('');
+    setMindmapLoading(false);
+    setProgress(prev => ({ ...prev, step3: 0 }));
+    await startMindmap();
+  };
+
+  // 重新生成测试题内容
+  const regenerateQuiz = async () => {
+    setQuiz('');
+    setQuizLoading(false);
+    setProgress(prev => ({ ...prev, step4: 0 }));
+    await startQuiz();
+  };
+
+  // 打开编辑弹窗
+  const openEditModal = (type, content) => {
+    setEditType(type);
+    setEditContent(content);
+    setEditModalOpen(true);
+  };
+
+  // 保存编辑内容
+  const saveEditContent = async () => {
+    try {
+      // 根据编辑类型调用相应的更新API
+      if (editType === 'interpretation') {
+        await updateInterpretation(documentId, editContent);
+        setInterpretation(editContent);
+      } else if (editType === 'mindmap') {
+        await updateMindmap(documentId, editContent);
+        setMindmap(editContent);
+      } else if (editType === 'quiz') {
+        await updateQuiz(documentId, editContent);
+        setQuiz(editContent);
+      }
+      
+      setEditModalOpen(false);
+      ToastManager.success('内容已保存');
+    } catch (error) {
+      ToastManager.error('保存失败：' + (error.response?.data?.message || error.message));
+    }
+  };
 
   // 生成解读内容
   const startInterpretation = async () => {
-    if (interpretationLoading || interpretation) return;
+    if (interpretationLoading) return;
     
     setInterpretationLoading(true);
     setProgress(prev => ({ ...prev, step2: 0 }));
@@ -209,7 +268,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
 
   // 生成脑图内容
   const startMindmap = async () => {
-    if (mindmapLoading || mindmap) return;
+    if (mindmapLoading) return;
     
     setMindmapLoading(true);
     setProgress(prev => ({ ...prev, step3: 0 }));
@@ -237,7 +296,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
 
   // 生成测试题内容
   const startQuiz = async () => {
-    if (quizLoading || quiz) return;
+    if (quizLoading) return;
     
     setQuizLoading(true);
     setProgress(prev => ({ ...prev, step4: 0 }));
@@ -263,6 +322,52 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     }
   };
 
+  // 检查并加载现有内容的辅助函数
+  const loadExistingInterpretation = async () => {
+    try {
+      const response = await getInterpretation(documentId);
+      if (response.data) {
+        setInterpretation(response.data);
+        setProgress(prev => ({ ...prev, step2: 100 }));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('加载解读内容失败:', error);
+      return false;
+    }
+  };
+
+  const loadExistingMindmap = async () => {
+    try {
+      const response = await getMindmap(documentId);
+      if (response.data) {
+        setMindmap(response.data);
+        setProgress(prev => ({ ...prev, step3: 100 }));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('加载脑图内容失败:', error);
+      return false;
+    }
+  };
+
+  const loadExistingQuiz = async () => {
+    try {
+      const response = await getQuiz(documentId);
+      if (response.data) {
+        setQuiz(response.data);
+        setProgress(prev => ({ ...prev, step4: 100 }));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('加载测试题内容失败:', error);
+      return false;
+    }
+  };
+
   const handleNextStep = async () => {
     if (currentStep === 1) {
       const errors = validateForm();
@@ -284,8 +389,11 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
         
         await updateDocument(documentId, formDataObj);
         setCurrentStep(currentStep + 1);
-        // 进入第二步时自动开始生成解读
-        startInterpretation();
+        // 进入第二步时先检查是否已有解读内容
+        const hasExisting = await loadExistingInterpretation();
+        if (!hasExisting) {
+          startInterpretation();
+        }
       } catch (error) {
         ToastManager.error('保存失败：' + (error.response?.data?.message || error.message));
       } finally {
@@ -294,11 +402,19 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     } else if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
       if (currentStep === 2) {
-      startMindmap();
-    } else if (currentStep === 3) {
-      startQuiz();
+        // 进入第三步时先检查是否已有脑图内容
+        const hasExisting = await loadExistingMindmap();
+        if (!hasExisting) {
+          startMindmap();
+        }
+      } else if (currentStep === 3) {
+        // 进入第四步时先检查是否已有测试题内容
+        const hasExisting = await loadExistingQuiz();
+        if (!hasExisting) {
+          startQuiz();
+        }
       }
-  } else {
+    } else {
       // 第4步：完成发布
       try {
         await updateDocumentPublishStatus(documentId, 'PUBLISHED');
@@ -416,8 +532,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
               />
             </div>
           </div>
-        );
-      case 2:
+        );      case 2:
         return (
           <div className="space-y-6">
             {interpretationLoading ? (
@@ -427,12 +542,32 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
                 description="系统正在生成解读内容，请稍候..."
                 icon="M13 10V3L4 14h7v7l9-11h-7z"
               />
+            ) : interpretation ? (
+              <div className="space-y-4">
+                <InterpretationViewer content={interpretation} />
+                {/* 操作按钮 */}
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => openEditModal('interpretation', interpretation)}
+                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                  >
+                    编辑
+                  </button>
+                </div>
+              </div>
             ) : (
-              <InterpretationViewer content={interpretation} />
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4">暂无解读内容</p>
+                <button
+                  onClick={startInterpretation}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  开始生成
+                </button>
+              </div>
             )}
           </div>
-        );
-      case 3:
+        );      case 3:
         return (
           <div className="space-y-6">
             {mindmapLoading ? (
@@ -442,12 +577,32 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
                 description="系统正在生成脑图内容，请稍候..."
                 icon="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
               />
+            ) : mindmap ? (
+              <div className="space-y-4">
+                <MindmapViewer content={mindmap} height="600px" />
+                {/* 操作按钮 */}
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => openEditModal('mindmap', mindmap)}
+                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                  >
+                    编辑
+                  </button>
+                </div>
+              </div>
             ) : (
-              <MindmapViewer content={mindmap} height="600px" />
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4">暂无脑图内容</p>
+                <button
+                  onClick={startMindmap}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  开始生成
+                </button>
+              </div>
             )}
           </div>
-        );
-      case 4:
+        );      case 4:
         return (
           <div className="space-y-6">
             {quizLoading ? (
@@ -457,14 +612,34 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
                 description="系统正在生成测试题内容，请稍候..."
                 icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
               />
+            ) : quiz ? (
+              <div className="space-y-4">
+                <QuizViewer questions={quiz} />
+                {/* 操作按钮 */}
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => openEditModal('quiz', quiz)}
+                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                  >
+                    编辑
+                  </button>
+                </div>
+              </div>
             ) : (
-              <QuizViewer questions={quiz} />
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4">暂无测试题内容</p>
+                <button
+                  onClick={startQuiz}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  开始生成
+                </button>
+              </div>
             )}
           </div>
         );
     }
   };
-
   const footer = (
     <div className="flex justify-end gap-2">
       {currentStep > 1 && (
@@ -487,19 +662,57 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     </div>
   );
 
+  const editModalFooter = (
+    <div className="flex justify-end gap-2">
+      <button
+        onClick={() => setEditModalOpen(false)}
+        className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+      >
+        取消
+      </button>
+      <button
+        onClick={saveEditContent}
+        className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+      >
+        保存
+      </button>
+    </div>
+  );
+
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="发布图书"
-      footer={footer}
-      width="5xl"
-    >
-      {renderStepIndicators()}
-      <div className="p-6">
-        {renderStepContent()}
-      </div>
-    </Modal>
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="发布图书"
+        footer={footer}
+        width="5xl"
+      >
+        {renderStepIndicators()}
+        <div className="p-6">
+          {renderStepContent()}
+        </div>
+      </Modal>
+
+      {/* 编辑内容弹窗 */}
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title={`编辑${editType === 'interpretation' ? '解读内容' : editType === 'mindmap' ? '脑图内容' : '测试题内容'}`}
+        footer={editModalFooter}
+        width="4xl"
+      >
+        <div className="space-y-4">
+          <textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            rows={20}
+            className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            placeholder="请输入内容..."
+          />
+        </div>
+      </Modal>
+    </>
   );
 }
 
