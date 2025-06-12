@@ -178,7 +178,6 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     try {
       const response = await getMindmap(documentId);
       if (response.data) {
-        console.log('获取到脑图数据:', response.data);
         setMindmap(response.data);
         setProgress(prev => ({ ...prev, step3: 100 }));
         setMindmapLoading(false);
@@ -299,13 +298,15 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     } else if (currentStep === 3) {
       startQuiz();
       }
-    } else {
+  } else {
+      // 第4步：完成发布
       try {
         await updateDocumentPublishStatus(documentId, 'PUBLISHED');
         onSuccess();
         onClose();
       } catch (error) {
-        ToastManager.error('发布失败：' + (error.response?.data?.message || error.message));
+        const errorMessage = error.message || '发布失败，请重试';
+        ToastManager.error(errorMessage);
       }
     }
   };

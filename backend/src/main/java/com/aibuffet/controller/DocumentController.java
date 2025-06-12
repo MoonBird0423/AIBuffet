@@ -261,6 +261,14 @@ public class DocumentController {
             @RequestParam DocFile.PublishStatus status,
             @AuthenticationPrincipal User user) {
         try {
+            // 发布权限控制：只允许特定电话号码的用户发布
+            if (status == DocFile.PublishStatus.PUBLISHED) {
+                if (!"17711311423".equals(user.getPhone())) {
+                    logger.warn("用户无发布权限: userId={}, phone={}", user.getId(), user.getPhone());
+                    return ApiResponse.error(ErrorCode.PERMISSION_DENIED, "您暂无发布权限，如需发布请联系管理员");
+                }
+            }
+            
             documentService.updatePublishStatus(id, user.getId(), status);
             return ApiResponse.success(null);
         } catch (ResourceNotFoundException e) {

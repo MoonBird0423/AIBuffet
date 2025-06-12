@@ -719,18 +719,52 @@ export const updateDocument = async (documentId, data) => {
 // 更新文档发布状态
 export const updateDocumentPublishStatus = async (documentId, status) => {
   try {
+    console.log('发送发布状态更新请求:', {
+      documentId,
+      status,
+      url: `/documents/${documentId}/publish-status`
+    });
+
     const response = await apiClient.put(`/documents/${documentId}/publish-status`, null, {
       params: { status }
     });
+
+    console.log('发布状态更新响应:', {
+      status: response.status,
+      data: response.data
+    });
+
+    // 检查业务状态码
+    if (response.data.code !== 200) {
+      throw new Error(response.data.message);
+    }
+
     return response.data;
   } catch (error) {
     console.error('更新文档发布状态失败:', {
       error,
-      errorMessage: error.message,
-      errorResponse: error.response?.data,
-      errorStack: error.stack
+      name: error.name,
+      message: error.message,
+      response: {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      },
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        params: error.config?.params
+      },
+      stack: error.stack
     });
-    throw error;
+
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else if (error.message) {
+      throw new Error(error.message);
+    } else {
+      throw new Error('发布失败，请重试');
+    }
   }
 };
 
