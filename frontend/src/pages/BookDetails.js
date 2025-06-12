@@ -229,48 +229,49 @@ function BookDetails() {
           <div className="text-center mb-8">
             <h3 className="text-2xl font-bold text-gray-900 mb-2">AI伴读，直达书魂</h3>
             <div className="w-24 h-1 bg-gradient-to-r from-indigo-500 to-purple-500 mx-auto rounded-full"></div>
-          </div>
-
-          {/* 音频播放器 */}
+          </div>          {/* 音频解读区域 */}
           {bookData && (
             <div className="mb-6">
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-3xl shadow-xl p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                    <i className="fas fa-headphones text-indigo-600 mr-2"></i>
-                    知婷老师解读
-                  </h3>
-                  {!hasAudio && activeTab === 'interpretation' && tabContent && tabContent !== '' && (
-                    <button
-                      onClick={handleGenerateAudio}
-                      disabled={audioLoading}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400"
-                    >
-                      {audioLoading ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          生成中...
-                        </>
-                      ) : (
-                        <>
-                          <i className="fas fa-magic mr-2"></i>
-                          生成音频
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-                
-                {audioError && (
-                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                    <div className="flex">
-                      <i className="fas fa-exclamation-triangle text-red-400 mr-2 mt-0.5"></i>
-                      <span className="text-red-700 text-sm">{audioError}</span>
-                    </div>
+                {!hasAudio ? (
+                  // 未生成音频时：只显示生成按钮和错误信息
+                  <div className="flex items-center justify-center space-x-4">
+                    {activeTab === 'interpretation' && tabContent && tabContent !== '' ? (
+                      <button
+                        onClick={handleGenerateAudio}
+                        disabled={audioLoading}
+                        className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 transition-all duration-200"
+                      >
+                        {audioLoading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                            生成中...
+                          </>
+                        ) : (
+                          <>
+                            <i className="fas fa-magic mr-3"></i>
+                            生成音频
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="text-center text-gray-500">
+                        <i className="fas fa-volume-mute text-3xl mb-3"></i>
+                        <p className="text-lg">请先查看解读内容以生成音频</p>
+                      </div>
+                    )}
+                    
+                    {audioError && (
+                      <div className="flex items-center text-red-600">
+                        <i className="fas fa-exclamation-triangle mr-2"></i>
+                        <span className="text-sm">{audioError}</span>
+                      </div>
+                    )}
                   </div>
+                ) : (
+                  // 音频生成完成后：显示音频播放组件
+                  <AudioPlayer audioUrl={audioUrl} />
                 )}
-                
-                <AudioPlayer audioUrl={audioUrl} />
               </div>
             </div>
           )}

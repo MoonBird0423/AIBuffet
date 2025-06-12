@@ -97,99 +97,88 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
-
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
   
-  if (!audioUrl) {
-    return (
-      <div className={`bg-gray-50 rounded-2xl p-6 ${className}`}>
-        <div className="text-center text-gray-500">
-          <i className="fas fa-volume-mute text-3xl mb-3"></i>
-          <p className="text-lg">暂无音频</p>
-        </div>
-      </div>
-    );
+  // 如果没有音频URL或有错误，不渲染组件（由父组件处理）
+  if (!audioUrl || error) {
+    return null;
   }
-
-  if (error) {
-    return (
-      <div className={`bg-red-50 border border-red-200 rounded-2xl p-6 ${className}`}>
-        <div className="text-center text-red-600">
-          <i className="fas fa-exclamation-triangle text-3xl mb-3"></i>
-          <p className="text-lg">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={`bg-white/50 border border-white/30 rounded-2xl p-6 backdrop-blur-sm ${className}`}>
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
       
-      <div className="space-y-4">
-        <div className="flex items-center justify-center space-x-8">
-          <div className="flex items-center space-x-3">
-            <i className="fas fa-volume-down text-gray-600"></i>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={volume}
-              onChange={handleVolumeChange}
-              className="w-20 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer audio-slider"
-            />
-          </div>
+      {/* 单行布局：播放按钮、播放时间、进度条、总时间、音量控制、播放速度控制 */}
+      <div className="flex items-center space-x-4">        {/* 播放按钮 */}
+        <button
+          onClick={togglePlay}
+          disabled={isLoading}
+          className="relative flex items-center justify-center w-16 h-16 rounded-full transition-all duration-200 shadow-lg disabled:opacity-50 overflow-hidden flex-shrink-0"
+          style={{
+            backgroundImage: 'url(/知婷老师.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        >
+          <div className="absolute inset-0 bg-black bg-opacity-30 hover:bg-opacity-20 transition-all duration-200"></div>
+          {isLoading ? (
+            <div className="relative z-10 animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+          ) : isPlaying ? (
+            <i className="relative z-10 fas fa-pause text-xl text-white"></i>
+          ) : (
+            <i className="relative z-10 fas fa-play ml-0.5 text-xl text-white"></i>
+          )}
+        </button>
 
-          <button
-            onClick={togglePlay}
-            disabled={isLoading}
-            className="flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full transition-all duration-200 shadow-lg disabled:bg-gray-400"
-          >
-            {isLoading ? (
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-            ) : isPlaying ? (
-              <i className="fas fa-pause text-xl"></i>
-            ) : (
-              <i className="fas fa-play ml-1 text-xl"></i>
-            )}
-          </button>
+        {/* 播放时间 */}
+        <span className="text-sm text-gray-600 min-w-[45px] font-mono flex-shrink-0">
+          {formatTime(currentTime)}
+        </span>
 
-          <div className="flex items-center space-x-3">
-            <i className="fas fa-tachometer-alt text-gray-600"></i>
-            <select
-              value={playbackRate}
-              onChange={handlePlaybackRateChange}
-              className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="0.5">0.5x</option>
-              <option value="0.75">0.75x</option>
-              <option value="1">1x</option>
-              <option value="1.25">1.25x</option>
-              <option value="1.5">1.5x</option>
-              <option value="2">2x</option>
-            </select>
-          </div>
+        {/* 进度条 */}
+        <div
+          className="flex-1 h-2 bg-gray-200 rounded-full cursor-pointer overflow-hidden min-w-0"
+          onClick={handleProgressClick}
+        >
+          <div
+            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-100"
+            style={{ width: `${progressPercentage}%` }}
+          ></div>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <span className="text-sm text-gray-600 min-w-[45px] font-mono">
-            {formatTime(currentTime)}
-          </span>
-          
-          <div
-            className="flex-1 h-3 bg-gray-200 rounded-full cursor-pointer overflow-hidden"
-            onClick={handleProgressClick}
-          >
-            <div
-              className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-100"
-              style={{ width: `${progressPercentage}%` }}
-            ></div>
-          </div>
+        {/* 总时间 */}
+        <span className="text-sm text-gray-600 min-w-[45px] font-mono flex-shrink-0">
+          {formatTime(duration)}
+        </span>
 
-          <span className="text-sm text-gray-600 min-w-[45px] font-mono">
-            {formatTime(duration)}
-          </span>
+        {/* 音量控制 */}
+        <div className="flex items-center space-x-2 flex-shrink-0">
+          <i className="fas fa-volume-down text-gray-600 text-sm"></i>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            value={volume}
+            onChange={handleVolumeChange}
+            className="w-16 h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer audio-slider"
+          />
+        </div>
+
+        {/* 播放速度控制 */}
+        <div className="flex items-center space-x-2 flex-shrink-0">
+          <i className="fas fa-tachometer-alt text-gray-600 text-sm"></i>
+          <select
+            value={playbackRate}
+            onChange={handlePlaybackRateChange}
+            className="text-xs border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="0.5">0.5x</option>
+            <option value="0.75">0.75x</option>
+            <option value="1">1x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2x</option>
+          </select>
         </div>
       </div>
     </div>

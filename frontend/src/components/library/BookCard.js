@@ -33,10 +33,10 @@ function BookCard({ document }) {
         )}
       </div>
       <div className="p-6 flex flex-col flex-grow">
-        <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">
+        <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">
           {formatFileName(document.fileName)}
         </h3>
-        <p className="text-sm text-gray-600 mb-4">{document.author || '未知作者'}</p>
+        <p className="text-sm text-gray-600 mb-4 truncate">{document.author || '未知作者'}</p>
         <div className="mt-auto flex items-center text-sm text-gray-500">
           <FaUsers className="mr-2" />
           <span>{(document.learnerCount || 0).toLocaleString()}次收藏</span>

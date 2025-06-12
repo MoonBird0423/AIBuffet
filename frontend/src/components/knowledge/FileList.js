@@ -153,7 +153,7 @@ const FileList = ({
                 </span>
               </Tooltip>
             </h3>
-            <p className="text-gray-600">{file.author || "暂无作者"}</p>
+            <p className="text-gray-600 truncate max-w-xs">{file.author || "暂无作者"}</p>
           </div>
         </div>
       </td>
