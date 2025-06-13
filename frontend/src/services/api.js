@@ -650,15 +650,16 @@ export const getDocument = async (id) => {
 
 // 文档分类常量
 export const DocumentCategory = {
-  SCIENCE_TECH: "科学技术",
-  EDUCATION: "教育学习",
-  LIFE_ENCYCLOPEDIA: "生活百科",
+  MINDFULNESS: "心灵",
   PERSONAL_GROWTH: "个人成长",
-  CHILDREN_EDUCATION: "儿童教育",
-  NOVEL: "小说",
-  COMPUTER: "计算机",
-  BIOGRAPHY: "人物传记",
+  FAMILY_PARENTING: "亲子家庭",
+  HUMANITIES_HISTORY: "人文历史",
   FINANCE: "经济理财",
+  COMPUTER: "计算机",
+  CAREER_DEVELOPMENT: "职场提升",
+  BIOGRAPHY: "人物传记",
+  HEALTHY_LIVING: "健康生活",
+  PREMIUM_FICTION: "精品小说",
   OTHER: "其他"
 };
 

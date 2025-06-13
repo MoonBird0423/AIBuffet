@@ -1,23 +1,25 @@
 import React from 'react';
 import { DocumentCategory } from '../../services/api';
 import { 
-  FaGlobeAmericas, FaFlask, FaGraduationCap, FaHeart, 
-  FaChartLine, FaChild, FaBook, FaLaptopCode, 
-  FaUserTie, FaCoins 
+  FaGlobeAmericas, FaHeart, FaChartLine, FaChild, 
+  FaBook, FaLaptopCode, FaUserTie, FaCoins, 
+  FaHistory, FaBriefcase, FaHeartbeat, FaStar
 } from 'react-icons/fa';
 
 function CategoryFilter({ selectedCategory, onSelectCategory }) {
   const categoryIcons = {
     'all': FaGlobeAmericas,
-    'SCIENCE': FaFlask,
-    'EDUCATION': FaGraduationCap,
-    'LIFESTYLE': FaHeart,
+    'MINDFULNESS': FaHeart,
     'PERSONAL_GROWTH': FaChartLine,
-    'CHILDREN': FaChild,
-    'LITERATURE': FaBook,
+    'FAMILY_PARENTING': FaChild,
+    'HUMANITIES_HISTORY': FaHistory,
+    'FINANCE': FaCoins,
     'COMPUTER': FaLaptopCode,
+    'CAREER_DEVELOPMENT': FaBriefcase,
     'BIOGRAPHY': FaUserTie,
-    'ECONOMICS': FaCoins,
+    'HEALTHY_LIVING': FaHeartbeat,
+    'PREMIUM_FICTION': FaStar,
+    'OTHER': FaBook,
   };
 
   const categories = [

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '../../styles/audioPlayer.css';
 
-const AudioPlayer = ({ audioUrl, className = '' }) => {
+const AudioPlayer = ({ audioUrl, bookTitle, className = '' }) => {
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -107,8 +107,9 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
     <div className={`bg-white/50 border border-white/30 rounded-2xl p-6 backdrop-blur-sm ${className}`}>
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
       
-      {/* 单行布局：播放按钮、播放时间、进度条、总时间、音量控制、播放速度控制 */}
-      <div className="flex items-center space-x-4">        {/* 播放按钮 */}
+      {/* 左右分栏布局：左侧播放按钮，右侧两行内容 */}
+      <div className="flex items-center space-x-6">
+        {/* 左侧播放按钮 */}
         <button
           onClick={togglePlay}
           disabled={isLoading}
@@ -129,56 +130,71 @@ const AudioPlayer = ({ audioUrl, className = '' }) => {
           )}
         </button>
 
-        {/* 播放时间 */}
-        <span className="text-sm text-gray-600 min-w-[45px] font-mono flex-shrink-0">
-          {formatTime(currentTime)}
-        </span>
+        {/* 右侧内容区域 */}
+        <div className="flex-1 space-y-3">
+          {/* 第一行：解读标题 */}
+          {bookTitle && (
+            <div className="text-left">
+              <h4 className="text-lg font-medium text-gray-800">
+                知婷老师解读《{bookTitle}》
+              </h4>
+            </div>
+          )}
+          
+          {/* 第二行：进度条和控制器 */}
+          <div className="flex items-center space-x-4">
+            {/* 播放时间 */}
+            <span className="text-sm text-gray-600 min-w-[45px] font-mono flex-shrink-0">
+              {formatTime(currentTime)}
+            </span>
 
-        {/* 进度条 */}
-        <div
-          className="flex-1 h-2 bg-gray-200 rounded-full cursor-pointer overflow-hidden min-w-0"
-          onClick={handleProgressClick}
-        >
-          <div
-            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-100"
-            style={{ width: `${progressPercentage}%` }}
-          ></div>
-        </div>
+            {/* 进度条 */}
+            <div
+              className="flex-1 h-2 bg-gray-200 rounded-full cursor-pointer overflow-hidden min-w-0"
+              onClick={handleProgressClick}
+            >
+              <div
+                className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-100"
+                style={{ width: `${progressPercentage}%` }}
+              ></div>
+            </div>
 
-        {/* 总时间 */}
-        <span className="text-sm text-gray-600 min-w-[45px] font-mono flex-shrink-0">
-          {formatTime(duration)}
-        </span>
+            {/* 总时间 */}
+            <span className="text-sm text-gray-600 min-w-[45px] font-mono flex-shrink-0">
+              {formatTime(duration)}
+            </span>
 
-        {/* 音量控制 */}
-        <div className="flex items-center space-x-2 flex-shrink-0">
-          <i className="fas fa-volume-down text-gray-600 text-sm"></i>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={volume}
-            onChange={handleVolumeChange}
-            className="w-16 h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer audio-slider"
-          />
-        </div>
+            {/* 音量控制 */}
+            <div className="flex items-center space-x-2 flex-shrink-0">
+              <i className="fas fa-volume-down text-gray-600 text-sm"></i>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={volume}
+                onChange={handleVolumeChange}
+                className="w-16 h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer audio-slider"
+              />
+            </div>
 
-        {/* 播放速度控制 */}
-        <div className="flex items-center space-x-2 flex-shrink-0">
-          <i className="fas fa-tachometer-alt text-gray-600 text-sm"></i>
-          <select
-            value={playbackRate}
-            onChange={handlePlaybackRateChange}
-            className="text-xs border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="0.5">0.5x</option>
-            <option value="0.75">0.75x</option>
-            <option value="1">1x</option>
-            <option value="1.25">1.25x</option>
-            <option value="1.5">1.5x</option>
-            <option value="2">2x</option>
-          </select>
+            {/* 播放速度控制 */}
+            <div className="flex items-center space-x-2 flex-shrink-0">
+              <i className="fas fa-tachometer-alt text-gray-600 text-sm"></i>
+              <select
+                value={playbackRate}
+                onChange={handlePlaybackRateChange}
+                className="text-xs border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="0.5">0.5x</option>
+                <option value="0.75">0.75x</option>
+                <option value="1">1x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
     </div>
