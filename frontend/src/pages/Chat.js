@@ -574,6 +574,48 @@ function Chat() {
     setShowPromptTemplates(!showPromptTemplates);
   };
 
+  // 添加消息监听器处理窗口切换
+  useEffect(() => {
+    const handleMessage = (event) => {
+      // 验证消息来源
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'UPDATE_QUESTION_TARGET') {
+        const { questionTarget } = event.data;
+        
+        // 更新问题目标
+        setQuestionTarget(questionTarget);
+        setShowNoTargetHint(false);
+        
+        // 更新URL参数
+        const params = new URLSearchParams();
+        params.set(`${questionTarget.type}Id`, questionTarget.id);
+        params.set(`${questionTarget.type}Name`, encodeURIComponent(questionTarget.name));
+        
+        // 保留现有的session参数
+        const currentSession = new URLSearchParams(window.location.search).get('session');
+        if (currentSession) {
+          params.set('session', currentSession);
+        }
+        
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.replaceState({}, '', newUrl);
+        
+        // 重置输入框聚焦
+        setInputFocusKey(prev => prev + 1);
+        
+        // 显示切换成功提示
+        ToastManager.success(`已切换到${questionTarget.type === 'book' ? '图书' : '知识库'}：${questionTarget.name}`);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
+  }, []);
+
   useEffect(() => {
     return () => {
       cancelCurrentRequest();

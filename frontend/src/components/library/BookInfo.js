@@ -1,4 +1,5 @@
 import React from 'react';
+import { openChatWindow } from '../../utils/chatWindowManager';
 
 function BookInfo({ bookData }) {
   // 如果没有数据，显示骨架屏
@@ -59,8 +60,11 @@ function BookInfo({ bookData }) {
           {/* CTA Button */}
           <button 
             onClick={() => {
-              const chatUrl = `/chat?bookId=${bookData.id}&bookName=${encodeURIComponent(bookData.fileName)}`;
-              window.open(chatUrl, '_blank');
+              openChatWindow({
+                type: 'book',
+                id: bookData.id,
+                name: bookData.fileName
+              });
             }}
             className="w-full md:w-auto bg-white text-purple-600 px-8 py-4 rounded-2xl text-lg font-semibold hover:bg-white/90 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
           >

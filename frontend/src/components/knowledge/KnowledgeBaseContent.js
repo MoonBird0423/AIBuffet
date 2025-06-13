@@ -5,6 +5,7 @@ import PublishModal from './PublishModal';
 import FavoriteList from './FavoriteList';
 import { getDocuments } from '../../services/api';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import { openChatWindow } from '../../utils/chatWindowManager';
 
 function KnowledgeBaseContent({ knowledgeBase }) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -43,8 +44,11 @@ function KnowledgeBaseContent({ knowledgeBase }) {
 
   // 处理知识库问答按钮点击
   const handleChatClick = () => {
-    const chatUrl = `/chat?knowledgeBaseId=${knowledgeBase.id}&knowledgeBaseName=${encodeURIComponent(knowledgeBase.name)}`;
-    window.open(chatUrl, '_blank');
+    openChatWindow({
+      type: 'knowledge',
+      id: knowledgeBase.id,
+      name: knowledgeBase.name
+    });
   };
   if (!knowledgeBase) {
     return (
