@@ -9,6 +9,7 @@ import BookDetails from './pages/BookDetails';
 import MainLayout from './components/layout/MainLayout';
 import ToastContainer from './components/common/Toast';
 import { AuthProvider } from './contexts/AuthContext';
+import { AudioProvider } from './contexts/AudioContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // 导入Tailwind CSS样式
@@ -17,12 +18,13 @@ import './index.css';
 function App() {
   return (
     <AuthProvider>
-      <Router
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true
-        }}
-      >
+      <AudioProvider>
+        <Router
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true
+          }}
+        >
         <Routes>
           {/* 登录页面 */}
           <Route path="/login" element={<Login />} />
@@ -53,7 +55,8 @@ function App() {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
         <ToastContainer />
-      </Router>
+        </Router>
+      </AudioProvider>
     </AuthProvider>
   );
 }

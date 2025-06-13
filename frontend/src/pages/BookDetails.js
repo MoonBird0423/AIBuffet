@@ -270,7 +270,7 @@ function BookDetails() {
                   </div>
                 ) : (
                   // 音频生成完成后：显示音频播放组件
-                  <AudioPlayer audioUrl={audioUrl} bookTitle={bookData?.fileName} />
+                  <AudioPlayer audioUrl={audioUrl} bookTitle={bookData?.fileName} bookId={id} />
                 )}
               </div>
             </div>

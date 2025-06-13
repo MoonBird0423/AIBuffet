@@ -1,94 +1,44 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import { useAudio } from '../../contexts/AudioContext';
 import '../../styles/audioPlayer.css';
 
-const AudioPlayer = ({ audioUrl, bookTitle, className = '' }) => {
-  const audioRef = useRef(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [playbackRate, setPlaybackRate] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+const AudioPlayer = ({ audioUrl, bookTitle, bookId, className = '' }) => {
+  const { currentAudio, playAudio, togglePlay, setCurrentTime, setVolume, setPlaybackRate } = useAudio();
 
+  // 当组件加载时，如果当前没有播放任何音频，则初始化为当前音频
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !audioUrl) return;
+    if (audioUrl && bookTitle && bookId && !currentAudio.audioUrl) {
+      // 如果全局没有音频在播放，可以考虑自动设置为当前音频（但不自动播放）
+    }
+  }, [audioUrl, bookTitle, bookId, currentAudio.audioUrl]);
 
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
-      setIsLoading(false);
-    };
-
-    const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-    };
-
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-    };
-
-    const handleError = () => {
-      setError('音频加载失败');
-      setIsLoading(false);
-    };
-
-    const handleCanPlay = () => {
-      setIsLoading(false);
-      setError(null);
-    };
-
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('error', handleError);
-    audio.addEventListener('canplay', handleCanPlay);
-
-    return () => {
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('error', handleError);
-      audio.removeEventListener('canplay', handleCanPlay);
-    };
-  }, [audioUrl]);
-
-  const togglePlay = () => {
-    const audio = audioRef.current;
-    if (isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
-    } else {
-      audio.play().catch(err => {
-        console.error('播放失败:', err);
-        setError('播放失败');
+  const handlePlayClick = () => {
+    if (audioUrl && bookTitle && bookId) {
+      playAudio({
+        id: bookId,
+        bookTitle: bookTitle,
+        audioUrl: audioUrl
       });
-      setIsPlaying(true);
     }
   };
 
   const handleProgressClick = (e) => {
-    const audio = audioRef.current;
     const progressBar = e.currentTarget;
     const rect = progressBar.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const width = rect.width;
-    const newTime = (clickX / width) * duration;
-    audio.currentTime = newTime;
+    const newTime = (clickX / width) * currentAudio.duration;
     setCurrentTime(newTime);
   };
 
   const handleVolumeChange = (e) => {
     const newVolume = parseFloat(e.target.value);
     setVolume(newVolume);
-    audioRef.current.volume = newVolume;
   };
 
   const handlePlaybackRateChange = (e) => {
     const newRate = parseFloat(e.target.value);
     setPlaybackRate(newRate);
-    audioRef.current.playbackRate = newRate;
   };
 
   const formatTime = (time) => {
@@ -97,22 +47,26 @@ const AudioPlayer = ({ audioUrl, bookTitle, className = '' }) => {
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
-  const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
-  
-  // 如果没有音频URL或有错误，不渲染组件（由父组件处理）
-  if (!audioUrl || error) {
+
+  // 如果没有音频URL，不渲染组件
+  if (!audioUrl) {
     return null;
   }
+
+  // 判断是否是当前播放的音频
+  const isCurrentAudio = currentAudio.id === bookId && currentAudio.audioUrl === audioUrl;
+  const progressPercentage = isCurrentAudio && currentAudio.duration > 0 
+    ? (currentAudio.currentTime / currentAudio.duration) * 100 
+    : 0;
+
   return (
     <div className={`bg-white/50 border border-white/30 rounded-2xl p-6 backdrop-blur-sm ${className}`}>
-      <audio ref={audioRef} src={audioUrl} preload="metadata" />
-      
       {/* 左右分栏布局：左侧播放按钮，右侧两行内容 */}
       <div className="flex items-center space-x-6">
         {/* 左侧播放按钮 */}
         <button
-          onClick={togglePlay}
-          disabled={isLoading}
+          onClick={handlePlayClick}
+          disabled={currentAudio.isLoading}
           className="relative flex items-center justify-center w-16 h-16 rounded-full transition-all duration-200 shadow-lg disabled:opacity-50 overflow-hidden flex-shrink-0"
           style={{
             backgroundImage: 'url(/知婷老师.png)',
@@ -121,9 +75,9 @@ const AudioPlayer = ({ audioUrl, bookTitle, className = '' }) => {
           }}
         >
           <div className="absolute inset-0 bg-black bg-opacity-30 hover:bg-opacity-20 transition-all duration-200"></div>
-          {isLoading ? (
+          {currentAudio.isLoading && isCurrentAudio ? (
             <div className="relative z-10 animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-          ) : isPlaying ? (
+          ) : (isCurrentAudio && currentAudio.isPlaying) ? (
             <i className="relative z-10 fas fa-pause text-xl text-white"></i>
           ) : (
             <i className="relative z-10 fas fa-play ml-0.5 text-xl text-white"></i>
@@ -145,7 +99,7 @@ const AudioPlayer = ({ audioUrl, bookTitle, className = '' }) => {
           <div className="flex items-center space-x-4">
             {/* 播放时间 */}
             <span className="text-sm text-gray-600 min-w-[45px] font-mono flex-shrink-0">
-              {formatTime(currentTime)}
+              {formatTime(isCurrentAudio ? currentAudio.currentTime : 0)}
             </span>
 
             {/* 进度条 */}
@@ -161,7 +115,7 @@ const AudioPlayer = ({ audioUrl, bookTitle, className = '' }) => {
 
             {/* 总时间 */}
             <span className="text-sm text-gray-600 min-w-[45px] font-mono flex-shrink-0">
-              {formatTime(duration)}
+              {formatTime(isCurrentAudio ? currentAudio.duration : 0)}
             </span>
 
             {/* 音量控制 */}
@@ -172,7 +126,7 @@ const AudioPlayer = ({ audioUrl, bookTitle, className = '' }) => {
                 min="0"
                 max="1"
                 step="0.1"
-                value={volume}
+                value={currentAudio.volume}
                 onChange={handleVolumeChange}
                 className="w-16 h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer audio-slider"
               />
@@ -182,7 +136,7 @@ const AudioPlayer = ({ audioUrl, bookTitle, className = '' }) => {
             <div className="flex items-center space-x-2 flex-shrink-0">
               <i className="fas fa-tachometer-alt text-gray-600 text-sm"></i>
               <select
-                value={playbackRate}
+                value={currentAudio.playbackRate}
                 onChange={handlePlaybackRateChange}
                 className="text-xs border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
               >

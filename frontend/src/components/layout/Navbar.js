@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import UserProfile from '../common/UserProfile';
+import CompactAudioPlayer from '../common/CompactAudioPlayer';
 
 function Navbar() {
   const location = useLocation();
@@ -10,7 +11,8 @@ function Navbar() {
       background: 'rgba(255, 255, 255, 0.08)',
       border: '1px solid rgba(255, 255, 255, 0.2)'
     }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">        <div className="flex justify-between items-center h-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
           <div className="flex items-center flex-1">
             <Link to="/" className="text-2xl font-bold text-white hover:text-gray-300 transition-colors">
               <div className="flex items-center space-x-2">
@@ -18,7 +20,10 @@ function Navbar() {
                 <span>书意</span>
               </div>
             </Link>
-          </div>          <div className="hidden md:flex items-center space-x-8">
+          </div>
+
+          <div className="hidden md:flex items-center space-x-8">
+            <CompactAudioPlayer />
             <div className="flex space-x-8">
               <Link 
                 to="/" 
