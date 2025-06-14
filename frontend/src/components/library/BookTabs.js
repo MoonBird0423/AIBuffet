@@ -3,7 +3,7 @@ import InterpretationViewer from '../knowledge/InterpretationViewer';
 import MindmapViewer from '../knowledge/MindmapViewer';
 import QuizViewer from '../knowledge/QuizViewer';
 
-function BookTabs({ activeTab, onTabChange, content, loading = false }) {
+function BookTabs({ activeTab, onTabChange, content, loading = false, contentStatus = 'loading' }) {
 
   const tabs = [
     { key: 'interpretation', label: '图书解读' },
@@ -11,56 +11,89 @@ function BookTabs({ activeTab, onTabChange, content, loading = false }) {
     { key: 'quiz', label: '知识测试' }
   ];
 
+  // 获取选项卡特定的空状态信息
+  const getEmptyStateInfo = (tabKey) => {
+    const emptyStates = {
+      interpretation: {
+        icon: 'fas fa-book-open',
+        title: '解读内容暂未生成',
+        description: '该图书的AI解读内容尚未生成，请稍后再试'
+      },
+      mindmap: {
+        icon: 'fas fa-project-diagram',
+        title: '知识脑图暂未生成',
+        description: '该图书的知识脑图尚未生成，请稍后再试'
+      },
+      quiz: {
+        icon: 'fas fa-question-circle',
+        title: '知识测试暂未生成',
+        description: '该图书的知识测试题目尚未生成，请稍后再试'
+      }
+    };
+    return emptyStates[tabKey] || emptyStates.interpretation;
+  };
+
   // 使用 useMemo 来稳定内容渲染
   const stableContent = useMemo(() => {
-    // 优先显示加载状态
-    if (loading) {
-      return (
-        <div className="flex justify-center items-center" style={{ minHeight: '400px' }}>
-          <div className="flex items-center space-x-2">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
-            <span className="text-gray-600">加载中...</span>
+    // 根据 contentStatus 渲染不同状态
+    switch (contentStatus) {
+      case 'loading':
+        return (
+          <div className="flex justify-center items-center" style={{ minHeight: '400px' }}>
+            <div className="flex items-center space-x-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+              <span className="text-gray-600 text-lg">正在加载内容...</span>
+            </div>
           </div>
-        </div>
-      );
-    }
+        );
 
-    // 内容为null或undefined时显示等待状态
-    if (content === null || content === undefined) {
-      return (
-        <div className="flex justify-center items-center" style={{ minHeight: '400px' }}>
-          <div className="flex items-center space-x-2">
-            <div className="animate-pulse rounded-full h-6 w-6 bg-gray-300"></div>
-            <span className="text-gray-500">准备中...</span>
+      case 'empty':
+        const emptyState = getEmptyStateInfo(activeTab);
+        return (
+          <div className="flex flex-col justify-center items-center" style={{ minHeight: '400px' }}>
+            <div className="text-center">
+              <i className={`${emptyState.icon} text-4xl text-gray-400 mb-4`}></i>
+              <h3 className="text-xl font-medium text-gray-600 mb-2">{emptyState.title}</h3>
+              <p className="text-gray-500 max-w-md">{emptyState.description}</p>
+            </div>
           </div>
-        </div>
-      );
-    }
+        );
 
-    // 内容为空字符串时显示暂无内容
-    if (content === '') {
-      return (
-        <div className="flex flex-col justify-center items-center" style={{ minHeight: '400px' }}>
-          <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-          </svg>
-          <span className="text-gray-500 text-lg">内容暂未生成</span>
-        </div>
-      );
-    }
+      case 'error':
+        return (
+          <div className="flex flex-col justify-center items-center" style={{ minHeight: '400px' }}>
+            <div className="text-center">
+              <i className="fas fa-exclamation-triangle text-4xl text-red-400 mb-4"></i>
+              <h3 className="text-xl font-medium text-red-600 mb-2">加载失败</h3>
+              <p className="text-gray-500 max-w-md">获取内容时发生错误，请刷新页面重试</p>
+            </div>
+          </div>
+        );
 
-    // 渲染实际内容
-    switch (activeTab) {
-      case 'interpretation':
-        return <InterpretationViewer content={content} useMaxHeight={false} />;
-      case 'mindmap':
-        return <MindmapViewer content={content} height="1000px" />;
-      case 'quiz':
-        return <QuizViewer questions={content} useMaxHeight={false} />;
+      case 'success':
+        // 渲染实际内容
+        switch (activeTab) {
+          case 'interpretation':
+            return <InterpretationViewer content={content} useMaxHeight={false} />;
+          case 'mindmap':
+            return <MindmapViewer content={content} height="1000px" />;
+          case 'quiz':
+            return <QuizViewer questions={content} useMaxHeight={false} />;
+          default:
+            return null;
+        }
+
       default:
-        return null;
+        return (
+          <div className="flex justify-center items-center" style={{ minHeight: '400px' }}>
+            <div className="flex items-center space-x-2">
+              <div className="animate-pulse rounded-full h-6 w-6 bg-gray-300"></div>
+              <span className="text-gray-500">准备中...</span>
+            </div>
+          </div>
+        );
     }
-  }, [activeTab, content, loading]);
+  }, [activeTab, content, contentStatus]);
 
   const renderContent = () => stableContent;
 

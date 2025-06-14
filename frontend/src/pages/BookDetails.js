@@ -22,6 +22,7 @@ function BookDetails() {
   const [contentCache, setContentCache] = useState({});
   const [tabLoading, setTabLoading] = useState(false);
   const [tabContentLoaded, setTabContentLoaded] = useState(false);
+  const [contentStatus, setContentStatus] = useState('loading'); // 'loading', 'success', 'empty', 'error'
   
   // 音频相关状态
   const [audioUrl, setAudioUrl] = useState(null);
@@ -60,12 +61,22 @@ function BookDetails() {
     const fetchTabContent = async () => {
       const cacheKey = `${id}-${activeTab}`;
       if (contentCache[cacheKey]) {
-        setTabContent(contentCache[cacheKey]);
+        const cachedContent = contentCache[cacheKey];
+        setTabContent(cachedContent);
+        // 根据缓存内容设置状态
+        if (cachedContent === '' || cachedContent === null || cachedContent === undefined) {
+          setContentStatus('empty');
+        } else if (typeof cachedContent === 'string' && cachedContent.includes('失败')) {
+          setContentStatus('error');
+        } else {
+          setContentStatus('success');
+        }
         return;
       }
 
       try {
         setTabLoading(true);
+        setContentStatus('loading');
         let content;
         switch (activeTab) {
           case 'interpretation':
@@ -81,20 +92,35 @@ function BookDetails() {
             content = quizResponse.data;
             break;
           default:
+            setContentStatus('empty');
             return;
         }
         
-        let processedContent = typeof content === 'string' ? content : '';
-        if (!processedContent) {
+        // 验证内容格式和有效性
+        let processedContent = '';
+        let status = 'empty';
+        
+        if (content === null || content === undefined) {
+          processedContent = null;
+          status = 'empty';
+        } else if (typeof content === 'string') {
+          processedContent = content.trim();
+          status = processedContent ? 'success' : 'empty';
+        } else {
+          // 对于非字符串内容，尝试转换或处理
           console.warn(`获取${activeTab}内容格式不正确:`, content);
+          processedContent = '';
+          status = 'empty';
         }
         
         setContentCache(prev => ({ ...prev, [cacheKey]: processedContent }));
         setTabContent(processedContent);
+        setContentStatus(status);
         setTabContentLoaded(true);
       } catch (err) {
         console.error('Error fetching tab content:', err);
-        setTabContent(`获取${activeTab}内容失败，请稍后重试`);
+        setContentStatus('error');
+        setTabContent(null); // 错误时不设置错误消息作为内容
         setTabContentLoaded(true);
       } finally {
         setTabLoading(false);
@@ -164,7 +190,20 @@ function BookDetails() {
     setActiveTab(tabKey);
     const cacheKey = `${id}-${tabKey}`;
     if (contentCache[cacheKey]) {
-      setTabContent(contentCache[cacheKey]);
+      const cachedContent = contentCache[cacheKey];
+      setTabContent(cachedContent);
+      // 根据缓存内容设置状态
+      if (cachedContent === '' || cachedContent === null || cachedContent === undefined) {
+        setContentStatus('empty');
+      } else if (typeof cachedContent === 'string' && cachedContent.includes('失败')) {
+        setContentStatus('error');
+      } else {
+        setContentStatus('success');
+      }
+    } else {
+      // 如果没有缓存，设置为加载状态，等待 useEffect 触发
+      setContentStatus('loading');
+      setTabContent(null);
     }
   };
 
@@ -284,6 +323,7 @@ function BookDetails() {
                 onTabChange={handleTabChange}
                 content={tabContent}
                 loading={tabLoading}
+                contentStatus={contentStatus}
               />
             </div>
           )}
