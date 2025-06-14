@@ -220,7 +220,7 @@ const FileList = ({
                         onClick={() => handlePublish(file.id)}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                       >
-                        <i className="fas fa-upload mr-2"></i>解读发布
+                        <i className="fas fa-upload mr-2"></i>智能解读
                       </button>
                     ) : (
                       <button

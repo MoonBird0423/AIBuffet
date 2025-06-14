@@ -37,10 +37,10 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
   const [isUploading, setIsUploading] = useState(false);
   
   const steps = [
-    { number: 1, text: '基本信息' },
-    { number: 2, text: '生成解读' },
-    { number: 3, text: '生成脑图' },
-    { number: 4, text: '生成测试' }
+    { number: 1, text: '生成解读' },
+    { number: 2, text: '生成脑图' },
+    { number: 3, text: '生成测试' },
+    { number: 4, text: '图书发布' }
   ];
 
   const [progress, setProgress] = useState({
@@ -118,6 +118,13 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
       
       if (documentId) {
         loadDocumentInfo();
+        // 自动开始第一步：检查并加载现有解读内容，如果没有则开始生成
+        setTimeout(async () => {
+          const hasExisting = await loadExistingInterpretation();
+          if (!hasExisting) {
+            startInterpretation();
+          }
+        }, 100);
       }
     }
   }, [isOpen, documentId]);
@@ -370,6 +377,24 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
 
   const handleNextStep = async () => {
     if (currentStep === 1) {
+      // 第1步：生成解读 -> 第2步：生成脑图
+      setCurrentStep(currentStep + 1);
+      const hasExisting = await loadExistingMindmap();
+      if (!hasExisting) {
+        startMindmap();
+      }
+    } else if (currentStep === 2) {
+      // 第2步：生成脑图 -> 第3步：生成测试
+      setCurrentStep(currentStep + 1);
+      const hasExisting = await loadExistingQuiz();
+      if (!hasExisting) {
+        startQuiz();
+      }
+    } else if (currentStep === 3) {
+      // 第3步：生成测试 -> 第4步：图书发布
+      setCurrentStep(currentStep + 1);
+    } else if (currentStep === 4) {
+      // 第4步：图书发布 - 表单验证和保存
       const errors = validateForm();
       if (Object.keys(errors).length > 0) {
         setErrors(errors);
@@ -388,41 +413,14 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
         formDataObj.append('category', formData.category);
         
         await updateDocument(documentId, formDataObj);
-        setCurrentStep(currentStep + 1);
-        // 进入第二步时先检查是否已有解读内容
-        const hasExisting = await loadExistingInterpretation();
-        if (!hasExisting) {
-          startInterpretation();
-        }
-      } catch (error) {
-        ToastManager.error('保存失败：' + (error.response?.data?.message || error.message));
-      } finally {
-        setIsUploading(false);
-      }
-    } else if (currentStep < 4) {
-      setCurrentStep(currentStep + 1);
-      if (currentStep === 2) {
-        // 进入第三步时先检查是否已有脑图内容
-        const hasExisting = await loadExistingMindmap();
-        if (!hasExisting) {
-          startMindmap();
-        }
-      } else if (currentStep === 3) {
-        // 进入第四步时先检查是否已有测试题内容
-        const hasExisting = await loadExistingQuiz();
-        if (!hasExisting) {
-          startQuiz();
-        }
-      }
-    } else {
-      // 第4步：完成发布
-      try {
         await updateDocumentPublishStatus(documentId, 'PUBLISHED');
+        ToastManager.success('图书发布成功');
         onSuccess();
         onClose();
       } catch (error) {
-        const errorMessage = error.message || '发布失败，请重试';
-        ToastManager.error(errorMessage);
+        ToastManager.error('发布失败：' + (error.response?.data?.message || error.message));
+      } finally {
+        setIsUploading(false);
       }
     }
   };
@@ -451,6 +449,114 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
+        return (
+          <div className="space-y-6">
+            {interpretationLoading ? (
+              <ProgressBar
+                progress={progress.step2}
+                title="生成解读中"
+                description="系统正在生成解读内容，请稍候..."
+                icon="M13 10V3L4 14h7v7l9-11h-7z"
+              />
+            ) : interpretation ? (
+              <div className="space-y-4">
+                <InterpretationViewer content={interpretation} />
+                {/* 操作按钮 */}
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => openEditModal('interpretation', interpretation)}
+                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                  >
+                    编辑
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4">暂无解读内容</p>
+                <button
+                  onClick={startInterpretation}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  开始生成
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      case 2:
+        return (
+          <div className="space-y-6">
+            {mindmapLoading ? (
+              <ProgressBar
+                progress={progress.step3}
+                title="生成脑图中"
+                description="系统正在生成脑图内容，请稍候..."
+                icon="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+              />
+            ) : mindmap ? (
+              <div className="space-y-4">
+                <MindmapViewer content={mindmap} height="600px" />
+                {/* 操作按钮 */}
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => openEditModal('mindmap', mindmap)}
+                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                  >
+                    编辑
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4">暂无脑图内容</p>
+                <button
+                  onClick={startMindmap}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  开始生成
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      case 3:
+        return (
+          <div className="space-y-6">
+            {quizLoading ? (
+              <ProgressBar
+                progress={progress.step4}
+                title="生成测试题中"
+                description="系统正在生成测试题内容，请稍候..."
+                icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+              />
+            ) : quiz ? (
+              <div className="space-y-4">
+                <QuizViewer questions={quiz} />
+                {/* 操作按钮 */}
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => openEditModal('quiz', quiz)}
+                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                  >
+                    编辑
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4">暂无测试题内容</p>
+                <button
+                  onClick={startQuiz}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  开始生成
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      case 4:
         return (
           <div className="space-y-6">
             {/* 封面上传 */}
@@ -532,111 +638,6 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
               />
             </div>
           </div>
-        );      case 2:
-        return (
-          <div className="space-y-6">
-            {interpretationLoading ? (
-              <ProgressBar
-                progress={progress.step2}
-                title="生成解读中"
-                description="系统正在生成解读内容，请稍候..."
-                icon="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            ) : interpretation ? (
-              <div className="space-y-4">
-                <InterpretationViewer content={interpretation} />
-                {/* 操作按钮 */}
-                <div className="flex justify-center gap-3">
-                  <button
-                    onClick={() => openEditModal('interpretation', interpretation)}
-                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
-                  >
-                    编辑
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">暂无解读内容</p>
-                <button
-                  onClick={startInterpretation}
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  开始生成
-                </button>
-              </div>
-            )}
-          </div>
-        );      case 3:
-        return (
-          <div className="space-y-6">
-            {mindmapLoading ? (
-              <ProgressBar
-                progress={progress.step3}
-                title="生成脑图中"
-                description="系统正在生成脑图内容，请稍候..."
-                icon="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-              />
-            ) : mindmap ? (
-              <div className="space-y-4">
-                <MindmapViewer content={mindmap} height="600px" />
-                {/* 操作按钮 */}
-                <div className="flex justify-center gap-3">
-                  <button
-                    onClick={() => openEditModal('mindmap', mindmap)}
-                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
-                  >
-                    编辑
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">暂无脑图内容</p>
-                <button
-                  onClick={startMindmap}
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  开始生成
-                </button>
-              </div>
-            )}
-          </div>
-        );      case 4:
-        return (
-          <div className="space-y-6">
-            {quizLoading ? (
-              <ProgressBar
-                progress={progress.step4}
-                title="生成测试题中"
-                description="系统正在生成测试题内容，请稍候..."
-                icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-              />
-            ) : quiz ? (
-              <div className="space-y-4">
-                <QuizViewer questions={quiz} />
-                {/* 操作按钮 */}
-                <div className="flex justify-center gap-3">
-                  <button
-                    onClick={() => openEditModal('quiz', quiz)}
-                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
-                  >
-                    编辑
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">暂无测试题内容</p>
-                <button
-                  onClick={startQuiz}
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  开始生成
-                </button>
-              </div>
-            )}
-          </div>
         );
     }
   };
@@ -657,7 +658,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
           ${isUploading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'}
           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
       >
-        {isUploading ? '保存中...' : currentStep === 4 ? '完成发布' : '下一步'}
+        {isUploading ? '保存中...' : currentStep === 4 ? '发布图书' : '下一步'}
       </button>
     </div>
   );
@@ -684,7 +685,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
       <Modal
         isOpen={isOpen}
         onClose={onClose}
-        title="发布图书"
+        title="智能解读"
         footer={footer}
         width="5xl"
       >
