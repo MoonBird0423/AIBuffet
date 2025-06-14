@@ -136,12 +136,30 @@ apiClient.interceptors.response.use(
   response => response,
   async error => {
     if (isAuthenticationError(error)) {
+      // 显示Toast提示
+      try {
+        const { ToastManager } = await import('../components/common/Toast');
+        ToastManager.warning('访问此功能需要登录', 3000);
+      } catch (toastError) {
+        console.warn('无法显示Toast提示:', toastError);
+      }
+
       const authUser = localStorage.getItem('auth_user');
       if (authUser) {
         // 确保用户不在登录页面才清除状态和跳转
         if (!window.location.pathname.includes('/login')) {
           localStorage.removeItem('auth_user');
-          window.location.href = '/login';
+          // 延迟跳转，让用户看到提示
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 1000);
+        }
+      } else {
+        // 用户本来就没有登录，直接跳转（但仍有延迟让用户看到提示）
+        if (!window.location.pathname.includes('/login')) {
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 1000);
         }
       }
       throw new Error('认证失败，请重新登录');

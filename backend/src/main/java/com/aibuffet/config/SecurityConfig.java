@@ -17,6 +17,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.session.SessionRegistryImpl;
+import org.springframework.http.HttpMethod;
 
 import java.util.Arrays;
 
@@ -42,6 +43,12 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/knowledge-bases/public/**").permitAll()
+                // 新增：无需登录的图书功能
+                .requestMatchers(HttpMethod.GET, "/api/documents").permitAll()                    // 图书搜索、分类筛选
+                .requestMatchers(HttpMethod.GET, "/api/documents/*").permitAll()                 // 图书信息查询  
+                .requestMatchers(HttpMethod.GET, "/api/publish/docs/*/interpretation").permitAll() // 图书文字解读查询
+                .requestMatchers(HttpMethod.GET, "/api/documents/*/audio").permitAll()           // 获取音频URL
+                .requestMatchers(HttpMethod.GET, "/api/documents/*/audio/status").permitAll()    // 音频状态查询
                 .anyRequest().authenticated())
             .addFilterBefore(
                 authenticationFilter,

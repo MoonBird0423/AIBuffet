@@ -55,7 +55,13 @@ public class PublishServiceImpl implements PublishService {
         DocFile docFile = docFileRepository.findById(docId)
                 .orElseThrow(() -> new ResourceNotFoundException("文档不存在"));
                 
-        if (!docFile.getUploadedBy().equals(userId) && !"PUBLISHED".equals(docFile.getPublishStatus())) {
+        // 如果文档已发布，所有用户都可以访问（包括未登录用户）
+        if ("PUBLISHED".equals(docFile.getPublishStatus().name())) {
+            return;
+        }
+        
+        // 如果文档未发布，必须是文档上传者才能访问
+        if (userId == null || !docFile.getUploadedBy().equals(userId)) {
             throw new IllegalArgumentException("无权访问此文档");
         }
     }

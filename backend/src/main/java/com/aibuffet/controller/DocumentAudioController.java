@@ -67,14 +67,18 @@ public class DocumentAudioController {
     /**
      * 获取指定文档的音频URL
      * @param docId 文档ID
+     * @param user 用户信息（可选）
      * @return 音频URL
      */
     @GetMapping("/{docId}/audio")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getAudioUrl(@PathVariable Long docId) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getAudioUrl(
+            @PathVariable Long docId,
+            @AuthenticationPrincipal(errorOnInvalidType = false) User user) {
         try {
-            logger.info("获取文档音频URL: 文档ID={}", docId);
+            Long userId = user != null ? user.getId() : null;
+            logger.info("获取文档音频URL: 文档ID={}, 用户ID={}", docId, userId);
             
-            String audioUrl = audioSynthesisService.getAudioUrl(docId);
+            String audioUrl = audioSynthesisService.getAudioUrlSecure(docId, userId);
             boolean hasAudio = audioUrl != null && !audioUrl.trim().isEmpty();
             
             Map<String, Object> result = new HashMap<>();
@@ -93,15 +97,19 @@ public class DocumentAudioController {
     /**
      * 检查指定文档是否有音频
      * @param docId 文档ID
+     * @param user 用户信息（可选）
      * @return 是否有音频
      */
     @GetMapping("/{docId}/audio/status")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getAudioStatus(@PathVariable Long docId) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getAudioStatus(
+            @PathVariable Long docId,
+            @AuthenticationPrincipal(errorOnInvalidType = false) User user) {
         try {
-            logger.info("检查文档音频状态: 文档ID={}", docId);
+            Long userId = user != null ? user.getId() : null;
+            logger.info("检查文档音频状态: 文档ID={}, 用户ID={}", docId, userId);
             
-            boolean hasAudio = audioSynthesisService.hasAudio(docId);
-            String audioUrl = hasAudio ? audioSynthesisService.getAudioUrl(docId) : null;
+            boolean hasAudio = audioSynthesisService.hasAudioSecure(docId, userId);
+            String audioUrl = hasAudio ? audioSynthesisService.getAudioUrlSecure(docId, userId) : null;
             
             Map<String, Object> result = new HashMap<>();
             result.put("hasAudio", hasAudio);

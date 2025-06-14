@@ -154,11 +154,13 @@ public class DocumentController {
             @RequestParam(required = false) DocFile.Category category,
             @RequestParam(required = false) String relationType,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal(errorOnInvalidType = false) User user) {
         try {
-            logger.info("DocumentController: 接收到查询请求: knowledgeBaseId={}, keyword={}, category={}, relationType={}, page={}, size={}", 
-                knowledgeBaseId, keyword, category, relationType, page, size);
-            Page<DocFile> documents = documentService.getDocuments(knowledgeBaseId, keyword, category, relationType, page, size);
+            Long userId = user != null ? user.getId() : null;
+            logger.info("DocumentController: 接收到查询请求: knowledgeBaseId={}, keyword={}, category={}, relationType={}, page={}, size={}, userId={}", 
+                knowledgeBaseId, keyword, category, relationType, page, size, userId);
+            Page<DocFile> documents = documentService.getDocuments(knowledgeBaseId, keyword, category, relationType, page, size, userId);
             logger.info("DocumentController: 查询完成，返回结果数量: {}", documents.getContent().size());
             return ApiResponse.success(documents);
         } catch (Exception e) {
@@ -319,17 +321,18 @@ public class DocumentController {
     @GetMapping("/{id}")
     public ApiResponse<DocFile> getDocument(
             @PathVariable Long id,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal(errorOnInvalidType = false) User user) {
         try {
-            logger.info("获取文档详情请求: docId={}, userId={}", id, user.getId());
-            DocFile document = documentService.getDocument(id, user.getId());
+            Long userId = user != null ? user.getId() : null;
+            logger.info("获取文档详情请求: docId={}, userId={}", id, userId);
+            DocFile document = documentService.getDocument(id, userId);
             logger.info("获取文档详情成功: docId={}", id);
             return ApiResponse.success(document);
         } catch (ResourceNotFoundException e) {
-            logger.warn("获取文档详情失败，文档不存在: docId={}, userId={}", id, user.getId());
+            logger.warn("获取文档详情失败，文档不存在: docId={}, userId={}", id, user != null ? user.getId() : null);
             return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND, e.getMessage());
         } catch (IllegalArgumentException e) {
-            logger.warn("获取文档详情失败，无权限: docId={}, userId={}", id, user.getId());
+            logger.warn("获取文档详情失败，无权限: docId={}, userId={}", id, user != null ? user.getId() : null);
             return ApiResponse.error(ErrorCode.PERMISSION_DENIED, e.getMessage());
         } catch (Exception e) {
             logger.error("获取文档详情失败，系统错误: ", e);

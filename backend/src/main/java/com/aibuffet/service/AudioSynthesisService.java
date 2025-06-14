@@ -28,6 +28,9 @@ public class AudioSynthesisService {
     
     @Autowired
     private OSSService ossService;
+    
+    @Autowired
+    private DocumentService documentService;
 
     /**
      * 为指定文档的解读内容生成音频
@@ -177,6 +180,35 @@ public class AudioSynthesisService {
      */
     public boolean hasAudio(Long docId) {
         String audioUrl = getAudioUrl(docId);
+        return audioUrl != null && !audioUrl.trim().isEmpty();
+    }
+
+    /**
+     * 安全地获取指定文档的音频URL（带权限检查）
+     * @param docId 文档ID
+     * @param userId 用户ID，可为null（未登录用户）
+     * @return 音频URL，如果无权限访问则返回null
+     */
+    public String getAudioUrlSecure(Long docId, Long userId) {
+        try {
+            // 检查文档访问权限
+            documentService.getDocument(docId, userId);
+            // 如果权限检查通过，返回音频URL
+            return getAudioUrl(docId);
+        } catch (Exception e) {
+            logger.debug("无权限访问文档音频: docId={}, userId={}, error={}", docId, userId, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 安全地检查指定文档是否已有音频（带权限检查）
+     * @param docId 文档ID
+     * @param userId 用户ID，可为null（未登录用户）
+     * @return 是否有音频，如果无权限访问则返回false
+     */
+    public boolean hasAudioSecure(Long docId, Long userId) {
+        String audioUrl = getAudioUrlSecure(docId, userId);
         return audioUrl != null && !audioUrl.trim().isEmpty();
     }
 }

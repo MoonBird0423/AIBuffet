@@ -21,14 +21,15 @@ public class PublishController {
     @GetMapping("/docs/{docId}/interpretation")
     public ApiResponse<String> getInterpretation(
             @PathVariable Long docId,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal(errorOnInvalidType = false) User user) {
         try {
-            logger.info("获取文档解读: docId={}, userId={}", docId, user.getId());
-            String content = publishService.getInterpretation(docId, user.getId()).get();
+            Long userId = user != null ? user.getId() : null;
+            logger.info("获取文档解读: docId={}, userId={}", docId, userId);
+            String content = publishService.getInterpretation(docId, userId).get();
             return ApiResponse.success(content);
         } catch (Exception e) {
             logger.error("获取文档解读失败: docId={}, userId={}, error={}", 
-                docId, user.getId(), e.getMessage(), e);
+                docId, user != null ? user.getId() : null, e.getMessage(), e);
             return ApiResponse.error(ErrorCode.SYSTEM_ERROR);
         }
     }

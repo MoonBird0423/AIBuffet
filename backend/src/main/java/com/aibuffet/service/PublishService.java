@@ -14,7 +14,7 @@ public interface PublishService {
     /**
      * 获取图书解读内容
      * @param docId 文档ID
-     * @param userId 用户ID
+     * @param userId 用户ID，可选，为null时只能访问公开发布的文档
      * @return 解读内容，如果不存在返回null
      */
     CompletableFuture<String> getInterpretation(Long docId, Long userId);

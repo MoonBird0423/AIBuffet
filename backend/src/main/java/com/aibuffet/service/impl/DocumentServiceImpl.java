@@ -237,9 +237,9 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<DocFile> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, String relationType, int page, int size) {
-        logger.info("DocumentService: 开始查询文档列表: knowledgeBaseId={}, keyword={}, category={}, relationType={}, page={}, size={}", 
-            knowledgeBaseId, keyword, category, relationType, page, size);
+    public Page<DocFile> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, String relationType, int page, int size, Long userId) {
+        logger.info("DocumentService: 开始查询文档列表: knowledgeBaseId={}, keyword={}, category={}, relationType={}, page={}, size={}, userId={}", 
+            knowledgeBaseId, keyword, category, relationType, page, size, userId);
         // 清除一级缓存
         entityManager.clear();
         
@@ -613,9 +613,15 @@ public class DocumentServiceImpl implements DocumentService {
                 });
 
         // 验证用户权限：
-        // 1. 如果文档已发布，所有用户都可以访问
+        // 1. 如果文档已发布，所有用户都可以访问（包括未登录用户）
         // 2. 如果文档未发布，只有关联知识库的创建者可以访问
         if (docFile.getPublishStatus() != DocFile.PublishStatus.PUBLISHED) {
+            // 如果用户未登录且文档未发布，拒绝访问
+            if (userId == null) {
+                logger.warn("未登录用户无权限访问未发布文档: docId={}", docId);
+                throw new IllegalArgumentException("No permission to access this document");
+            }
+            
             KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileId(docId)
                     .orElseThrow(() -> {
                         logger.warn("文档未关联到任何知识库: docId={}", docId);

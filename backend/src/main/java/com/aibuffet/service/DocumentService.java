@@ -35,9 +35,10 @@ public interface DocumentService {
      * @param relationType 关联关系类型，可选，用于区分上传和收藏
      * @param page 页码，从0开始
      * @param size 每页大小
+     * @param userId 用户ID，可选，为null时只返回公开发布的文档
      * @return 分页的文档列表
      */
-    Page<DocFile> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, String relationType, int page, int size);
+    Page<DocFile> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, String relationType, int page, int size, Long userId);
 
     /**
      * 重新处理文档
@@ -69,7 +70,7 @@ public interface DocumentService {
      * 获取单个文档详情
      * 
      * @param docId 文档ID
-     * @param userId 用户ID，用于权限验证
+     * @param userId 用户ID，可选，为null时只能访问公开发布的文档
      * @return 文档详情
      * @throws com.aibuffet.common.ResourceNotFoundException 当文档不存在时
      * @throws IllegalArgumentException 当用户无权限访问该文档时
