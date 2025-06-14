@@ -33,6 +33,11 @@ function BookDetails() {
   // 收藏相关状态
   const [showFavoriteModal, setShowFavoriteModal] = useState(false);
 
+  // 页面加载时滚动到顶部
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // 获取图书基本信息
   useEffect(() => {
     const fetchBookData = async () => {
@@ -60,14 +65,13 @@ function BookDetails() {
   useEffect(() => {
     const fetchTabContent = async () => {
       const cacheKey = `${id}-${activeTab}`;
+      
       if (contentCache[cacheKey]) {
         const cachedContent = contentCache[cacheKey];
         setTabContent(cachedContent);
         // 根据缓存内容设置状态
         if (cachedContent === '' || cachedContent === null || cachedContent === undefined) {
           setContentStatus('empty');
-        } else if (typeof cachedContent === 'string' && cachedContent.includes('失败')) {
-          setContentStatus('error');
         } else {
           setContentStatus('success');
         }
@@ -77,7 +81,9 @@ function BookDetails() {
       try {
         setTabLoading(true);
         setContentStatus('loading');
+        
         let content;
+        
         switch (activeTab) {
           case 'interpretation':
             const interpretationResponse = await getInterpretation(id);
@@ -117,6 +123,7 @@ function BookDetails() {
         setTabContent(processedContent);
         setContentStatus(status);
         setTabContentLoaded(true);
+        
       } catch (err) {
         console.error('Error fetching tab content:', err);
         setContentStatus('error');
@@ -131,6 +138,7 @@ function BookDetails() {
       fetchTabContent();
     }
   }, [activeTab, id]);
+
 
   // 检查音频状态
   useEffect(() => {
@@ -189,17 +197,20 @@ function BookDetails() {
   const handleTabChange = (tabKey) => {
     setActiveTab(tabKey);
     const cacheKey = `${id}-${tabKey}`;
+    
     if (contentCache[cacheKey]) {
       const cachedContent = contentCache[cacheKey];
       setTabContent(cachedContent);
+      
       // 根据缓存内容设置状态
+      let newStatus;
       if (cachedContent === '' || cachedContent === null || cachedContent === undefined) {
-        setContentStatus('empty');
-      } else if (typeof cachedContent === 'string' && cachedContent.includes('失败')) {
-        setContentStatus('error');
+        newStatus = 'empty';
       } else {
-        setContentStatus('success');
+        newStatus = 'success';
       }
+      
+      setContentStatus(newStatus);
     } else {
       // 如果没有缓存，设置为加载状态，等待 useEffect 触发
       setContentStatus('loading');
@@ -225,39 +236,16 @@ function BookDetails() {
     <div className="min-h-screen bg-gray-50">
 
       {/* 顶部渐变背景区域 */}
-      <div className="bg-gradient-to-tr from-[#667eea] to-[#764ba2] pb-6">
+      <div className="bg-gradient-to-tr from-[#667eea] to-[#764ba2] pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* 按钮区域 */}
-          <div className="pt-20 pb-8">
-            <div className="flex justify-between items-center">
-              <button
-                onClick={handleBack}
-                className="inline-flex items-center px-6 py-3 backdrop-blur-xl bg-white/10 border border-white/20 rounded-full text-white hover:bg-white/30 transition-all duration-200"
-              >
-                <i className="fas fa-arrow-left mr-2"></i>
-                返回图书馆
-              </button>
-              <div className="flex space-x-4">
-                <button
-                  onClick={() => setShowFavoriteModal(true)}
-                  className="transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/15 px-6 py-3 backdrop-blur-xl bg-white/10 border border-white/20 rounded-full text-white hover:bg-white/30"
-                >
-                  <i className="fas fa-heart mr-2"></i>
-                  收藏到知识库
-                </button>
-                <button 
-                  onClick={handleShare}
-                  className="transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/15 px-6 py-3 backdrop-blur-xl bg-white/10 border border-white/20 rounded-full text-white hover:bg-white/30"
-                >
-                  <i className="fas fa-share mr-2"></i>
-                  分享
-                </button>
-              </div>
-            </div>
-          </div>
-
           {/* 图书基本信息 */}
-          <BookInfo bookData={bookData} />
+          <div style={{paddingTop: '112px'}}>
+            <BookInfo 
+              bookData={bookData} 
+              onFavorite={() => setShowFavoriteModal(true)}
+              onShare={handleShare}
+            />
+          </div>
         </div>
       </div>
 

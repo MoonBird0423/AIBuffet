@@ -16,6 +16,7 @@ import com.aibuffet.repository.DocQuizRepository;
 import com.aibuffet.repository.ModelRepository;
 import org.springframework.beans.factory.annotation.Value;
 import com.aibuffet.service.PublishService;
+import com.aibuffet.service.DocumentService;
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.*;
@@ -40,6 +41,7 @@ public class PublishServiceImpl implements PublishService {
     private final DocInterpretationRepository docInterpretationRepository;
     private final DocMindmapRepository docMindmapRepository;
     private final DocQuizRepository docQuizRepository;
+    private final DocumentService documentService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${book.interpretation.user-prompt}")
@@ -52,17 +54,21 @@ public class PublishServiceImpl implements PublishService {
     private String quizUserPrompt;
 
     private void verifyDocAccess(Long docId, Long userId) {
-        DocFile docFile = docFileRepository.findById(docId)
-                .orElseThrow(() -> new ResourceNotFoundException("文档不存在"));
-                
-        // 如果文档已发布，所有用户都可以访问（包括未登录用户）
-        if ("PUBLISHED".equals(docFile.getPublishStatus().name())) {
-            return;
-        }
-        
-        // 如果文档未发布，必须是文档上传者才能访问
-        if (userId == null || !docFile.getUploadedBy().equals(userId)) {
-            throw new IllegalArgumentException("无权访问此文档");
+        // 直接调用DocumentService的getDocument方法
+        // 该方法已经实现了正确的权限检查逻辑，包括：
+        // 1. 对于已发布文档：所有用户都可以访问（包括未登录用户）
+        // 2. 对于未发布文档：只有在knowledge_base_files表中有关联记录的用户可以访问
+        try {
+            documentService.getDocument(docId, userId);
+        } catch (Exception e) {
+            // 重新抛出更友好的错误信息
+            if (e instanceof ResourceNotFoundException) {
+                throw new ResourceNotFoundException("文档不存在");
+            } else if (e instanceof IllegalArgumentException) {
+                throw new IllegalArgumentException("无权访问此文档");
+            } else {
+                throw new RuntimeException("文档访问验证失败: " + e.getMessage(), e);
+            }
         }
     }
 

@@ -304,7 +304,8 @@ public class DocumentServiceImpl implements DocumentService {
                 logger.info("DocumentService: 执行公共图书馆分类查询");
                 result = docFileRepository.findByCategoryAndPublishStatus(
                     category.name(), publishStatusStr, PageRequest.of(page, size));
-            } else {                logger.info("DocumentService: 执行公共图书馆全部查询");
+            } else {
+                logger.info("DocumentService: 执行公共图书馆全部查询");
                 result = docFileRepository.findByPublishStatus(
                     publishStatusStr, PageRequest.of(page, size));
             }
@@ -332,17 +333,14 @@ public class DocumentServiceImpl implements DocumentService {
                     return new ResourceNotFoundException("Document not found");
                 });
 
-        // 检查用户权限
-        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileId(docId)
+        // 修复：检查用户权限 - 使用用户特定的关联关系查询
+        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileIdAndCreatedBy(docId, userId)
                 .orElseThrow(() -> {
-                    logger.warn("文档未关联到任何知识库: docId={}", docId);
-                    return new ResourceNotFoundException("Document is not associated with any knowledge base");
+                    logger.warn("用户未关联该文档到任何知识库: docId={}, userId={}", docId, userId);
+                    return new IllegalArgumentException("No permission to retry this document");
                 });
 
-        if (!relation.getCreatedBy().equals(userId)) {
-            logger.warn("用户无权限重试该文档: docId={}, userId={}", docId, userId);
-            throw new IllegalArgumentException("No permission to retry this document");
-        }
+        logger.debug("找到用户文档关联关系: docId={}, userId={}, kbId={}", docId, userId, relation.getKbId());
 
         // 重置处理状态
         docFile.setProcessingStatus(DocFile.ProcessingStatus.PENDING);
@@ -366,17 +364,16 @@ public class DocumentServiceImpl implements DocumentService {
                     return new ResourceNotFoundException("Document not found");
                 });
 
-        // 检查用户权限
-        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileId(docId)
+        // 修复：检查用户权限 - 使用用户特定的关联关系查询
+        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileIdAndCreatedBy(docId, userId)
                 .orElseThrow(() -> {
-                    logger.warn("文档未关联到任何知识库: docId={}", docId);
-                    return new ResourceNotFoundException("Document is not associated with any knowledge base");
+                    logger.warn("用户未关联该文档到任何知识库: docId={}, userId={}", docId, userId);
+                    return new IllegalArgumentException("No permission to view document chunks");
                 });
 
-        if (!relation.getCreatedBy().equals(userId)) {
-            logger.warn("用户无权限查看该文档的分块: docId={}, userId={}", docId, userId);
-            throw new IllegalArgumentException("No permission to view document chunks");
-        }        List<DocChunk> chunks = docChunkRepository.findByFileIdOrderByChunkIndexAsc(docId);
+        logger.debug("找到用户文档关联关系: docId={}, userId={}, kbId={}", docId, userId, relation.getKbId());
+
+        List<DocChunk> chunks = docChunkRepository.findByFileIdOrderByChunkIndexAsc(docId);
         logger.info("成功获取文档分块: docId={}, 分块数量={}", docId, chunks.size());
         return chunks;
     }
@@ -391,17 +388,14 @@ public class DocumentServiceImpl implements DocumentService {
                     return new ResourceNotFoundException("Document not found");
                 });
 
-        // 检查用户权限
-        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileId(docId)
+        // 修复：检查用户权限 - 使用用户特定的关联关系查询
+        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileIdAndCreatedBy(docId, userId)
                 .orElseThrow(() -> {
-                    logger.warn("文档未关联到任何知识库: docId={}", docId);
-                    return new ResourceNotFoundException("Document is not associated with any knowledge base");
+                    logger.warn("用户未关联该文档到任何知识库: docId={}, userId={}", docId, userId);
+                    return new IllegalArgumentException("No permission to view document chunks");
                 });
 
-        if (!relation.getCreatedBy().equals(userId)) {
-            logger.warn("用户无权限查看该文档的分块: docId={}, userId={}", docId, userId);
-            throw new IllegalArgumentException("No permission to view document chunks");
-        }
+        logger.debug("找到用户文档关联关系: docId={}, userId={}, kbId={}", docId, userId, relation.getKbId());
 
         Page<DocChunk> chunksPage = docChunkRepository.findByFileIdOrderByChunkIndexAsc(docId, PageRequest.of(page, size));
         
@@ -416,7 +410,9 @@ public class DocumentServiceImpl implements DocumentService {
         logger.info("成功分页获取文档分块: docId={}, 当前页={}, 每页大小={}, 总页数={}, 总条数={}", 
             docId, chunksPage.getNumber(), chunksPage.getSize(), chunksPage.getTotalPages(), chunksPage.getTotalElements());
         return result;
-    }    private String getFileExtension(String filename) {
+    }
+
+    private String getFileExtension(String filename) {
         int lastDotPos = filename.lastIndexOf('.');
         return lastDotPos == -1 ? "" : filename.substring(lastDotPos).toLowerCase();
     }
@@ -528,17 +524,14 @@ public class DocumentServiceImpl implements DocumentService {
                     return new ResourceNotFoundException("Document not found or deleted");
                 });
 
-        // 验证用户权限
-        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileId(docId)
+        // 修复：验证用户权限 - 使用用户特定的关联关系查询
+        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileIdAndCreatedBy(docId, userId)
                 .orElseThrow(() -> {
-                    logger.warn("文档未关联到任何知识库: docId={}", docId);
-                    return new ResourceNotFoundException("Document is not associated with any knowledge base");
+                    logger.warn("用户未关联该文档到任何知识库: docId={}, userId={}", docId, userId);
+                    return new IllegalArgumentException("No permission to update this document");
                 });
 
-        if (!relation.getCreatedBy().equals(userId)) {
-            logger.warn("用户无权限更新该文档: docId={}, userId={}", docId, userId);
-            throw new IllegalArgumentException("No permission to update this document");
-        }
+        logger.debug("找到用户文档关联关系: docId={}, userId={}, kbId={}", docId, userId, relation.getKbId());
 
         // 更新文档信息
         boolean updated = false;
@@ -583,17 +576,14 @@ public class DocumentServiceImpl implements DocumentService {
                     return new ResourceNotFoundException("Document not found or deleted");
                 });
 
-        // 验证用户权限
-        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileId(docId)
+        // 修复：验证用户权限 - 使用用户特定的关联关系查询
+        KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileIdAndCreatedBy(docId, userId)
                 .orElseThrow(() -> {
-                    logger.warn("文档未关联到任何知识库: docId={}", docId);
-                    return new ResourceNotFoundException("Document is not associated with any knowledge base");
+                    logger.warn("用户未关联该文档到任何知识库: docId={}, userId={}", docId, userId);
+                    return new IllegalArgumentException("No permission to update this document status");
                 });
 
-        if (!relation.getCreatedBy().equals(userId)) {
-            logger.warn("用户无权限更新该文档状态: docId={}, userId={}", docId, userId);
-            throw new IllegalArgumentException("No permission to update this document status");
-        }
+        logger.debug("找到用户文档关联关系: docId={}, userId={}, kbId={}", docId, userId, relation.getKbId());
 
         docFile.setPublishStatus(status);
         docFileRepository.save(docFile);
@@ -622,16 +612,14 @@ public class DocumentServiceImpl implements DocumentService {
                 throw new IllegalArgumentException("No permission to access this document");
             }
             
-            KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileId(docId)
+            // 修复：使用用户特定的关联关系查询，而不是查询第一个关联关系
+            KnowledgeBaseFile relation = knowledgeBaseFileRepository.findFirstByFileIdAndCreatedBy(docId, userId)
                     .orElseThrow(() -> {
-                        logger.warn("文档未关联到任何知识库: docId={}", docId);
-                        return new ResourceNotFoundException("Document is not associated with any knowledge base");
+                        logger.warn("用户未关联该文档到任何知识库: docId={}, userId={}", docId, userId);
+                        return new IllegalArgumentException("No permission to access this document");
                     });
 
-            if (!relation.getCreatedBy().equals(userId)) {
-                logger.warn("用户无权限访问该文档: docId={}, userId={}", docId, userId);
-                throw new IllegalArgumentException("No permission to access this document");
-            }
+            logger.debug("找到用户文档关联关系: docId={}, userId={}, kbId={}", docId, userId, relation.getKbId());
         }
 
         // 计算收藏数量

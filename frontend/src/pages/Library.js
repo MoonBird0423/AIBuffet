@@ -22,6 +22,11 @@ function Library() {
     ...Object.entries(DocumentCategory).map(([id, name]) => ({ id, name }))
   ];
 
+  // 页面加载时滚动到顶部
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // 实现Intersection Observer监测
   useEffect(() => {
     observer.current = new IntersectionObserver(entries => {

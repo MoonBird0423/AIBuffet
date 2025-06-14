@@ -1,11 +1,11 @@
 import React from 'react';
 import { openChatWindow } from '../../utils/chatWindowManager';
 
-function BookInfo({ bookData }) {
+function BookInfo({ bookData, onFavorite, onShare }) {
   // 如果没有数据，显示骨架屏
   if (!bookData) {
     return (
-      <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-4 mb-6 animate-pulse">
+      <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-4 animate-pulse">
         <div className="flex flex-col lg:flex-row">          {/* 封面图片骨架 */}
           <div className="lg:w-1/3 p-8 flex justify-center">
             <div className="w-60 bg-gray-200/50 rounded-xl" style={{height: '360px'}} />
@@ -26,7 +26,7 @@ function BookInfo({ bookData }) {
   }
 
   return (
-    <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-4 mb-6">
+    <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-4">
       <div className="flex flex-col lg:flex-row">
         {/* 左侧封面图片 */}
         <div className="lg:w-1/3 p-8 flex justify-center">          <div className="relative">            <img
@@ -57,20 +57,42 @@ function BookInfo({ bookData }) {
             </p>
           </div>
 
-          {/* CTA Button */}
-          <button 
-            onClick={() => {
-              openChatWindow({
-                type: 'book',
-                id: bookData.id,
-                name: bookData.fileName
-              });
-            }}
-            className="w-full md:w-auto bg-white text-purple-600 px-8 py-4 rounded-2xl text-lg font-semibold hover:bg-white/90 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
-          >
-            <i className="fas fa-comments mr-2"></i>
-            知识问答
-          </button>
+          {/* CTA Buttons */}
+          <div className="flex flex-wrap gap-3">
+            <button 
+              onClick={() => {
+                openChatWindow({
+                  type: 'book',
+                  id: bookData.id,
+                  name: bookData.fileName
+                });
+              }}
+              className="bg-white text-purple-600 px-8 py-4 rounded-2xl text-lg font-semibold hover:bg-white/90 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+            >
+              <i className="fas fa-comments mr-2"></i>
+              知识问答
+            </button>
+            
+            {onFavorite && (
+              <button
+                onClick={onFavorite}
+                className="bg-transparent border-2 border-white/50 text-white px-6 py-3 rounded-2xl text-base font-medium hover:bg-white hover:text-purple-600 hover:border-white transition-all duration-200"
+              >
+                <i className="fas fa-heart mr-2"></i>
+                收藏到知识库
+              </button>
+            )}
+            
+            {onShare && (
+              <button 
+                onClick={onShare}
+                className="bg-transparent border-2 border-white/50 text-white px-6 py-3 rounded-2xl text-base font-medium hover:bg-white hover:text-purple-600 hover:border-white transition-all duration-200"
+              >
+                <i className="fas fa-share mr-2"></i>
+                分享
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
