@@ -72,8 +72,8 @@ function Home() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
               {/* Primary Button - 浏览图书馆 */}
               <Link to="/library">
-                <button className="bg-white text-blue-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg">
-                  <i className="fas fa-book-open mr-2 text-blue-600"></i>
+                <button className="bg-white text-purple-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg">
+                  <i className="fas fa-book-open mr-2 text-purple-600"></i>
                   浏览图书
                 </button>
               </Link>
@@ -242,7 +242,7 @@ function Home() {
                 加入千万用户，体验AI驱动的高效阅读方式
               </p>
               <Link to="/login">
-                <button className="bg-white text-blue-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg">
+                <button className="bg-white text-purple-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg">
                   <i className="fas fa-rocket mr-2"></i>
                   立即加入
                 </button>
