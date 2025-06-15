@@ -2,8 +2,9 @@ import React, { useMemo } from 'react';
 import InterpretationViewer from '../knowledge/InterpretationViewer';
 import MindmapViewer from '../knowledge/MindmapViewer';
 import QuizViewer from '../knowledge/QuizViewer';
+import AudioPlayer from '../common/AudioPlayer';
 
-function BookTabs({ activeTab, onTabChange, content, loading = false, contentStatus = 'loading' }) {
+function BookTabs({ activeTab, onTabChange, content, loading = false, contentStatus = 'loading', audioUrl, hasAudio, bookTitle, bookId }) {
 
   const tabs = [
     { key: 'interpretation', label: '图书解读' },
@@ -74,7 +75,18 @@ function BookTabs({ activeTab, onTabChange, content, loading = false, contentSta
         // 渲染实际内容
         switch (activeTab) {
           case 'interpretation':
-            return <InterpretationViewer content={content} useMaxHeight={false} />;
+            return (
+              <div className="space-y-6">
+                {/* 音频播放器 - 只有当音频存在时才显示 */}
+                {hasAudio && audioUrl && (
+                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6">
+                    <AudioPlayer audioUrl={audioUrl} bookTitle={bookTitle} bookId={bookId} />
+                  </div>
+                )}
+                {/* 解读内容 */}
+                <InterpretationViewer content={content} useMaxHeight={false} />
+              </div>
+            );
           case 'mindmap':
             return <MindmapViewer content={content} height="1000px" />;
           case 'quiz':
@@ -93,7 +105,7 @@ function BookTabs({ activeTab, onTabChange, content, loading = false, contentSta
           </div>
         );
     }
-  }, [activeTab, content, contentStatus]);
+  }, [activeTab, content, contentStatus, hasAudio, audioUrl, bookTitle, bookId]);
 
   const renderContent = () => stableContent;
 

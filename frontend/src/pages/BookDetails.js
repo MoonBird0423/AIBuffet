@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useDocumentTitle from '../hooks/useDocumentTitle';
-import { getDocument, getInterpretation, getMindmap, getQuiz, synthesizeAudio, getAudioStatus } from '../services/api';
+import { getDocument, getInterpretation, getMindmap, getQuiz, getAudioStatus } from '../services/api';
 import BookInfo from '../components/library/BookInfo';
 import BookTabs from '../components/library/BookTabs';
-import AudioPlayer from '../components/common/AudioPlayer';
 import FavoriteModal from '../components/library/FavoriteModal';
 import { ToastManager } from '../components/common/Toast';
 
@@ -27,8 +26,6 @@ function BookDetails() {
   // 音频相关状态
   const [audioUrl, setAudioUrl] = useState(null);
   const [hasAudio, setHasAudio] = useState(false);
-  const [audioLoading, setAudioLoading] = useState(false);
-  const [audioError, setAudioError] = useState(null);
   
   // 收藏相关状态
   const [showFavoriteModal, setShowFavoriteModal] = useState(false);
@@ -139,7 +136,6 @@ function BookDetails() {
     }
   }, [activeTab, id]);
 
-
   // 检查音频状态
   useEffect(() => {
     if (activeTab === 'interpretation' && id && tabContent && tabContent !== '') {
@@ -156,26 +152,6 @@ function BookDetails() {
       }
     } catch (error) {
       console.error('检查音频状态失败:', error);
-    }
-  };
-
-  const handleGenerateAudio = async () => {
-    setAudioLoading(true);
-    setAudioError(null);
-    
-    try {
-      const response = await synthesizeAudio(id);
-      if (response.code === 200) {
-        setAudioUrl(response.data.audioUrl);
-        setHasAudio(true);
-      } else {
-        setAudioError(response.message || '音频生成失败');
-      }
-    } catch (error) {
-      console.error('音频生成失败:', error);
-      setAudioError(error.message || '音频生成失败，请稍后重试');
-    } finally {
-      setAudioLoading(false);
     }
   };
 
@@ -256,52 +232,7 @@ function BookDetails() {
           <div className="text-center mb-8">
             <h3 className="text-2xl font-bold text-gray-900 mb-2">AI伴读，直达书魂</h3>
             <div className="w-24 h-1 bg-gradient-to-r from-indigo-500 to-purple-500 mx-auto rounded-full"></div>
-          </div>          {/* 音频解读区域 */}
-          {bookData && (
-            <div className="mb-6">
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-3xl shadow-xl p-8">
-                {!hasAudio ? (
-                  // 未生成音频时：只显示生成按钮和错误信息
-                  <div className="flex items-center justify-center space-x-4">
-                    {activeTab === 'interpretation' && tabContent && tabContent !== '' ? (
-                      <button
-                        onClick={handleGenerateAudio}
-                        disabled={audioLoading}
-                        className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 transition-all duration-200"
-                      >
-                        {audioLoading ? (
-                          <>
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                            生成中...
-                          </>
-                        ) : (
-                          <>
-                            <i className="fas fa-magic mr-3"></i>
-                            生成音频
-                          </>
-                        )}
-                      </button>
-                    ) : (
-                      <div className="text-center text-gray-500">
-                        <i className="fas fa-volume-mute text-3xl mb-3"></i>
-                        <p className="text-lg">请先查看解读内容以生成音频</p>
-                      </div>
-                    )}
-                    
-                    {audioError && (
-                      <div className="flex items-center text-red-600">
-                        <i className="fas fa-exclamation-triangle mr-2"></i>
-                        <span className="text-sm">{audioError}</span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  // 音频生成完成后：显示音频播放组件
-                  <AudioPlayer audioUrl={audioUrl} bookTitle={bookData?.fileName} bookId={id} />
-                )}
-              </div>
-            </div>
-          )}
+          </div>
 
           {/* 内容选项卡 */}
           {bookData && (
@@ -312,6 +243,10 @@ function BookDetails() {
                 content={tabContent}
                 loading={tabLoading}
                 contentStatus={contentStatus}
+                audioUrl={audioUrl}
+                hasAudio={hasAudio}
+                bookTitle={bookData?.fileName}
+                bookId={id}
               />
             </div>
           )}

@@ -7,6 +7,8 @@ import {
   getDocument, 
   generateInterpretation, 
   getInterpretation,
+  synthesizeAudio,
+  getAudioStatus,
   generateMindmap,
   getMindmap,
   generateQuiz,
@@ -18,6 +20,7 @@ import {
 import MindmapViewer from './MindmapViewer';
 import QuizViewer from './QuizViewer';
 import InterpretationViewer from './InterpretationViewer';
+import AudioPlayer from '../common/AudioPlayer';
 import ProgressBar from '../common/ProgressBar';
 import { ToastManager } from '../common/Toast';
 import Select from '../common/Select';
@@ -38,21 +41,28 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
   
   const steps = [
     { number: 1, text: '生成解读' },
-    { number: 2, text: '生成脑图' },
-    { number: 3, text: '生成测试' },
-    { number: 4, text: '图书发布' }
+    { number: 2, text: '生成音频' },
+    { number: 3, text: '生成脑图' },
+    { number: 4, text: '生成测试' },
+    { number: 5, text: '图书发布' }
   ];
 
   const [progress, setProgress] = useState({
-    step2: 0,
-    step3: 0,
-    step4: 0
+    interpretation: 0,  // 步骤1：解读进度
+    audio: 0,          // 步骤2：音频进度
+    mindmap: 0,        // 步骤3：脑图进度
+    quiz: 0,           // 步骤4：测试进度
+    publish: 0         // 步骤5：发布进度
   });
 
   const [interpretation, setInterpretation] = useState('');
   const [interpretationLoading, setInterpretationLoading] = useState(false);
+  const [audioUrl, setAudioUrl] = useState('');
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [hasAudio, setHasAudio] = useState(false);
   const [mindmap, setMindmap] = useState('');
-  const [mindmapLoading, setMindmapLoading] = useState(false);  const [quiz, setQuiz] = useState('');
+  const [mindmapLoading, setMindmapLoading] = useState(false);
+  const [quiz, setQuiz] = useState('');
   const [quizLoading, setQuizLoading] = useState(false);
 
   // 编辑弹窗状态
@@ -86,12 +96,17 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
       // 重置所有状态
       setCurrentStep(1);
       setProgress({
-        step2: 0,
-        step3: 0,
-        step4: 0
+        interpretation: 0,
+        audio: 0,
+        mindmap: 0,
+        quiz: 0,
+        publish: 0
       });
       setInterpretation('');
       setInterpretationLoading(false);
+      setAudioUrl('');
+      setAudioLoading(false);
+      setHasAudio(false);
       setMindmap('');
       setMindmapLoading(false);
       setQuiz('');
@@ -142,7 +157,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
   const regenerateInterpretation = async () => {
     setInterpretation('');
     setInterpretationLoading(false);
-    setProgress(prev => ({ ...prev, step2: 0 }));
+    setProgress(prev => ({ ...prev, interpretation: 0 }));
     await startInterpretation();
   };
 
@@ -150,7 +165,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
   const regenerateMindmap = async () => {
     setMindmap('');
     setMindmapLoading(false);
-    setProgress(prev => ({ ...prev, step3: 0 }));
+    setProgress(prev => ({ ...prev, mindmap: 0 }));
     await startMindmap();
   };
 
@@ -158,7 +173,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
   const regenerateQuiz = async () => {
     setQuiz('');
     setQuizLoading(false);
-    setProgress(prev => ({ ...prev, step4: 0 }));
+    setProgress(prev => ({ ...prev, quiz: 0 }));
     await startQuiz();
   };
 
@@ -196,7 +211,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     if (interpretationLoading) return;
     
     setInterpretationLoading(true);
-    setProgress(prev => ({ ...prev, step2: 0 }));
+    setProgress(prev => ({ ...prev, interpretation: 0 }));
 
     try {
       // 启动生成
@@ -211,7 +226,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
           // 更新进度条
           setProgress(prev => ({
             ...prev,
-            step2: Math.min(prev.step2 + 5, 95)
+            interpretation: Math.min(prev.interpretation + 5, 95)
           }));
         }
       }, 2000);
@@ -228,7 +243,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
       const response = await getInterpretation(documentId);
       if (response.data) {
         setInterpretation(response.data);
-        setProgress(prev => ({ ...prev, step2: 100 }));
+        setProgress(prev => ({ ...prev, interpretation: 100 }));
         setInterpretationLoading(false);
         return true;
       }
@@ -245,7 +260,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
       const response = await getMindmap(documentId);
       if (response.data) {
         setMindmap(response.data);
-        setProgress(prev => ({ ...prev, step3: 100 }));
+        setProgress(prev => ({ ...prev, mindmap: 100 }));
         setMindmapLoading(false);
         return true;
       }
@@ -262,7 +277,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
       const response = await getQuiz(documentId);
       if (response.data) {
         setQuiz(response.data);
-        setProgress(prev => ({ ...prev, step4: 100 }));
+        setProgress(prev => ({ ...prev, quiz: 100 }));
         setQuizLoading(false);
         return true;
       }
@@ -278,7 +293,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     if (mindmapLoading) return;
     
     setMindmapLoading(true);
-    setProgress(prev => ({ ...prev, step3: 0 }));
+    setProgress(prev => ({ ...prev, mindmap: 0 }));
 
     try {
       await generateMindmap(documentId);
@@ -290,7 +305,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
         } else {
           setProgress(prev => ({
             ...prev,
-            step3: Math.min(prev.step3 + 5, 95)
+            mindmap: Math.min(prev.mindmap + 5, 95)
           }));
         }
       }, 2000);
@@ -301,12 +316,58 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     }
   };
 
+  // 生成音频内容
+  const startAudio = async () => {
+    if (audioLoading) return;
+    
+    setAudioLoading(true);
+    setProgress(prev => ({ ...prev, audio: 0 }));
+
+    try {
+      await synthesizeAudio(documentId);
+
+      const pollInterval = setInterval(async () => {
+        const hasContent = await pollAudio();
+        if (hasContent) {
+          clearInterval(pollInterval);
+        } else {
+          setProgress(prev => ({
+            ...prev,
+            audio: Math.min(prev.audio + 5, 95)
+          }));
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('生成音频失败:', error);
+      setAudioLoading(false);
+      ToastManager.error('生成音频失败，请重试');
+    }
+  };
+
+  // 轮询音频内容
+  const pollAudio = async () => {
+    try {
+      const response = await getAudioStatus(documentId);
+      if (response.code === 200 && response.data.hasAudio) {
+        setHasAudio(true);
+        setAudioUrl(response.data.audioUrl);
+        setProgress(prev => ({ ...prev, audio: 100 }));
+        setAudioLoading(false);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('获取音频失败:', error);
+      return false;
+    }
+  };
+
   // 生成测试题内容
   const startQuiz = async () => {
     if (quizLoading) return;
     
     setQuizLoading(true);
-    setProgress(prev => ({ ...prev, step4: 0 }));
+    setProgress(prev => ({ ...prev, quiz: 0 }));
 
     try {
       await generateQuiz(documentId);
@@ -318,7 +379,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
         } else {
           setProgress(prev => ({
             ...prev,
-            step4: Math.min(prev.step4 + 5, 95)
+            quiz: Math.min(prev.quiz + 5, 95)
           }));
         }
       }, 2000);
@@ -335,7 +396,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
       const response = await getInterpretation(documentId);
       if (response.data) {
         setInterpretation(response.data);
-        setProgress(prev => ({ ...prev, step2: 100 }));
+        setProgress(prev => ({ ...prev, interpretation: 100 }));
         return true;
       }
       return false;
@@ -350,7 +411,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
       const response = await getMindmap(documentId);
       if (response.data) {
         setMindmap(response.data);
-        setProgress(prev => ({ ...prev, step3: 100 }));
+        setProgress(prev => ({ ...prev, mindmap: 100 }));
         return true;
       }
       return false;
@@ -360,12 +421,28 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     }
   };
 
+  const loadExistingAudio = async () => {
+    try {
+      const response = await getAudioStatus(documentId);
+      if (response.code === 200 && response.data.hasAudio) {
+        setHasAudio(true);
+        setAudioUrl(response.data.audioUrl);
+        setProgress(prev => ({ ...prev, audio: 100 }));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('加载音频内容失败:', error);
+      return false;
+    }
+  };
+
   const loadExistingQuiz = async () => {
     try {
       const response = await getQuiz(documentId);
       if (response.data) {
         setQuiz(response.data);
-        setProgress(prev => ({ ...prev, step4: 100 }));
+        setProgress(prev => ({ ...prev, quiz: 100 }));
         return true;
       }
       return false;
@@ -377,24 +454,34 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
 
   const handleNextStep = async () => {
     if (currentStep === 1) {
-      // 第1步：生成解读 -> 第2步：生成脑图
+      // 第1步：生成解读 -> 第2步：生成音频
+      setCurrentStep(currentStep + 1);
+      const hasExisting = await loadExistingAudio();
+      if (!hasExisting) {
+        // 音频是可选的，如果没有解读内容则不自动生成
+        if (interpretation) {
+          startAudio();
+        }
+      }
+    } else if (currentStep === 2) {
+      // 第2步：生成音频 -> 第3步：生成脑图
       setCurrentStep(currentStep + 1);
       const hasExisting = await loadExistingMindmap();
       if (!hasExisting) {
         startMindmap();
       }
-    } else if (currentStep === 2) {
-      // 第2步：生成脑图 -> 第3步：生成测试
+    } else if (currentStep === 3) {
+      // 第3步：生成脑图 -> 第4步：生成测试
       setCurrentStep(currentStep + 1);
       const hasExisting = await loadExistingQuiz();
       if (!hasExisting) {
         startQuiz();
       }
-    } else if (currentStep === 3) {
-      // 第3步：生成测试 -> 第4步：图书发布
-      setCurrentStep(currentStep + 1);
     } else if (currentStep === 4) {
-      // 第4步：图书发布 - 表单验证和保存
+      // 第4步：生成测试 -> 第5步：图书发布
+      setCurrentStep(currentStep + 1);
+    } else if (currentStep === 5) {
+      // 第5步：图书发布 - 表单验证和保存
       const errors = validateForm();
       if (Object.keys(errors).length > 0) {
         setErrors(errors);
@@ -427,7 +514,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
 
   const renderStepIndicators = () => (
     <div className="p-4 bg-gray-50">
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-5 gap-4">
         {steps.map((step) => (
           <div key={step.number} className="flex-1">
             <div 
@@ -453,7 +540,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
           <div className="space-y-6">
             {interpretationLoading ? (
               <ProgressBar
-                progress={progress.step2}
+                progress={progress.interpretation}
                 title="生成解读中"
                 description="系统正在生成解读内容，请稍候..."
                 icon="M13 10V3L4 14h7v7l9-11h-7z"
@@ -487,9 +574,46 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
       case 2:
         return (
           <div className="space-y-6">
+            {/* 检查是否有解读内容 */}
+            {!interpretation ? (
+              <div className="text-center py-8">
+                <i className="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
+                <h3 className="text-xl font-medium text-gray-700 mb-2">图书文字解读还未完成</h3>
+                <p className="text-gray-500">暂不能生成解读音频，请先完成第一步的文字解读</p>
+              </div>
+            ) : audioLoading ? (
+              <ProgressBar
+                progress={progress.audio}
+                title="生成音频中"
+                description="系统正在生成音频内容，请稍候..."
+                icon="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M6 10H3a1 1 0 00-1 1v2a1 1 0 001 1h3l3.928 2.321A1 1 0 0011 16V8a1 1 0 00-1.072-.928L6 10z"
+              />
+            ) : hasAudio && audioUrl ? (
+              <div className="space-y-4">
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6">
+                  <AudioPlayer audioUrl={audioUrl} bookTitle={formData.fileName} bookId={documentId} />
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <i className="fas fa-microphone text-4xl text-blue-500 mb-4"></i>
+                <p className="text-gray-500 mb-4">可以为解读内容生成音频</p>
+                <button
+                  onClick={startAudio}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  开始生成
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      case 3:
+        return (
+          <div className="space-y-6">
             {mindmapLoading ? (
               <ProgressBar
-                progress={progress.step3}
+                progress={progress.mindmap}
                 title="生成脑图中"
                 description="系统正在生成脑图内容，请稍候..."
                 icon="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
@@ -520,12 +644,12 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
             )}
           </div>
         );
-      case 3:
+      case 4:
         return (
           <div className="space-y-6">
             {quizLoading ? (
               <ProgressBar
-                progress={progress.step4}
+                progress={progress.quiz}
                 title="生成测试题中"
                 description="系统正在生成测试题内容，请稍候..."
                 icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
@@ -556,7 +680,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
             )}
           </div>
         );
-      case 4:
+      case 5:
         return (
           <div className="space-y-6">
             {/* 封面上传 */}
@@ -658,7 +782,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
           ${isUploading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'}
           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
       >
-        {isUploading ? '保存中...' : currentStep === 4 ? '发布图书' : '下一步'}
+        {isUploading ? '保存中...' : currentStep === 5 ? '发布图书' : '下一步'}
       </button>
     </div>
   );
