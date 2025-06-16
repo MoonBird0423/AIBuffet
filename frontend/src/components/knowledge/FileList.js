@@ -148,7 +148,10 @@ const FileList = ({
           <div className="ml-4">
             <h3 className="text-lg font-semibold text-gray-900">
               <Tooltip content={file.fileName} position="top">
-                <span className="truncate block hover:text-blue-600 transition-colors">
+                <span 
+                  className="truncate block hover:text-blue-600 hover:underline transition-colors cursor-pointer"
+                  onClick={() => handleLearn(file.id)}
+                >
                   {truncateFileName(file.fileName)}
                 </span>
               </Tooltip>
@@ -193,13 +196,7 @@ const FileList = ({
             content={
               <div className="py-1">
                 {file.publishStatus === 'PUBLISHED' ? (
-                  <>{/* 已发布状态：显示学习、处理详情、取消发布 */}
-                    <button
-                      onClick={() => handleLearn(file.id)}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                    >
-                      <i className="fas fa-graduation-cap mr-2"></i>学习
-                    </button>
+                  <>{/* 已发布状态：显示处理详情、取消发布 */}
                     <button
                       onClick={() => handleViewDetails(file.id)}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"

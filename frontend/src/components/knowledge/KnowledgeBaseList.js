@@ -80,7 +80,7 @@ function KnowledgeBaseList({ knowledgeBases = [], selectedKnowledgeBase, onSelec
     setError(''); // 清除之前的错误信息
   };
   return (
-    <div className="bg-white rounded-3xl p-6 shadow-xl sticky top-24">
+    <div className="bg-white rounded-3xl p-6 shadow-xl">
       {/* 列表头部 */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-gray-900">我的知识库</h2>

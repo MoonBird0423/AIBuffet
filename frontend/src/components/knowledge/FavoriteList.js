@@ -96,7 +96,10 @@ const FavoriteList = ({ knowledgeBaseId }) => {
               <div className="flex-1 ml-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-1">
                   <Tooltip content={book.fileName} position="top">
-                    <span className="truncate block hover:text-blue-600 transition-colors">
+                    <span 
+                      className="truncate block hover:text-blue-600 hover:underline transition-colors cursor-pointer"
+                      onClick={() => handleLearn(book.id)}
+                    >
                       {truncateFileName(book.fileName)}
                     </span>
                   </Tooltip>
@@ -104,12 +107,6 @@ const FavoriteList = ({ knowledgeBaseId }) => {
                 <p className="text-gray-600 mb-2">{book.author || '未知作者'}</p>
               </div>
               <div className="flex space-x-3">
-                <button 
-                  onClick={() => handleLearn(book.id)}
-                  className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-medium hover:bg-blue-200 transition-all duration-200"
-                >
-                  学习
-                </button>
                 <button 
                   onClick={() => {
                     setSelectedBook(book);
