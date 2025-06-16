@@ -45,22 +45,24 @@ public class DocumentAudioController {
                 Map<String, Object> result = new HashMap<>();
                 result.put("audioUrl", existingAudioUrl);
                 result.put("isNew", false);
+                result.put("status", "completed");
                 return ResponseEntity.ok(ApiResponse.success(result));
             }
 
-            // 生成新音频
-            String audioUrl = audioSynthesisService.synthesizeAudioForInterpretation(docId, userId);
+            // 启动异步音频生成任务
+            audioSynthesisService.synthesizeAudioAsync(docId, userId);
             
             Map<String, Object> result = new HashMap<>();
-            result.put("audioUrl", audioUrl);
+            result.put("status", "processing");
+            result.put("message", "音频生成已启动");
             result.put("isNew", true);
             
-            logger.info("音频生成成功: 文档ID={}, 音频URL={}", docId, audioUrl);
+            logger.info("音频生成任务已启动: 文档ID={}", docId);
             return ResponseEntity.ok(ApiResponse.success(result));
 
         } catch (Exception e) {
-            logger.error("音频生成失败: 文档ID={}, 错误={}", docId, e.getMessage(), e);
-            return ResponseEntity.ok(ApiResponse.error(ErrorCode.SYSTEM_ERROR, "音频生成失败: " + e.getMessage()));
+            logger.error("启动音频生成失败: 文档ID={}, 错误={}", docId, e.getMessage(), e);
+            return ResponseEntity.ok(ApiResponse.error(ErrorCode.SYSTEM_ERROR, "启动音频生成失败: " + e.getMessage()));
         }
     }
 

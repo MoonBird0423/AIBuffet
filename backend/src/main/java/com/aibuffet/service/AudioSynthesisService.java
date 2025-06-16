@@ -10,11 +10,13 @@ import com.aibuffet.repository.DocInterpretationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class AudioSynthesisService {
@@ -31,6 +33,25 @@ public class AudioSynthesisService {
     
     @Autowired
     private DocumentService documentService;
+
+    /**
+     * 异步为指定文档的解读内容生成音频
+     * @param docId 文档ID
+     * @param userId 用户ID
+     * @return 异步任务
+     */
+    @Async
+    public CompletableFuture<String> synthesizeAudioAsync(Long docId, Long userId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                logger.info("开始异步音频生成任务: docId={}, userId={}", docId, userId);
+                return synthesizeAudioForInterpretation(docId, userId);
+            } catch (Exception e) {
+                logger.error("异步音频生成失败: docId={}, userId={}, error={}", docId, userId, e.getMessage(), e);
+                throw new RuntimeException("异步音频生成失败: " + e.getMessage(), e);
+            }
+        });
+    }
 
     /**
      * 为指定文档的解读内容生成音频
