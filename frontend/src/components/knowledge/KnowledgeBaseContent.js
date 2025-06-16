@@ -15,7 +15,7 @@ function KnowledgeBaseContent({ knowledgeBase }) {
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
-  const [activeTab, setActiveTab] = useState('uploads'); // 新增选项卡状态
+  const [activeTab, setActiveTab] = useState('collections'); // 新增选项卡状态
 
   // 获取文件列表
   const fetchFiles = async () => {
@@ -58,17 +58,6 @@ function KnowledgeBaseContent({ knowledgeBase }) {
             <div className="flex space-x-2">
               <button 
                 className={`tab-button px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  activeTab === 'uploads' 
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                onClick={() => setActiveTab('uploads')}
-              >
-                <i className="fas fa-upload mr-2"></i>
-                我的上传
-              </button>
-              <button 
-                className={`tab-button px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                   activeTab === 'collections' 
                     ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
                     : 'text-gray-600 hover:text-gray-900'
@@ -77,6 +66,17 @@ function KnowledgeBaseContent({ knowledgeBase }) {
               >
                 <i className="fas fa-heart mr-2"></i>
                 我的收藏
+              </button>
+              <button 
+                className={`tab-button px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  activeTab === 'uploads' 
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('uploads')}
+              >
+                <i className="fas fa-upload mr-2"></i>
+                我的上传
               </button>
             </div>
           </div>
