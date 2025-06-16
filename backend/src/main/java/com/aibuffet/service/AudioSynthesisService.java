@@ -103,7 +103,7 @@ public class AudioSynthesisService {
                 // 去除有序列表标记
                 .replaceAll("^\\d+\\.\\s+", "")
                 // 去除引用标记
-                .replaceAll("^>\\s*", "")
+                .replaceAll("(?m)^>\\s*", "")
                 // 去除代码块标记
                 .replaceAll("```[\\s\\S]*?```", "")
                 // 去除行内代码标记
