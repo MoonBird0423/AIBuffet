@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Modal from '../common/Modal';
 import Popover from '../common/Popover';
 import { createKnowledgeBase, updateKnowledgeBase, deleteKnowledgeBase } from '../../services/api';
+import { openChatWindow } from '../../utils/chatWindowManager';
 
 function KnowledgeBaseList({ knowledgeBases = [], selectedKnowledgeBase, onSelect, onListChange }) {  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -144,6 +145,17 @@ function KnowledgeBaseList({ knowledgeBases = [], selectedKnowledgeBase, onSelec
                       </button>
                     }
                     content={                    <div className="py-1">
+                      <button
+                        onClick={() => openChatWindow({
+                          type: 'knowledge',
+                          id: knowledgeBase.id,
+                          name: knowledgeBase.name
+                        })}
+                        className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <i className="fas fa-comments mr-2"></i>
+                        智能问答
+                      </button>
                       <button
                         onClick={() => handleEditClick(knowledgeBase)}
                         className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

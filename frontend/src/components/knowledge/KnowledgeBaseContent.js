@@ -5,7 +5,6 @@ import PublishModal from './PublishModal';
 import FavoriteList from './FavoriteList';
 import { getDocuments } from '../../services/api';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
-import { openChatWindow } from '../../utils/chatWindowManager';
 
 function KnowledgeBaseContent({ knowledgeBase }) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -41,15 +40,6 @@ function KnowledgeBaseContent({ knowledgeBase }) {
   useEffect(() => {
     fetchFiles();
   }, [knowledgeBase?.id, page]);
-
-  // 处理知识库问答按钮点击
-  const handleChatClick = () => {
-    openChatWindow({
-      type: 'knowledge',
-      id: knowledgeBase.id,
-      name: knowledgeBase.name
-    });
-  };
   if (!knowledgeBase) {
     return (
       <div className="bg-white rounded-3xl shadow-xl p-8 text-center text-gray-500">
@@ -60,22 +50,6 @@ function KnowledgeBaseContent({ knowledgeBase }) {
 
   return (
     <div className="space-y-6">
-      {/* 知识库标题栏 */}
-      <div className="bg-white rounded-2xl shadow-sm p-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900" id="selectedKnowledgeBaseName">{knowledgeBase.name}</h2>
-          </div>
-          <button
-            onClick={handleChatClick}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all duration-200"
-          >
-            <i className="fas fa-comments mr-2"></i>
-            知识库问答
-          </button>
-        </div>
-      </div>
-
       {/* 统一选项卡容器 */}
       <div className="bg-white rounded-3xl shadow-xl">
         {/* 选项卡导航 */}

@@ -204,7 +204,7 @@ const FileList = ({
                       onClick={() => handleViewDetails(file.id)}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     >
-                      <i className="fas fa-info-circle mr-2"></i>处理详情
+                      <i className="fas fa-info-circle mr-2"></i>解析详情
                     </button>
                     <button
                       onClick={() => handleUnpublish(file.id)}
@@ -214,7 +214,7 @@ const FileList = ({
                     </button>
                   </>
                 ) : (
-                  <>{/* 未发布状态：显示发布、处理详情、删除 */}
+                  <>{/* 未发布状态：显示发布、解析详情、删除 */}
                     {file.processing_status === 'COMPLETED' ? (
                       <button
                         onClick={() => handlePublish(file.id)}
@@ -234,7 +234,7 @@ const FileList = ({
                       onClick={() => handleViewDetails(file.id)}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     >
-                      <i className="fas fa-info-circle mr-2"></i>处理详情
+                      <i className="fas fa-info-circle mr-2"></i>解析详情
                     </button>                    <button
                       onClick={() => handleDelete(file)}
                       disabled={deletingId === file.id}
@@ -357,7 +357,7 @@ const FileList = ({
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">图书信息</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">发布状态</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">处理状态</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">解析状态</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
             </tr>
           </thead>
