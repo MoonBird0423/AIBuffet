@@ -620,7 +620,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
               />
             ) : mindmap ? (
               <div className="space-y-4">
-                <MindmapViewer content={mindmap} height="600px" />
+                <MindmapViewer content={mindmap} height="60vh" />
                 {/* 操作按钮 */}
                 <div className="flex justify-center gap-3">
                   <button
