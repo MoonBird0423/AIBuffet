@@ -926,6 +926,17 @@ export const getAudioStatus = async (docId) => {
   }
 };
 
+// 删除音频
+export const deleteAudio = async (docId) => {
+  try {
+    const response = await apiClient.delete(`/documents/${docId}/audio`);
+    return response.data;
+  } catch (error) {
+    console.error('删除音频失败:', error);
+    throw error;
+  }
+};
+
 // 知识库搜索
 export const searchKnowledgeBase = async (knowledgeBaseId, query, limit = 10, threshold = 0.7) => {
   try {

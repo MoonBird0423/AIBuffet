@@ -211,4 +211,49 @@ public class AudioSynthesisService {
         String audioUrl = getAudioUrlSecure(docId, userId);
         return audioUrl != null && !audioUrl.trim().isEmpty();
     }
+
+    /**
+     * 删除指定文档的音频（包括OSS文件和数据库记录）
+     * @param docId 文档ID
+     * @param userId 用户ID
+     */
+    public void deleteAudio(Long docId, Long userId) {
+        try {
+            // 1. 检查文档访问权限
+            documentService.getDocument(docId, userId);
+            
+            // 2. 获取音频记录
+            Optional<DocInterpretation> interpretationOpt = docInterpretationRepository.findByDocId(docId);
+            if (interpretationOpt.isEmpty()) {
+                throw new RuntimeException("找不到文档ID为 " + docId + " 的解读内容");
+            }
+            
+            DocInterpretation interpretation = interpretationOpt.get();
+            String audioUrl = interpretation.getAudioUrl();
+            
+            if (audioUrl != null && !audioUrl.trim().isEmpty()) {
+                // 3. 构造音频文件的OSS对象键（与上传时保持一致）
+                String objectKey = String.format("interpretation_audio/%d/%d.wav", userId, docId);
+                
+                // 4. 使用OSS服务的通用删除方法
+                try {
+                    ossService.deleteFile(objectKey);
+                    logger.info("成功删除OSS音频文件: docId={}, objectKey={}", docId, objectKey);
+                } catch (Exception e) {
+                    logger.warn("删除OSS音频文件失败，但继续删除数据库记录: docId={}, error={}", docId, e.getMessage());
+                    // 即使OSS删除失败，也要清除数据库记录，避免数据不一致
+                }
+            }
+            
+            // 5. 清除数据库中的音频URL
+            interpretation.setAudioUrl(null);
+            docInterpretationRepository.save(interpretation);
+            
+            logger.info("音频删除完成: docId={}", docId);
+            
+        } catch (Exception e) {
+            logger.error("删除音频失败: docId={}, userId={}, error={}", docId, userId, e.getMessage(), e);
+            throw new RuntimeException("删除音频失败: " + e.getMessage(), e);
+        }
+    }
 }

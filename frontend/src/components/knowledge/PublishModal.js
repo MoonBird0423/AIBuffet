@@ -9,6 +9,7 @@ import {
   getInterpretation,
   synthesizeAudio,
   getAudioStatus,
+  deleteAudio,
   generateMindmap,
   getMindmap,
   generateQuiz,
@@ -69,6 +70,10 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editContent, setEditContent] = useState('');
   const [editType, setEditType] = useState(''); // 'interpretation', 'mindmap', 'quiz'
+
+  // 音频删除相关状态
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
@@ -203,6 +208,30 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
       ToastManager.success('内容已保存');
     } catch (error) {
       ToastManager.error('保存失败：' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  // 删除音频的处理函数
+  const handleDeleteAudio = async () => {
+    try {
+      setIsDeleting(true);
+      const response = await deleteAudio(documentId);
+      
+      if (response.code === 200) {
+        ToastManager.success('音频删除成功');
+        setShowDeleteConfirm(false);
+        // 重置音频相关状态
+        setHasAudio(false);
+        setAudioUrl('');
+        setProgress(prev => ({ ...prev, audio: 0 }));
+      } else {
+        throw new Error(response.message || '删除失败');
+      }
+    } catch (error) {
+      ToastManager.error('删除音频失败: ' + error.message);
+      console.error('删除音频失败:', error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -593,6 +622,16 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6">
                   <AudioPlayer audioUrl={audioUrl} bookTitle={formData.fileName} bookId={documentId} />
                 </div>
+                {/* 操作按钮 */}
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={isDeleting}
+                    className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors disabled:opacity-50"
+                  >
+                    {isDeleting ? '删除中...' : '删除音频'}
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="text-center py-8">
@@ -837,6 +876,39 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
           />
         </div>
       </Modal>
+
+      {/* 删除音频确认弹窗 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <i className="fas fa-exclamation-triangle text-red-600"></i>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">确认删除音频</h3>
+              <p className="text-sm text-gray-500 mb-6">
+                删除后将无法恢复，您确定要删除这个音频文件吗？
+              </p>
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleDeleteAudio}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                >
+                  {isDeleting ? '删除中...' : '确认删除'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

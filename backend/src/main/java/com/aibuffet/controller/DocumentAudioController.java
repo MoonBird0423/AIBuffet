@@ -123,4 +123,28 @@ public class DocumentAudioController {
             return ResponseEntity.ok(ApiResponse.error(ErrorCode.SYSTEM_ERROR, "检查音频状态失败: " + e.getMessage()));
         }
     }
+
+    /**
+     * 删除指定文档的音频
+     * @param docId 文档ID
+     * @return 删除结果
+     */
+    @DeleteMapping("/{docId}/audio")
+    public ResponseEntity<ApiResponse<String>> deleteAudio(
+            @PathVariable Long docId,
+            @AuthenticationPrincipal User user) {
+        try {
+            Long userId = user.getId();
+            logger.info("开始删除文档音频: 文档ID={}, 用户ID={}", docId, userId);
+            
+            audioSynthesisService.deleteAudio(docId, userId);
+            
+            logger.info("音频删除成功: 文档ID={}", docId);
+            return ResponseEntity.ok(ApiResponse.success("音频删除成功"));
+            
+        } catch (Exception e) {
+            logger.error("音频删除失败: 文档ID={}, 错误={}", docId, e.getMessage(), e);
+            return ResponseEntity.ok(ApiResponse.error(ErrorCode.SYSTEM_ERROR, "音频删除失败: " + e.getMessage()));
+        }
+    }
 }
