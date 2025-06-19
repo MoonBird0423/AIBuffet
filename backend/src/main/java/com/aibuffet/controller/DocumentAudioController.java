@@ -4,6 +4,7 @@ import com.aibuffet.common.ApiResponse;
 import com.aibuffet.common.ErrorCode;
 import com.aibuffet.model.User;
 import com.aibuffet.service.AudioSynthesisService;
+import com.aibuffet.service.MultiRoleAudioSynthesisService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,9 @@ public class DocumentAudioController {
 
     @Autowired
     private AudioSynthesisService audioSynthesisService;
+
+    @Autowired
+    private MultiRoleAudioSynthesisService multiRoleAudioSynthesisService;
 
     /**
      * 为指定文档生成音频
@@ -147,6 +151,50 @@ public class DocumentAudioController {
         } catch (Exception e) {
             logger.error("音频删除失败: 文档ID={}, 错误={}", docId, e.getMessage(), e);
             return ResponseEntity.ok(ApiResponse.error(ErrorCode.SYSTEM_ERROR, "音频删除失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 为指定文档生成多角色语音
+     * @param docId 文档ID
+     * @return 多角色语音合成结果
+     */
+    @PostMapping("/{docId}/audio/multi-role-synthesize")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> synthesizeMultiRoleAudio(
+            @PathVariable Long docId,
+            @AuthenticationPrincipal User user) {
+        try {
+            Long userId = user.getId();
+            logger.info("开始为文档生成多角色语音: 文档ID={}, 用户ID={}", docId, userId);
+
+            // 检查是否已有音频（单角色或多角色）
+            if (audioSynthesisService.hasAudio(docId)) {
+                String existingAudioUrl = audioSynthesisService.getAudioUrl(docId);
+                logger.info("文档已有音频，返回现有URL: 文档ID={}, URL={}", docId, existingAudioUrl);
+                
+                Map<String, Object> result = new HashMap<>();
+                result.put("audioUrl", existingAudioUrl);
+                result.put("isNew", false);
+                result.put("status", "completed");
+                result.put("type", "multi-role");
+                return ResponseEntity.ok(ApiResponse.success(result));
+            }
+
+            // 启动异步多角色语音生成任务
+            multiRoleAudioSynthesisService.synthesizeMultiRoleAudioAsync(docId, userId);
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("status", "processing");
+            result.put("message", "多角色语音生成已启动");
+            result.put("isNew", true);
+            result.put("type", "multi-role");
+            
+            logger.info("多角色语音生成任务已启动: 文档ID={}", docId);
+            return ResponseEntity.ok(ApiResponse.success(result));
+
+        } catch (Exception e) {
+            logger.error("启动多角色语音生成失败: 文档ID={}, 错误={}", docId, e.getMessage(), e);
+            return ResponseEntity.ok(ApiResponse.error(ErrorCode.SYSTEM_ERROR, "启动多角色语音生成失败: " + e.getMessage()));
         }
     }
 }
