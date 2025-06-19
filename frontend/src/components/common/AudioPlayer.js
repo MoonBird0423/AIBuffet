@@ -90,7 +90,7 @@ const AudioPlayer = ({ audioUrl, bookTitle, bookId, className = '' }) => {
           {bookTitle && (
             <div className="text-left">
               <h4 className="text-lg font-medium text-gray-800">
-                知婷老师解读《{bookTitle}》
+               《{bookTitle}》
               </h4>
             </div>
           )}

@@ -47,6 +47,9 @@ public class MultiRoleAudioSynthesisService {
     
     @Autowired
     private DocumentService documentService;
+    
+    @Autowired
+    private PromptTemplateService promptTemplateService;
 
     // 降级处理的固定文本
     private static final String FALLBACK_TEXT = "生成音频的文本格式有问题，请删除后重试。";
@@ -55,29 +58,6 @@ public class MultiRoleAudioSynthesisService {
     private static final Pattern SPEAK_TAG_PATTERN = Pattern.compile("<speak[^>]*>.*?</speak>", Pattern.DOTALL);
     private static final Pattern NESTED_SPEAK_PATTERN = Pattern.compile("<speak[^>]*>.*?<speak[^>]*>.*?</speak>.*?</speak>", Pattern.DOTALL);
 
-    // 固定的SSML生成提示词
-    private static final String SSML_PROMPT_TEMPLATE = """
-        请将下面的对话转换成阿里云CosyVoice大模型的SSML标记语言（基于W3C的语音合成标记语言版本1.0）让对话的每个角色都有不同的音色。
-        可使用标签：
-        1、<speak>标签是所有待支持SSML标签的根节点。一切需要调用SSML标签的文本都要包含在<speak></speak>中；
-        2、支持多个 <speak> 标签并列使用（如：<speak></speak><speak></speak>），但不支持嵌套结构（如：<speak><speak></speak></speak>）；
-        3、<break>用于在文本中插入停顿，该标签是可选标签；
-        4、<phoneme>用于控制标签内文本的读音，该标签是可选标签；
-        5、<say-as>用于指示出标签内文本的信息类型，进而按照该类型的默认发音方式发音；
-        使用例子：
-        <speak><say-as interpret-as="telephone">114</say-as>查询号码 <say-as interpret-as="cardinal">123</say-as>开始干。加起来为<say-as interpret-as="digits">1234</say-as>。<say-as interpret-as="name">张三</say-as>的快递。<say-as interpret-as="address">富路国际1号楼3单元304</say-as><say-as interpret-as="nick">李四6689</say-as></speak>
-        角色音色选择指南：（通过<speak>标签属性voice来指定）
-        -longxiaoxia_v2：适合主持人
-        -longcheng_v2：适合会议男嘉宾
-        -longxiaochun_v2：适合会议女嘉宾
-        -longwan_v2：适合观众代表
-        特别注意：
-        -除了转换内容不要输出其他内容，需要保证输出内容可直接CosyVoice大模型识别。
-        -需要对输出内容进行检查，确保格式满足规范要求。
-        -对话流畅，信息完整。
-        对话内容
-        %s
-        """;
 
     /**
      * 异步多角色语音合成
@@ -176,8 +156,11 @@ public class MultiRoleAudioSynthesisService {
             // 创建Generation实例
             Generation gen = new Generation();
             
+            // 从数据库获取SSML生成提示词模板
+            String ssmlPromptTemplate = promptTemplateService.getActivePromptContent("audio.ssml.generation.prompt");
+            
             // 构建用户提示词
-            String userPrompt = String.format(SSML_PROMPT_TEMPLATE, content);
+            String userPrompt = String.format(ssmlPromptTemplate, content);
             
             // 构建系统消息
             Message systemMsg = Message.builder()

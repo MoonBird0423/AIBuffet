@@ -17,6 +17,7 @@ import com.aibuffet.repository.ModelRepository;
 import org.springframework.beans.factory.annotation.Value;
 import com.aibuffet.service.PublishService;
 import com.aibuffet.service.DocumentService;
+import com.aibuffet.service.PromptTemplateService;
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.*;
@@ -42,16 +43,8 @@ public class PublishServiceImpl implements PublishService {
     private final DocMindmapRepository docMindmapRepository;
     private final DocQuizRepository docQuizRepository;
     private final DocumentService documentService;
+    private final PromptTemplateService promptTemplateService;
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    @Value("${book.interpretation.user-prompt}")
-    private String interpretationUserPrompt;
-
-    @Value("${book.mindmap.user-prompt}")
-    private String mindmapUserPrompt;
-
-    @Value("${book.quiz.user-prompt}")
-    private String quizUserPrompt;
 
     private void verifyDocAccess(Long docId, Long userId) {
         // 直接调用DocumentService的getDocument方法
@@ -203,7 +196,8 @@ public class PublishServiceImpl implements PublishService {
                 String fileId = uploadFileAndGetFileId(docId, userId).get();
 
                 // 2. 调用AI生成解读内容
-                String content = generateContent(fileId, interpretationUserPrompt, userId).get();
+                String prompt = promptTemplateService.getActivePromptContent("book.interpretation.user-prompt");
+                String content = generateContent(fileId, prompt, userId).get();
 
                 // 3. 保存解读内容（如果已存在则覆盖）
                 DocInterpretation interpretation = docInterpretationRepository.findByDocId(docId)
@@ -233,7 +227,8 @@ public class PublishServiceImpl implements PublishService {
                 String fileId = uploadFileAndGetFileId(docId, userId).get();
 
                 // 2. 调用AI生成脑图内容
-                String content = generateContent(fileId, mindmapUserPrompt, userId).get();
+                String prompt = promptTemplateService.getActivePromptContent("book.mindmap.user-prompt");
+                String content = generateContent(fileId, prompt, userId).get();
                 log.debug("AI生成的脑图内容: {}", content);
 
                 // 3. 保存脑图内容（如果已存在则覆盖）
@@ -264,7 +259,8 @@ public class PublishServiceImpl implements PublishService {
                 String fileId = uploadFileAndGetFileId(docId, userId).get();
 
                 // 2. 调用AI生成测试题内容
-                String content = generateContent(fileId, quizUserPrompt, userId).get();
+                String prompt = promptTemplateService.getActivePromptContent("book.quiz.user-prompt");
+                String content = generateContent(fileId, prompt, userId).get();
 
                 // 3. 保存测试题内容（如果已存在则覆盖）
                 DocQuiz quiz = docQuizRepository.findByDocId(docId)
