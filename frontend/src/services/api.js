@@ -906,6 +906,17 @@ export const synthesizeAudio = async (docId) => {
   }
 };
 
+// 多角色音频合成
+export const synthesizeMultiRoleAudio = async (docId) => {
+  try {
+    const response = await apiClient.post(`/documents/${docId}/audio/multi-role-synthesize`);
+    return response.data;
+  } catch (error) {
+    console.error('多角色音频合成失败:', error);
+    throw error;
+  }
+};
+
 export const getAudioUrl = async (docId) => {
   try {
     const response = await apiClient.get(`/documents/${docId}/audio`);

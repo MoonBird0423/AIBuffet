@@ -8,6 +8,7 @@ import {
   generateInterpretation, 
   getInterpretation,
   synthesizeAudio,
+  synthesizeMultiRoleAudio,
   getAudioStatus,
   deleteAudio,
   generateMindmap,
@@ -353,7 +354,7 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
     setProgress(prev => ({ ...prev, audio: 0 }));
 
     try {
-      await synthesizeAudio(documentId);
+      await synthesizeMultiRoleAudio(documentId);
 
       const pollInterval = setInterval(async () => {
         const hasContent = await pollAudio();
@@ -367,9 +368,9 @@ function PublishModal({ isOpen, onClose, onSuccess, fileName, documentId }) {
         }
       }, 2000);
     } catch (error) {
-      console.error('生成音频失败:', error);
+      console.error('生成多角色音频失败:', error);
       setAudioLoading(false);
-      ToastManager.error('生成音频失败，请重试');
+      ToastManager.error('生成多角色音频失败，请重试');
     }
   };
 
