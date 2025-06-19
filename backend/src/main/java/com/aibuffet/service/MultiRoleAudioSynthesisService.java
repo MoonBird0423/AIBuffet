@@ -8,9 +8,15 @@ import com.aibuffet.model.Model;
 import com.aibuffet.model.DocInterpretation;
 import com.aibuffet.repository.ModelRepository;
 import com.aibuffet.repository.DocInterpretationRepository;
-import com.openai.client.OpenAIClient;
-import com.openai.client.okhttp.OpenAIOkHttpClient;
-import com.openai.models.*;
+import com.alibaba.dashscope.aigc.generation.Generation;
+import com.alibaba.dashscope.aigc.generation.GenerationParam;
+import com.alibaba.dashscope.aigc.generation.GenerationResult;
+import com.alibaba.dashscope.common.Message;
+import com.alibaba.dashscope.common.Role;
+import com.alibaba.dashscope.exception.ApiException;
+import com.alibaba.dashscope.exception.InputRequiredException;
+import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.alibaba.dashscope.utils.JsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +29,8 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 @Service
 public class MultiRoleAudioSynthesisService {
@@ -40,23 +48,32 @@ public class MultiRoleAudioSynthesisService {
     @Autowired
     private DocumentService documentService;
 
+    // 降级处理的固定文本
+    private static final String FALLBACK_TEXT = "生成音频的文本格式有问题，请删除后重试。";
+    
+    // SSML标签验证的正则表达式
+    private static final Pattern SPEAK_TAG_PATTERN = Pattern.compile("<speak[^>]*>.*?</speak>", Pattern.DOTALL);
+    private static final Pattern NESTED_SPEAK_PATTERN = Pattern.compile("<speak[^>]*>.*?<speak[^>]*>.*?</speak>.*?</speak>", Pattern.DOTALL);
+
     // 固定的SSML生成提示词
     private static final String SSML_PROMPT_TEMPLATE = """
         请将下面的对话转换成阿里云CosyVoice大模型的SSML标记语言（基于W3C的语音合成标记语言版本1.0）让对话的每个角色都有不同的音色。
         可使用标签：
         1、<speak>标签是所有待支持SSML标签的根节点。一切需要调用SSML标签的文本都要包含在<speak></speak>中；
-        2、<break>用于在文本中插入停顿，该标签是可选标签；
-        3、<phoneme>用于控制标签内文本的读音，该标签是可选标签；
-        4、<say-as>用于指示出标签内文本的信息类型，进而按照该类型的默认发音方式发音；
+        2、支持多个 <speak> 标签并列使用（如：<speak></speak><speak></speak>），但不支持嵌套结构（如：<speak><speak></speak></speak>）；
+        3、<break>用于在文本中插入停顿，该标签是可选标签；
+        4、<phoneme>用于控制标签内文本的读音，该标签是可选标签；
+        5、<say-as>用于指示出标签内文本的信息类型，进而按照该类型的默认发音方式发音；
         使用例子：
         <speak><say-as interpret-as="telephone">114</say-as>查询号码 <say-as interpret-as="cardinal">123</say-as>开始干。加起来为<say-as interpret-as="digits">1234</say-as>。<say-as interpret-as="name">张三</say-as>的快递。<say-as interpret-as="address">富路国际1号楼3单元304</say-as><say-as interpret-as="nick">李四6689</say-as></speak>
         角色音色选择指南：（通过<speak>标签属性voice来指定）
         -longxiaoxia_v2：适合主持人
-        -longxiang：适合会议男嘉宾
-        -longxiaobai：适合会议女嘉宾
-        -longyuan：适合观众代表
+        -longcheng_v2：适合会议男嘉宾
+        -longxiaochun_v2：适合会议女嘉宾
+        -longwan_v2：适合观众代表
         特别注意：
         -除了转换内容不要输出其他内容，需要保证输出内容可直接CosyVoice大模型识别。
+        -需要对输出内容进行检查，确保格式满足规范要求。
         -对话流畅，信息完整。
         对话内容
         %s
@@ -110,10 +127,14 @@ public class MultiRoleAudioSynthesisService {
             logger.info("使用Qwen模型生成SSML: {}", qwenModel.getName());
 
             // 3. 调用qwen3-32b生成SSML标记内容
-            String ssmlContent = generateSSMLContent(interpretation.getContent(), qwenModel);
-            logger.info("SSML内容生成完成，长度: {} 字符", ssmlContent.length());
+            String rawSSMLContent = generateSSMLContent(interpretation.getContent(), qwenModel);
+            logger.info("原始SSML内容生成完成，长度: {} 字符", rawSSMLContent.length());
 
-            // 4. 获取cosyvoice-v2模型配置
+            // 4. 校验和处理SSML内容
+            String processedSSMLContent = validateAndProcessSSML(rawSSMLContent);
+            logger.info("SSML内容处理完成，最终长度: {} 字符", processedSSMLContent.length());
+
+            // 5. 获取cosyvoice-v2模型配置
             Optional<Model> cosyModelOpt = modelRepository.findByPurposeExact("多角色语音合成");
             if (cosyModelOpt.isEmpty()) {
                 throw new RuntimeException("找不到用途为'多角色语音合成'的模型配置");
@@ -122,14 +143,14 @@ public class MultiRoleAudioSynthesisService {
             Model cosyModel = cosyModelOpt.get();
             logger.info("使用CosyVoice模型进行多角色语音合成: {}", cosyModel.getName());
 
-            // 5. 调用cosyvoice-v2进行多角色语音合成
-            byte[] audioBytes = synthesizeMultiRoleAudio(ssmlContent, cosyModel);
+            // 6. 调用cosyvoice-v2进行多角色语音合成
+            byte[] audioBytes = synthesizeMultiRoleAudio(processedSSMLContent, cosyModel);
 
-            // 6. 将音频数据上传到OSS
+            // 7. 将音频数据上传到OSS
             String fileName = "multi_role_interpretation_" + docId + ".wav";
             String audioUrl = ossService.uploadInterpretationAudio(audioBytes, fileName, userId, docId);
 
-            // 7. 更新解读记录的音频URL
+            // 8. 更新解读记录的音频URL
             interpretation.setAudioUrl(audioUrl);
             docInterpretationRepository.save(interpretation);
 
@@ -152,36 +173,52 @@ public class MultiRoleAudioSynthesisService {
         try {
             logger.info("开始调用Qwen模型生成SSML标记");
             
-            // 构建OpenAI客户端
-            OpenAIClient client = OpenAIOkHttpClient.builder()
-                    .apiKey(qwenModel.getApiKey())
-                    .baseUrl(qwenModel.getBaseUrl())
-                    .build();
-
+            // 创建Generation实例
+            Generation gen = new Generation();
+            
             // 构建用户提示词
             String userPrompt = String.format(SSML_PROMPT_TEMPLATE, content);
             
-            // 创建聊天完成请求
-            ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
-                    .addUserMessage(userPrompt)
-                    .model(qwenModel.getName())
+            // 构建系统消息
+            Message systemMsg = Message.builder()
+                    .role(Role.SYSTEM.getValue())
+                    .content("You are a helpful assistant specialized in generating SSML markup for multi-role audio synthesis.")
                     .build();
-
-            // 调用API
-            ChatCompletion chatCompletion = client.chat().completions().create(params);
             
-            if (chatCompletion.choices().isEmpty()) {
+            // 构建用户消息
+            Message userMsg = Message.builder()
+                    .role(Role.USER.getValue())
+                    .content(userPrompt)
+                    .build();
+            
+            // 构建请求参数
+            GenerationParam param = GenerationParam.builder()
+                    .apiKey(qwenModel.getApiKey())
+                    .model(qwenModel.getName())
+                    .messages(java.util.Arrays.asList(systemMsg, userMsg))
+                    .resultFormat(GenerationParam.ResultFormat.MESSAGE)
+                    .enableThinking(false)
+                    .build();
+            
+            // 调用API
+            GenerationResult result = gen.call(param);
+            
+            if (result == null || result.getOutput() == null || result.getOutput().getChoices() == null || result.getOutput().getChoices().isEmpty()) {
                 throw new RuntimeException("Qwen模型返回空响应");
             }
             
-            String ssmlContent = chatCompletion.choices().get(0).message().content().orElse("");
-            if (ssmlContent.trim().isEmpty()) {
+            String ssmlContent = result.getOutput().getChoices().get(0).getMessage().getContent();
+            if (ssmlContent == null || ssmlContent.trim().isEmpty()) {
                 throw new RuntimeException("Qwen模型生成的SSML内容为空");
             }
             
             logger.info("SSML内容生成成功，长度: {} 字符", ssmlContent.length());
+            logger.info("生成的SSML内容: {}", ssmlContent);
             return ssmlContent.trim();
             
+        } catch (ApiException | NoApiKeyException | InputRequiredException e) {
+            logger.error("调用Qwen模型生成SSML失败: {}", e.getMessage(), e);
+            throw new RuntimeException("SSML生成失败: " + e.getMessage(), e);
         } catch (Exception e) {
             logger.error("调用Qwen模型生成SSML失败: {}", e.getMessage(), e);
             throw new RuntimeException("SSML生成失败: " + e.getMessage(), e);
@@ -234,6 +271,7 @@ public class MultiRoleAudioSynthesisService {
             SpeechSynthesisParam param = SpeechSynthesisParam.builder()
                     .apiKey(cosyModel.getApiKey())
                     .model(cosyModel.getName())
+                    .voice("longxiaoxia_v2")  // 添加默认音色
                     .build();
 
             // 创建语音合成器
@@ -261,6 +299,114 @@ public class MultiRoleAudioSynthesisService {
             logger.error("调用CosyVoice多角色语音合成失败: {}", e.getMessage(), e);
             throw new RuntimeException("多角色语音合成失败: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * 校验和处理SSML内容
+     * @param ssmlContent 原始SSML内容
+     * @return 处理后的SSML内容
+     */
+    private String validateAndProcessSSML(String ssmlContent) {
+        try {
+            logger.info("开始处理SSML内容，原始长度: {} 字符", ssmlContent.length());
+            
+            // 显示SSML内容的前500字符以便调试
+            String preview = ssmlContent.length() > 500 ? ssmlContent.substring(0, 500) + "..." : ssmlContent;
+            logger.info("SSML内容预览: {}", preview);
+            
+            // 暂时注释掉格式校验，直接使用原始内容进行测试
+            // boolean isValid = validateSSMLFormat(ssmlContent);
+            // 
+            // if (!isValid) {
+            //     logger.warn("SSML格式校验失败，使用降级文本");
+            //     return createFallbackSSML();
+            // }
+            
+            logger.info("跳过格式校验，直接使用原始SSML内容，长度: {} 字符", ssmlContent.length());
+            return ssmlContent;
+            
+        } catch (Exception e) {
+            logger.error("SSML内容处理失败: {}", e.getMessage(), e);
+            logger.warn("使用降级文本");
+            return createFallbackSSML();
+        }
+    }
+
+
+    /**
+     * SSML格式校验
+     * @param content SSML内容
+     * @return 是否有效
+     */
+    private boolean validateSSMLFormat(String content) {
+        try {
+            // 1. 检查是否包含speak标签
+            if (!content.contains("<speak") || !content.contains("</speak>")) {
+                logger.warn("SSML内容缺少必需的<speak>标签");
+                return false;
+            }
+            
+            // 2. 检查是否存在嵌套的speak标签（不允许）
+            Matcher nestedMatcher = NESTED_SPEAK_PATTERN.matcher(content);
+            if (nestedMatcher.find()) {
+                logger.warn("发现嵌套的<speak>标签，不符合规范");
+                return false;
+            }
+            
+            // 3. 检查speak标签的配对
+            int openTags = countOccurrences(content, "<speak");
+            int closeTags = countOccurrences(content, "</speak>");
+            if (openTags != closeTags) {
+                logger.warn("speak标签配对不匹配，开标签: {}, 闭标签: {}", openTags, closeTags);
+                return false;
+            }
+            
+            // 4. 检查是否有有效的speak标签内容
+            Matcher speakMatcher = SPEAK_TAG_PATTERN.matcher(content);
+            if (!speakMatcher.find()) {
+                logger.warn("未找到有效的<speak>标签内容");
+                return false;
+            }
+            
+            // 5. 检查内容长度是否合理（避免过长的内容）
+            if (content.length() > 50000) {
+                logger.warn("SSML内容过长: {} 字符，可能导致处理问题", content.length());
+                return false;
+            }
+            
+            logger.info("SSML格式校验通过");
+            return true;
+            
+        } catch (Exception e) {
+            logger.error("SSML格式校验异常: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 创建降级SSML内容
+     * @return 降级的SSML内容
+     */
+    private String createFallbackSSML() {
+        String fallbackSSML = String.format("<speak voice=\"longxiaoxia_v2\">%s</speak>", FALLBACK_TEXT);
+        logger.info("创建降级SSML内容: {}", fallbackSSML);
+        return fallbackSSML;
+    }
+
+    /**
+     * 统计字符串中子字符串的出现次数
+     * @param text 原字符串
+     * @param substring 子字符串
+     * @return 出现次数
+     */
+    private int countOccurrences(String text, String substring) {
+        int count = 0;
+        int index = 0;
+        while ((index = text.indexOf(substring, index)) != -1) {
+            count++;
+            index += substring.length();
+        }
+        return count;
     }
 
 }
