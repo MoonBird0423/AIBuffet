@@ -4,7 +4,6 @@ import com.aibuffet.model.PromptTemplate;
 import com.aibuffet.repository.PromptTemplateRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -23,15 +22,6 @@ public class PromptTemplateService {
 
     private final PromptTemplateRepository promptTemplateRepository;
 
-    // Fallback配置，如果数据库中没有找到对应提示词，则使用配置文件中的值
-    @Value("${book.interpretation.user-prompt:}")
-    private String fallbackInterpretationPrompt;
-
-    @Value("${book.mindmap.user-prompt:}")
-    private String fallbackMindmapPrompt;
-
-    @Value("${book.quiz.user-prompt:}")
-    private String fallbackQuizPrompt;
 
     /**
      * 获取生效的提示词内容
@@ -48,31 +38,8 @@ public class PromptTemplateService {
             return template.get().getContent();
         }
         
-        // 如果数据库中没有找到，尝试使用配置文件中的fallback值
-        String fallbackContent = getFallbackContent(name);
-        if (fallbackContent != null && !fallbackContent.isEmpty()) {
-            log.warn("数据库中未找到提示词 {}, 使用配置文件中的fallback值", name);
-            return fallbackContent;
-        }
-        
         log.error("未找到提示词: {}", name);
         throw new RuntimeException("未找到提示词: " + name);
-    }
-
-    /**
-     * 获取fallback内容
-     */
-    private String getFallbackContent(String name) {
-        switch (name) {
-            case "book.interpretation.user-prompt":
-                return fallbackInterpretationPrompt;
-            case "book.mindmap.user-prompt":
-                return fallbackMindmapPrompt;
-            case "book.quiz.user-prompt":
-                return fallbackQuizPrompt;
-            default:
-                return null;
-        }
     }
 
     /**
