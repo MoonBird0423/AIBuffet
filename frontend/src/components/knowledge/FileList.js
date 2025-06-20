@@ -8,6 +8,8 @@ import Popover from '../common/Popover';
 import Modal from '../common/Modal';
 import ChunkViewModal from './ChunkViewModal';
 import PublishModal from './PublishModal';
+import InterpretationModal from './InterpretationModal';
+import BookPublishModal from './BookPublishModal';
 
 const FileList = ({ 
   files, 
@@ -27,6 +29,10 @@ const FileList = ({
   const [showUnpublishModal, setShowUnpublishModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingFile, setDeletingFile] = useState(null);
+  const [showInterpretationModal, setShowInterpretationModal] = useState(false);
+  const [showBookPublishModal, setShowBookPublishModal] = useState(false);
+  const [interpretationFileId, setInterpretationFileId] = useState(null);
+  const [bookPublishFileId, setBookPublishFileId] = useState(null);
 
   const truncateFileName = (fileName) => {
     if (fileName.length > 20) {
@@ -40,6 +46,16 @@ const FileList = ({
   const handlePublish = (fileId) => {
     setPublishingFileId(fileId);
     setShowPublishModal(true);
+  };
+
+  const handleSmartInterpretation = (fileId) => {
+    setInterpretationFileId(fileId);
+    setShowInterpretationModal(true);
+  };
+
+  const handleBookPublish = (fileId) => {
+    setBookPublishFileId(fileId);
+    setShowBookPublishModal(true);
   };
 
   const handleUnpublish = (fileId) => {
@@ -60,6 +76,12 @@ const FileList = ({
     onRefresh();
     setShowPublishModal(false);
     setPublishingFileId(null);
+  };
+
+  const handleBookPublishSuccess = () => {
+    onRefresh();
+    setShowBookPublishModal(false);
+    setBookPublishFileId(null);
   };
 
   const handleUnpublishConfirm = async () => {
@@ -211,21 +233,37 @@ const FileList = ({
                     </button>
                   </>
                 ) : (
-                  <>{/* 未发布状态：显示发布、解析详情、删除 */}
+                  <>{/* 未发布状态：显示智能解读、发布、解析详情、删除 */}
                     {file.processing_status === 'COMPLETED' ? (
-                      <button
-                        onClick={() => handlePublish(file.id)}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                      >
-                        <i className="fas fa-upload mr-2"></i>智能解读
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleSmartInterpretation(file.id)}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                        >
+                          <i className="fas fa-brain mr-2"></i>智能解读
+                        </button>
+                        <button
+                          onClick={() => handleBookPublish(file.id)}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                        >
+                          <i className="fas fa-upload mr-2"></i>发布
+                        </button>
+                      </>
                     ) : (
-                      <button
-                        disabled
-                        className="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed flex items-center"
-                      >
-                        <i className="fas fa-upload mr-2"></i>发布（处理中）
-                      </button>
+                      <>
+                        <button
+                          disabled
+                          className="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed flex items-center"
+                        >
+                          <i className="fas fa-brain mr-2"></i>智能解读（处理中）
+                        </button>
+                        <button
+                          disabled
+                          className="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed flex items-center"
+                        >
+                          <i className="fas fa-upload mr-2"></i>发布（处理中）
+                        </button>
+                      </>
                     )}
                     <button
                       onClick={() => handleViewDetails(file.id)}
@@ -446,6 +484,29 @@ const FileList = ({
           确定要删除文档"{deletingFile?.fileName}"吗？此操作不可恢复。
         </p>
       </Modal>
+
+      {/* 智能解读弹窗 */}
+      <InterpretationModal
+        isOpen={showInterpretationModal}
+        onClose={() => {
+          setShowInterpretationModal(false);
+          setInterpretationFileId(null);
+        }}
+        fileName={files.find(f => f.id === interpretationFileId)?.fileName || ''}
+        documentId={interpretationFileId}
+      />
+
+      {/* 图书发布弹窗 */}
+      <BookPublishModal
+        isOpen={showBookPublishModal}
+        onClose={() => {
+          setShowBookPublishModal(false);
+          setBookPublishFileId(null);
+        }}
+        onSuccess={handleBookPublishSuccess}
+        fileName={files.find(f => f.id === bookPublishFileId)?.fileName || ''}
+        documentId={bookPublishFileId}
+      />
     </div>
   );
 };
