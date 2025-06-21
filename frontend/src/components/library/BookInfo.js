@@ -1,5 +1,6 @@
 import React from 'react';
 import { openChatWindow } from '../../utils/chatWindowManager';
+import { BookOpenIcon } from '@heroicons/react/24/outline';
 
 function BookInfo({ bookData, onFavorite, onShare }) {
   // 如果没有数据，显示骨架屏
@@ -29,12 +30,26 @@ function BookInfo({ bookData, onFavorite, onShare }) {
     <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-4">
       <div className="flex flex-col lg:flex-row">
         {/* 左侧封面图片 */}
-        <div className="lg:w-1/3 p-8 flex justify-center">          <div className="relative">            <img
-              src={bookData.coverUrl || 'https://via.placeholder.com/300x450'}
-              alt={bookData.fileName}
-              className="w-60 object-cover rounded-xl shadow-2xl"
+        <div className="lg:w-1/3 p-8 flex justify-center">
+          <div className="relative">
+            {bookData.coverUrl ? (
+              <img
+                src={bookData.coverUrl}
+                alt={bookData.fileName}
+                className="w-60 object-cover rounded-xl shadow-2xl"
+                style={{height: '360px'}}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextElementSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div 
+              className={`w-60 bg-white/20 backdrop-blur-sm rounded-xl shadow-2xl flex items-center justify-center ${bookData.coverUrl ? 'hidden' : ''}`}
               style={{height: '360px'}}
-            />
+            >
+              <BookOpenIcon className="h-20 w-20 text-white/70" />
+            </div>
           </div>
         </div>
 

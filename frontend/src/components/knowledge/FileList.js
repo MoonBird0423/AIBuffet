@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { deleteDocument, updateDocumentPublishStatus } from '../../services/api';
 import { ToastManager } from '../common/Toast';
-import { ChevronLeftIcon, ChevronRightIcon, ExclamationCircleIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, ChevronRightIcon, ExclamationCircleIcon, EllipsisVerticalIcon, BookOpenIcon } from '@heroicons/react/24/outline';
 import Tooltip from '../common/Tooltip';
 import Popover from '../common/Popover';
 import Modal from '../common/Modal';
@@ -159,14 +159,22 @@ const FileList = ({
     <tr key={file.id} className="hover:bg-gray-50">{/* 移除tr间的空白 */}
       <td className="px-6 py-4">
         <div className="flex items-center">
-          <img 
-            src={file.coverUrl || "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=80&h=100&fit=crop"} 
-            alt={file.fileName} 
-            className="w-12 h-16 object-cover rounded-lg"
-            onError={(e) => {
-              e.target.src = "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=80&h=100&fit=crop";
-            }}
-          />
+          {file.coverUrl ? (
+            <img 
+              src={file.coverUrl} 
+              alt={file.fileName} 
+              className="w-12 h-16 object-cover rounded-lg"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextElementSibling.style.display = 'flex';
+              }}
+            />
+          ) : null}
+          <div 
+            className={`w-12 h-16 bg-gray-200 rounded-lg flex items-center justify-center ${file.coverUrl ? 'hidden' : ''}`}
+          >
+            <BookOpenIcon className="h-6 w-6 text-gray-500" />
+          </div>
           <div className="ml-4">
             <h3 className="text-lg font-semibold text-gray-900">
               <Tooltip content={file.fileName} position="top">

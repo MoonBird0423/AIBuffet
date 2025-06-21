@@ -102,7 +102,7 @@ function Library() {
               探索知识海洋
             </h1>
             <p className="text-xl text-white/90 mb-8">
-              发现兴趣之书，开启智能之旅
+              以下内容均由AI生成，如有侵权请联系删除
             </p>
           </div>
           
