@@ -27,3 +27,6 @@
 /backend/*.iml
 /backend/.idea/
 /backend/milvus/volumes/
+
+# Config files
+docs/env-vars-config.md

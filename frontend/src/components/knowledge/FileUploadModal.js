@@ -3,6 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import { ToastManager } from '../../components/common/Toast';
 import { XMarkIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { uploadDocuments } from '../../services/api';
+import Modal from '../common/Modal';
 
 const ALLOWED_FILE_TYPES = {
   '文档': ['.txt', '.docx', '.pdf', '.md'],
@@ -154,23 +155,32 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
     setIsUploading(false);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-3xl">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">上传文档</h2>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="上传文档"
+      width="3xl"
+      footer={
+        <div className="flex justify-end space-x-4">
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="px-4 py-2 text-gray-700 hover:text-gray-900 disabled:opacity-50"
             disabled={isUploading}
           >
-            <XMarkIcon className="h-6 w-6" />
+            取消
+          </button>
+          <button
+            onClick={handleUpload}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+            disabled={isUploading || files.length === 0}
+          >
+            {isUploading ? '上传中...' : '开始上传'}
           </button>
         </div>
-
-        <div className="space-y-4">
+      }
+    >
+      <div className="space-y-4">
           <div
             {...getRootProps()}
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
@@ -255,26 +265,8 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
               </p>
             </div>
           </div>
-        </div>
-
-        <div className="mt-6 flex justify-end space-x-4">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 hover:text-gray-900 disabled:opacity-50"
-            disabled={isUploading}
-          >
-            取消
-          </button>
-          <button
-            onClick={handleUpload}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-            disabled={isUploading || files.length === 0}
-          >
-            {isUploading ? '上传中...' : '开始上传'}
-          </button>
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 

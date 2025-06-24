@@ -1,6 +1,9 @@
 package com.aibuffet.config;
 
 import io.netty.channel.ChannelOption;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollDatagramChannel;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
@@ -80,8 +83,12 @@ public class WebClientConfig {
             })
             .collect(Collectors.toList());
 
+        // 动态选择传输方式
+        Class<? extends DatagramChannel> channelType = Epoll.isAvailable() ? 
+            EpollDatagramChannel.class : NioDatagramChannel.class;
+
         DnsNameResolverBuilder builder = new DnsNameResolverBuilder()
-            .channelType(NioDatagramChannel.class)  // 显式指定channel类型
+            .channelType(channelType)  // 动态设置channel类型
             .queryTimeoutMillis(queryTimeout * 1000L)
             .maxQueriesPerResolve(maxQueries)
             .nameServerProvider(hostname -> DnsServerAddresses.sequential(dnsServers).stream())
