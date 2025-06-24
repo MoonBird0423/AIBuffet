@@ -20,6 +20,7 @@ import com.alibaba.dashscope.utils.JsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +36,15 @@ import java.util.regex.Matcher;
 @Service
 public class MultiRoleAudioSynthesisService {
     private static final Logger logger = LoggerFactory.getLogger(MultiRoleAudioSynthesisService.class);
+
+    @Value("${audio.synthesis.timeout:300}")
+    private int synthesisTimeout;
+    
+    @Value("${audio.synthesis.max-retries:3}")
+    private int maxRetries;
+    
+    @Value("${audio.synthesis.retry-delay:5000}")
+    private long retryDelay;
     
     @Autowired
     private ModelRepository modelRepository;
@@ -215,12 +225,16 @@ public class MultiRoleAudioSynthesisService {
      * @return 音频字节数组
      */
     private byte[] synthesizeMultiRoleAudio(String ssmlContent, Model cosyModel) {
-        try {
-            logger.info("开始调用CosyVoice进行多角色语音合成");
-            
-            // 用于收集音频数据的输出流
-            ByteArrayOutputStream audioOutputStream = new ByteArrayOutputStream();
-            CountDownLatch latch = new CountDownLatch(1);
+        int attempt = 0;
+        Exception lastException = null;
+        
+        while (attempt <= maxRetries) {
+            try {
+                logger.info("开始调用CosyVoice进行多角色语音合成 (尝试 {}/{})", attempt + 1, maxRetries + 1);
+                
+                // 用于收集音频数据的输出流
+                ByteArrayOutputStream audioOutputStream = new ByteArrayOutputStream();
+                CountDownLatch latch = new CountDownLatch(1);
             
             // 创建回调接口
             ResultCallback<SpeechSynthesisResult> callback = new ResultCallback<SpeechSynthesisResult>() {
@@ -263,10 +277,10 @@ public class MultiRoleAudioSynthesisService {
             // 开始语音合成
             synthesizer.call(ssmlContent);
             
-            // 等待合成完成，最多等待5分钟
-            boolean completed = latch.await(5, TimeUnit.MINUTES);
+            // 等待合成完成，使用配置的超时时间
+            boolean completed = latch.await(synthesisTimeout, TimeUnit.SECONDS);
             if (!completed) {
-                throw new RuntimeException("语音合成超时，超过5分钟未完成");
+                throw new RuntimeException(String.format("语音合成超时，超过%d秒未完成", synthesisTimeout));
             }
 
             // 获取合成的音频数据
@@ -276,12 +290,26 @@ public class MultiRoleAudioSynthesisService {
             }
             
             logger.info("多角色语音合成成功，音频大小: {} bytes", audioBytes.length);
-            return audioBytes;
-            
-        } catch (Exception e) {
-            logger.error("调用CosyVoice多角色语音合成失败: {}", e.getMessage(), e);
-            throw new RuntimeException("多角色语音合成失败: " + e.getMessage(), e);
+                return audioBytes;
+                
+            } catch (Exception e) {
+                lastException = e;
+                logger.error("调用CosyVoice多角色语音合成失败 (尝试 {}/{}): {}", 
+                    attempt + 1, maxRetries + 1, e.getMessage(), e);
+                
+                if (attempt < maxRetries) {
+                    try {
+                        Thread.sleep(retryDelay);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                attempt++;
+            }
         }
+        
+        logger.error("多角色语音合成失败，已达到最大重试次数: {}", maxRetries);
+        throw new RuntimeException("多角色语音合成失败: " + lastException.getMessage(), lastException);
     }
 
     /**
