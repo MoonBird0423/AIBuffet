@@ -7,10 +7,7 @@ import {
   AiOutlineLoading3Quarters,
   AiOutlineWarning,
   AiOutlineUser,
-  AiOutlineRobot,
-  AiOutlineApple,
-  AiOutlineBulb,
-  AiOutlineExperiment
+  AiOutlineRobot
 } from 'react-icons/ai';
 
 // 消息状态枚举
@@ -181,22 +178,9 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
       );
     }
 
-    const modelIcons = {
-      'GPT-4': { icon: AiOutlineApple, bg: 'bg-red-100', color: 'text-red-600' },
-      'Claude': { icon: AiOutlineBulb, bg: 'bg-yellow-100', color: 'text-yellow-600' },
-      'Gemini': { icon: AiOutlineExperiment, bg: 'bg-green-100', color: 'text-green-600' },
-      'Llama 2': { icon: AiOutlineRobot, bg: 'bg-blue-100', color: 'text-blue-600' }
-    };
-
-    const iconConfig = modelIcons[model] || {
-      icon: AiOutlineRobot,
-      bg: 'bg-purple-100',
-      color: 'text-purple-600'
-    };
-    
     return (
-      <div className={`${iconConfig.bg} p-2 rounded-full`}>
-        <iconConfig.icon className={`text-xl ${iconConfig.color}`} />
+      <div className="bg-purple-100 p-2 rounded-full">
+        <AiOutlineRobot className="text-xl text-purple-600" />
       </div>
     );
   };
