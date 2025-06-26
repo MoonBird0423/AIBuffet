@@ -32,36 +32,41 @@ public class ChatCompletionServiceImpl implements ChatCompletionService {
     private WebClient.Builder webClientBuilder;
 
     @Override
-public void streamChatCompletion(List<Map<String, Object>> messages, String modelName, SseEmitter emitter) {
+    public void streamChatCompletion(List<Map<String, Object>> messages, String modelName, SseEmitter emitter) {
         StringBuilder generatedContent = new StringBuilder();
         try {
+            logger.info("[SSE Debug] 开始流式聊天完成，模型: {}, 消息数量: {}", modelName, messages.size());
+            
             // 获取模型信息
             Model model = modelRepository.findByNameExact(modelName)
                 .orElseThrow(() -> new RuntimeException("Model not found: " + modelName));
 
+            logger.info("[SSE Debug] 获取到模型信息: {}, 基础URL: {}", model.getName(), model.getBaseUrl());
+
             // 构建请求体
             Map<String, Object> requestBody = buildRequestBody(messages, model);
+            logger.info("[SSE Debug] 构建请求体完成，大小: {} bytes", objectMapper.writeValueAsString(requestBody).length());
 
             // 使用配置的WebClient.Builder创建实例
             String baseUrl = model.getBaseUrl();
-            logger.info("准备连接模型服务 [{}], 开始DNS解析: {}", modelName, baseUrl);
+            logger.info("[SSE Debug] 准备连接模型服务 [{}], 开始DNS解析: {}", modelName, baseUrl);
 
             WebClient client = webClientBuilder
                 .baseUrl(baseUrl)
                 .filters(filterList -> {
                     filterList.add((request, next) -> {
-                        logger.debug("DNS解析完成，开始建立连接: {}", request.url());
+                        logger.info("[SSE Debug] DNS解析完成，开始建立连接: {}", request.url());
                         return next.exchange(request);
                     });
                 })
                 .build();
 
-            logger.info("DNS解析成功，准备发送请求到模型 [{}]", modelName);
-            logger.debug("Request body: {}", objectMapper.writeValueAsString(requestBody));
+            logger.info("[SSE Debug] DNS解析成功，准备发送请求到模型 [{}]", modelName);
+            logger.info("[SSE Debug] 请求体详情: {}", objectMapper.writeValueAsString(requestBody));
 
             // 添加连接监控
             final long startTime = System.currentTimeMillis();
-            logger.debug("开始建立连接...");
+            logger.info("[SSE Debug] 开始建立连接，时间戳: {}", startTime);
             
             // 发送请求并处理流式响应
             client.post()
@@ -80,70 +85,85 @@ public void streamChatCompletion(List<Map<String, Object>> messages, String mode
                         try {
                             // 处理特殊标记
                             if ("[DONE]".equals(chunk.trim())) {
-                                logger.debug("收到[DONE]信号，当前生成内容长度: {}", generatedContent.length());
+                                logger.info("[SSE Debug] 收到[DONE]信号，当前生成内容长度: {}", generatedContent.length());
                                 return;
                             }
 
                             // 解析返回的数据块
-                            logger.debug("处理响应chunk: {}", chunk);
-                            Map<String, Object> data = objectMapper.readValue(chunk, Map.class);
-                            try {
-                                emitter.send(data);
-                            } catch (Exception e) {
-                                logger.error("发送数据到SSE失败: {}", e.getMessage());
-                                throw e;
-                            }
+                            logger.info("[SSE Debug] 处理响应chunk，长度: {}, 内容: {}", 
+                                chunk.length(), 
+                                chunk.length() > 100 ? chunk.substring(0, 100) + "..." : chunk);
                             
-                            // 保存生成的内容
+                            Map<String, Object> data = objectMapper.readValue(chunk, Map.class);
+                            
+                            // 记录发送前的数据状态
                             Map<String, Object> choice = (Map<String, Object>)((List<Object>)data.get("choices")).get(0);
                             Map<String, Object> delta = (Map<String, Object>) choice.get("delta");
                             Object finishReason = choice.get("finish_reason");
                             
-                            // 检查完成状态
+                            if (delta != null && delta.containsKey("content")) {
+                                String content = (String) delta.get("content");
+                                logger.info("[SSE Debug] 准备发送内容到SSE，长度: {}, 内容: {}", 
+                                    content.length(),
+                                    content.length() > 50 ? content.substring(0, 50) + "..." : content);
+                            }
+                            
+                            try {
+                                emitter.send(data);
+                                logger.info("[SSE Debug] 成功发送数据到SSE");
+                            } catch (Exception e) {
+                                logger.error("[SSE Debug] 发送数据到SSE失败: {}", e.getMessage());
+                                throw e;
+                            }
+                            
+                            // 保存生成的内容
                             if (finishReason != null) {
-                                logger.debug("检测到完成状态: {}", finishReason);
+                                logger.info("[SSE Debug] 检测到完成状态: {}", finishReason);
                                 return;
                             }
                             
-                            String content = delta != null ? delta.toString() : null;
+                            String content = delta != null ? (String) delta.get("content") : null;
                             if (content != null) {
                                 generatedContent.append(content);
+                                logger.info("[SSE Debug] 累积内容，当前总长度: {}, 本次添加: {}", 
+                                    generatedContent.length(), content.length());
+                                
                                 if (generatedContent.length() % 100 == 0) {
                                     long currentTime = System.currentTimeMillis();
                                     long duration = currentTime - startTime;
-                                    logger.debug("处理进度 - 内容长度: {}, 已耗时: {}ms, 平均速度: {}/s", 
+                                    logger.info("[SSE Debug] 处理进度 - 内容长度: {}, 已耗时: {}ms, 平均速度: {}/s", 
                                         generatedContent.length(),
                                         duration,
                                         String.format("%.2f", (generatedContent.length() * 1000.0 / duration)));
                                 }
                             }
                         } catch (Exception e) {
-                            logger.error("Error processing chunk: {} - {}", chunk, e.getMessage());
+                            logger.error("[SSE Debug] Error processing chunk: {} - {}", chunk, e.getMessage());
                             // 不要因为单个chunk解析错误就中断整个流
-                            logger.warn("Continuing despite chunk processing error");
+                            logger.warn("[SSE Debug] Continuing despite chunk processing error");
                         }
                     },
                     error -> {
-                        logger.error("与模型 [{}] 通信时发生错误: {}", modelName, error.getMessage());
-                        logger.error("错误详情: ", error);
+                        logger.error("[SSE Debug] 与模型 [{}] 通信时发生错误: {}", modelName, error.getMessage());
+                        logger.error("[SSE Debug] 错误详情: ", error);
                         
                         // 区分不同类型的错误
                         String errorMessage;
                         if (error instanceof java.net.UnknownHostException) {
                             errorMessage = "域名解析失败，请检查DNS设置";
-                            logger.error("DNS解析失败: {}, 请确认域名 {} 是否正确", error.getMessage(), model.getBaseUrl());
+                            logger.error("[SSE Debug] DNS解析失败: {}, 请确认域名 {} 是否正确", error.getMessage(), model.getBaseUrl());
                         } else if (error instanceof java.net.SocketException) {
                             errorMessage = "网络连接异常，请检查网络状态";
-                            logger.error("网络连接异常: {}", error.getMessage());
+                            logger.error("[SSE Debug] 网络连接异常: {}", error.getMessage());
                         } else if (error instanceof java.net.ConnectException) {
                             errorMessage = "无法连接到模型服务器";
-                            logger.error("连接失败: {}, URL: {}", error.getMessage(), model.getBaseUrl());
+                            logger.error("[SSE Debug] 连接失败: {}, URL: {}", error.getMessage(), model.getBaseUrl());
                         } else if (error instanceof java.net.SocketTimeoutException) {
                             errorMessage = "请求超时，请稍后重试";
-                            logger.error("请求超时: {}", error.getMessage());
+                            logger.error("[SSE Debug] 请求超时: {}", error.getMessage());
                         } else if (error instanceof reactor.netty.http.client.PrematureCloseException) {
                             errorMessage = "连接提前关闭，可能是请求超时";
-                            logger.error("连接关闭: {}", error.getMessage());
+                            logger.error("[SSE Debug] 连接关闭: {}", error.getMessage());
                         } else {
                             errorMessage = "调用模型服务失败: " + error.getMessage();
                         }
@@ -157,8 +177,9 @@ public void streamChatCompletion(List<Map<String, Object>> messages, String mode
                                     "finish_reason", "length"
                                 )));
                                 emitter.send(partialResponse);
+                                logger.info("[SSE Debug] 发送部分内容，长度: {}", generatedContent.length());
                             } catch (Exception e) {
-                                logger.error("Error sending partial content", e);
+                                logger.error("[SSE Debug] Error sending partial content", e);
                             }
                         }
                         
@@ -168,17 +189,19 @@ public void streamChatCompletion(List<Map<String, Object>> messages, String mode
                         try {
                             long duration = System.currentTimeMillis() - startTime;
                             emitter.complete();
-                            logger.info("Stream completed for model: {}, 总耗时: {}ms, 生成内容长度: {}", 
+                            logger.info("[SSE Debug] Stream completed for model: {}, 总耗时: {}ms, 生成内容长度: {}", 
                                 modelName, duration, generatedContent.length());
                         } catch (Exception e) {
-                            logger.error("完成SSE发送时发生错误 [model: {}, 生成内容长度: {}]: {}", 
+                            logger.error("[SSE Debug] 完成SSE发送时发生错误 [model: {}, 生成内容长度: {}]: {}", 
                                 modelName, generatedContent.length(), e.getMessage(), e);
                         }
                     }
                 );
 
         } catch (Exception e) {
-            logger.error("Error in streamChatCompletion for model [{}]: {}", modelName, e.getMessage());
+            logger.error("[SSE Debug] Error in streamChatCompletion for model [{}]: {}", modelName, e.getMessage());
+            logger.error("[SSE Debug] 异常堆栈: ", e);
+            
             // 如果有部分生成的内容，确保在错误发生时也能发送
             if (generatedContent.length() > 0) {
                 try {
@@ -188,8 +211,9 @@ public void streamChatCompletion(List<Map<String, Object>> messages, String mode
                         "finish_reason", "length"
                     )));
                     emitter.send(partialResponse);
+                    logger.info("[SSE Debug] 异常情况下发送部分内容，长度: {}", generatedContent.length());
                 } catch (Exception sendError) {
-                    logger.error("Error sending partial content during exception", sendError);
+                    logger.error("[SSE Debug] Error sending partial content during exception", sendError);
                 }
             }
             handleError(emitter, "系统错误: " + e.getMessage());
@@ -268,12 +292,16 @@ public void streamChatCompletion(List<Map<String, Object>> messages, String mode
 
     private void handleError(SseEmitter emitter, String errorMessage) {
         try {
+            logger.info("[SSE Debug] 开始处理错误: {}", errorMessage);
             Map<String, Object> errorResponse = new LinkedHashMap<>();
             errorResponse.put("error", errorMessage);
             emitter.send(errorResponse);
+            logger.info("[SSE Debug] 错误响应已发送");
             emitter.complete();
+            logger.info("[SSE Debug] SSE发射器已完成");
         } catch (Exception e) {
-            logger.error("Error sending error response: {}", e.getMessage());
+            logger.error("[SSE Debug] Error sending error response: {}", e.getMessage());
+            logger.error("[SSE Debug] 错误响应发送异常堆栈: ", e);
         }
     }
 }

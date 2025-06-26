@@ -112,4 +112,14 @@ public class ChatCompletionController {
             throw new RuntimeException("处理请求失败: " + e.getMessage());
         }
     }
+
+    @GetMapping("/test-log")
+    public ResponseEntity<String> testLog() {
+        logger.info("[SSE Debug] 测试INFO级别日志");
+        logger.warn("[SSE Debug] 测试WARN级别日志");
+        logger.error("[SSE Debug] 测试ERROR级别日志");
+        logger.debug("[SSE Debug] 测试DEBUG级别日志");
+        
+        return ResponseEntity.ok("日志测试完成，请检查控制台输出");
+    }
 }

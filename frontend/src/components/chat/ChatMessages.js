@@ -107,8 +107,16 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
 
   // 消息更新时的滚动处理
   useEffect(() => {
+    console.log('[ChatMessages Debug] 消息更新触发滚动处理:', {
+      messageCount: messages.length,
+      messageStatus: messageStatus,
+      partialResponseLength: partialResponse?.length || 0,
+      justSentMessage: justSentMessage
+    });
+    
     // 用户发送新消息时 - 强制滚动到底部
     if (messages.length > 0 && messages[messages.length - 1].role === 'user') {
+      console.log('[ChatMessages Debug] 检测到用户新消息，强制滚动');
       setJustSentMessage(true);
       scrollToBottom(true);
       return;
@@ -116,12 +124,15 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
     
     // 模型正在流式输出时
     if (messageStatus === MessageStatus.STREAMING) {
+      console.log('[ChatMessages Debug] 检测到流式输出状态，准备滚动');
       const scrollTimeout = setTimeout(() => {
         requestAnimationFrame(() => {
           if (justSentMessage) {
+            console.log('[ChatMessages Debug] 用户刚发送消息，强制滚动');
             scrollToBottom(true);
             setJustSentMessage(false);
           } else {
+            console.log('[ChatMessages Debug] 流式输出中，自动滚动');
             scrollToBottom();
           }
         });
@@ -131,6 +142,7 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
     
     // 消息完成时
     if (messageStatus === MessageStatus.COMPLETED) {
+      console.log('[ChatMessages Debug] 消息完成，检查是否需要滚动');
       setJustSentMessage(false);
       const container = messagesEndRef.current?.parentElement;
       if (container && isAtBottomForAutoScroll(container)) {
@@ -186,7 +198,16 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
   };
 
   const renderContent = (content, isPartial = false, status) => {
+    console.log('[ChatMessages Debug] renderContent被调用:', {
+      hasContent: !!content,
+      contentLength: content?.length || 0,
+      isPartial: isPartial,
+      status: status,
+      contentPreview: content ? content.substring(0, 50) + (content.length > 50 ? '...' : '') : 'null'
+    });
+    
     if (!content && status === MessageStatus.STREAMING) {
+      console.log('[ChatMessages Debug] 显示加载状态');
       return (
         <div className="flex items-center space-x-2">
           <AiOutlineLoading3Quarters className="animate-spin text-gray-400" />
@@ -196,6 +217,7 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
     }
 
     if (Array.isArray(content)) {
+      console.log('[ChatMessages Debug] 渲染数组内容，长度:', content.length);
       return content.map((item, i) => {
         if (item.type === 'text') {
           let html = md.render(item.text || '');
@@ -215,9 +237,11 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
     }
 
     if (typeof content === 'string') {
+      console.log('[ChatMessages Debug] 渲染字符串内容，长度:', content.length);
       let html = md.render(content || '');
       if (isPartial && status === MessageStatus.STREAMING) {
         html += '<span class="inline-block w-2 h-4 ml-0.5 bg-gray-600 animate-pulse"></span>';
+        console.log('[ChatMessages Debug] 添加流式光标');
       }
       
       return (
@@ -228,6 +252,7 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
       );
     }
     
+    console.log('[ChatMessages Debug] 无法显示的内容类型:', typeof content);
     return <p>无法显示的内容</p>;
   };
 
@@ -327,6 +352,18 @@ function ChatMessages({ messages, partialResponse, error, messageStatus, questio
                                showPartialResponse ? MessageStatus.STREAMING :
                                messageStatus === MessageStatus.STREAMING ? MessageStatus.STREAMING :
                                messageStatus;
+          
+          console.log('[ChatMessages Debug] 渲染消息:', {
+            index: index,
+            role: message.role,
+            isLastMessage: isLastMessage,
+            isLastAssistantMessage: isLastAssistantMessage,
+            showPartialResponse: showPartialResponse,
+            partialResponseLength: partialResponse?.length || 0,
+            messageContentLength: message.content?.length || 0,
+            currentStatus: currentStatus,
+            messageStatus: messageStatus
+          });
           
           // 仅在状态变化时输出日志
           if (currentStatus !== messageStatus) {

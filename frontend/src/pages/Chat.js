@@ -7,6 +7,7 @@ import ChatInput from '../components/chat/ChatInput';
 import ChatSidebar from '../components/chat/ChatSidebar';
 import { getChatSession, createChatSession, updateChatSession, invokeModel } from '../services/api';
 import { ToastManager } from '../components/common/Toast';
+import streamDebugger from '../utils/streamDebug';
 
 function Chat() {
   const location = useLocation();
@@ -349,25 +350,65 @@ function Chat() {
         messages: newMessages,
         onMessage: (data) => {
           const content = data.choices?.[0]?.delta?.content || '';
+          console.log('[Chat Debug] 收到流式数据:', {
+            hasContent: !!content,
+            contentLength: content.length,
+            contentPreview: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
+            sessionId: activeSessionId,
+            currentPartialLength: partialResponseMap.get(activeSessionId)?.length || 0
+          });
+          
+          streamDebugger.log('CHAT_MESSAGE_RECEIVED', {
+            hasContent: !!content,
+            contentLength: content.length,
+            sessionId: activeSessionId
+          });
+          
           if (content) {
             // 更新UI显示
             setPartialResponseMap(prev => {
               const newMap = new Map(prev);
               const currentPartial = (newMap.get(activeSessionId) || '') + content;
+              console.log('[Chat Debug] 更新partialResponse:', {
+                sessionId: activeSessionId,
+                oldLength: newMap.get(activeSessionId)?.length || 0,
+                newLength: currentPartial.length,
+                addedContent: content
+              });
               newMap.set(activeSessionId, currentPartial);
               return newMap;
             });
             
+            streamDebugger.log('UI_PARTIAL_UPDATE', {
+              sessionId: activeSessionId,
+              contentLength: content.length
+            });
+            
             // 累积AI响应内容
             aiMessage.content += content;
+            console.log('[Chat Debug] 累积AI消息内容:', {
+              sessionId: activeSessionId,
+              aiMessageLength: aiMessage.content.length,
+              addedContent: content
+            });
             
             // 更新UI中的消息
             setMessagesMap(prev => {
               const newMap = new Map(prev);
               const sessionMessages = [...(newMap.get(activeSessionId) || [])];
               sessionMessages[sessionMessages.length - 1] = { ...aiMessage };
+              console.log('[Chat Debug] 更新消息映射:', {
+                sessionId: activeSessionId,
+                messageCount: sessionMessages.length,
+                lastMessageLength: aiMessage.content.length
+              });
               newMap.set(activeSessionId, sessionMessages);
               return newMap;
+            });
+            
+            streamDebugger.log('UI_MESSAGE_UPDATE', {
+              sessionId: activeSessionId,
+              messageLength: aiMessage.content.length
             });
           }
         },
@@ -412,6 +453,12 @@ function Chat() {
               sessionId: activeSessionId,
               aiMessage: aiMessage
             });
+            
+            streamDebugger.log('CHAT_COMPLETED', {
+              sessionId: activeSessionId,
+              finalLength: aiMessage.content.length
+            });
+            
             // 设置完成状态
             setCompletedMap(prev => {
               const newMap = new Map(prev);
@@ -459,6 +506,12 @@ function Chat() {
             if (sidebarRef.current) {
               sidebarRef.current.handleChatUpdated(updatedChat);
             }
+            
+            // 输出性能分析报告
+            setTimeout(() => {
+              streamDebugger.analyze();
+            }, 1000);
+            
           } catch (error) {
             console.error('Update session error:', error);
             setError('更新会话失败，但对话已完成');
