@@ -263,182 +263,57 @@ export const clearQuestionTarget = async (sessionId) => {
   }
 };
 
-// 模型调用相关API
-export const invokeModel = ({ messages, onMessage, onError, onFinish, signal }) => {
-  // 重置调试器
-  streamDebugger.reset();
-  streamDebugger.log('CHAT_START', { messageCount: messages.length });
+// 新增WebSocket流式聊天方法
+export function createChatWebSocket({ messages, onMessage, onError, onFinish }) {
+  const wsUrl = process.env.NODE_ENV === 'production'
+    ? `wss://${window.location.host}/ws/chat/completions`
+    : `ws://localhost:8080/ws/chat/completions`;
 
-  // 获取认证信息
-  const authUser = localStorage.getItem('auth_user');
-  let token = '';
-  if (authUser) {
-    try {
-      const user = JSON.parse(authUser);
-      token = user.token;
-    } catch (e) {
-      console.error('解析认证信息失败:', e);
-    }
+  let ws;
+  let finished = false;
+
+  try {
+    ws = new window.WebSocket(wsUrl);
+  } catch (e) {
+    onError?.(e);
+    return () => {};
   }
 
-  const requestBody = {
-    messages,
-    stream: true,
-    temperature: 0.7,
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ messages, stream: true, temperature: 0.7 }));
   };
 
-  console.log('[SSE Debug] 开始流式调用，请求体:', requestBody);
-  streamDebugger.log('SSE_REQUEST_START', { requestBody });
-
-  // 使用fetch API发送请求并处理SSE响应
-  fetch(`${API_URL}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'text/event-stream',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(requestBody),
-    signal
-  })
-  .then(response => {
-    console.log('[SSE Debug] 收到响应，状态:', response.status, '状态文本:', response.statusText);
-    streamDebugger.log('SSE_RESPONSE_RECEIVED', { 
-      status: response.status, 
-      statusText: response.statusText 
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let chunkCount = 0;
-    let totalBytesReceived = 0;
-
-    let isCompleted = false;
-    const markAsCompleted = async () => {
-      if (!isCompleted) {
-        isCompleted = true;
-        console.log('[SSE Debug] 标记完成，总接收chunk数:', chunkCount, '总字节数:', totalBytesReceived);
-        streamDebugger.log('SSE_COMPLETED', { 
-          chunkCount, 
-          totalBytesReceived 
-        });
-        await new Promise(resolve => setTimeout(resolve, 100));
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.done) {
+        finished = true;
         onFinish?.();
+      } else {
+        onMessage?.(data);
       }
-    };
-
-    const processText = async (text) => {
-      try {
-        console.log('[SSE Debug] 处理文本块，长度:', text.length, '内容:', text.substring(0, 100) + (text.length > 100 ? '...' : ''));
-        streamDebugger.log('SSE_TEXT_PROCESSED', { 
-          textLength: text.length,
-          chunkCount: chunkCount 
-        });
-        
-        buffer += text;
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        console.log('[SSE Debug] 分割后行数:', lines.length, '剩余buffer长度:', buffer.length);
-
-        for (const line of lines) {
-          if (!line.trim()) {
-            console.log('[SSE Debug] 跳过空行');
-            continue;
-          }
-          
-          if (line.trim() === 'data: [DONE]') {
-            console.log('[SSE Debug] 收到[DONE]信号');
-            streamDebugger.log('SSE_DONE_SIGNAL');
-            await markAsCompleted();
-            return;
-          }
-
-          try {
-            const jsonStr = line.startsWith('data:') ? line.slice(5) : line;
-            console.log('[SSE Debug] 解析JSON行:', jsonStr.substring(0, 100) + (jsonStr.length > 100 ? '...' : ''));
-            const data = JSON.parse(jsonStr);
-            if (data.error) {
-              console.error('[SSE Debug] 收到错误数据:', data.error);
-              streamDebugger.log('SSE_ERROR', { error: data.error });
-              throw new Error(data.error);
-            }
-            
-            const content = data.choices?.[0]?.delta?.content;
-            if (content) {
-              console.log('[SSE Debug] 发送内容到回调，长度:', content.length, '内容:', content.substring(0, 50) + (content.length > 50 ? '...' : ''));
-              streamDebugger.log('SSE_CONTENT_READY', { 
-                contentLength: content.length,
-                contentPreview: content.substring(0, 20)
-              });
-            }
-            onMessage?.(data);
-            streamDebugger.log('SSE_MESSAGE_SENT', { 
-              hasContent: !!content,
-              contentLength: content?.length || 0
-            });
-          } catch (error) {
-            console.error('[SSE Debug] 解析SSE消息失败:', error, '原始行:', line);
-            streamDebugger.log('SSE_PARSE_ERROR', { error: error.message });
-            onError?.(new Error('消息解析失败: ' + error.message));
-            return;
-          }
-        }
-      } catch (error) {
-        console.error('[SSE Debug] 处理SSE流错误:', error);
-        streamDebugger.log('SSE_PROCESS_ERROR', { error: error.message });
-        onError?.(error);
-      }
-    };
-
-    const pump = async () => {
-      try {
-        const { value, done } = await reader.read();
-        chunkCount++;
-        if (value) {
-          totalBytesReceived += value.length;
-          console.log('[SSE Debug] 读取chunk #', chunkCount, '字节数:', value.length, '累计字节数:', totalBytesReceived);
-          streamDebugger.log('SSE_CHUNK_READ', { 
-            chunkNumber: chunkCount,
-            bytesReceived: value.length,
-            totalBytesReceived
-          });
-        }
-        
-        if (done) {
-          console.log('[SSE Debug] 流读取完成，总chunk数:', chunkCount);
-          streamDebugger.log('SSE_STREAM_DONE', { chunkCount });
-          await markAsCompleted();
-          return;
-        }
-        await processText(decoder.decode(value, { stream: true }));
-        return pump();
-      } catch (error) {
-        console.error('[SSE Debug] SSE流读取错误:', error);
-        streamDebugger.log('SSE_READ_ERROR', { error: error.message });
-        onError?.(error);
-      }
-    };
-
-    return pump();
-  })
-  .catch(error => {
-    console.error('[SSE Debug] SSE连接错误:', error);
-    streamDebugger.log('SSE_CONNECTION_ERROR', { error: error.message });
-    onError?.(error);
-  });
-
-  // 返回一个取消函数
-  return () => {
-    if (signal) {
-      signal.abort();
+    } catch (e) {
+      onError?.(e);
     }
   };
+
+  ws.onerror = (e) => {
+    if (!finished) onError?.(e);
+  };
+
+  ws.onclose = () => {
+    if (!finished) onFinish?.();
+  };
+
+  // 返回关闭函数
+  return () => {
+    if (ws && ws.readyState === ws.OPEN) ws.close();
+  };
+}
+
+// 修改invokeModel为调用WebSocket
+export const invokeModel = ({ messages, onMessage, onError, onFinish }) => {
+  return createChatWebSocket({ messages, onMessage, onError, onFinish });
 };
 
 export const queryModels = async (params) => {

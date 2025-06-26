@@ -12,6 +12,8 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -302,6 +304,83 @@ public class ChatCompletionServiceImpl implements ChatCompletionService {
         } catch (Exception e) {
             logger.error("[SSE Debug] Error sending error response: {}", e.getMessage());
             logger.error("[SSE Debug] 错误响应发送异常堆栈: ", e);
+        }
+    }
+
+    // Spring WebSocket流式推送方法
+    public void streamChatCompletionWebSocket(List<Map<String, Object>> messages, String modelName, WebSocketSession wsSession) {
+        StringBuilder generatedContent = new StringBuilder();
+        try {
+            logger.info("[WS Debug] 开始WebSocket流式聊天完成，模型: {}, 消息数量: {}", modelName, messages.size());
+            Model model = modelRepository.findByNameExact(modelName)
+                .orElseThrow(() -> new RuntimeException("Model not found: " + modelName));
+            Map<String, Object> requestBody = buildRequestBody(messages, model);
+            String baseUrl = model.getBaseUrl();
+            WebClient client = webClientBuilder.baseUrl(baseUrl).build();
+            final long startTime = System.currentTimeMillis();
+            client.post()
+                .uri("")
+                .header("Authorization", "Bearer " + model.getApiKey())
+                .header("X-Request-ID", java.util.UUID.randomUUID().toString())
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .header("Accept", "text/event-stream")
+                .bodyValue(requestBody)
+                .accept(MediaType.TEXT_EVENT_STREAM)
+                .retrieve()
+                .bodyToFlux(String.class)
+                .timeout(java.time.Duration.ofMinutes(5))
+                .subscribe(
+                    chunk -> {
+                        try {
+                            if ("[DONE]".equals(chunk.trim())) {
+                                logger.info("[WS Debug] 收到[DONE]信号，当前生成内容长度: {}", generatedContent.length());
+                                wsSession.sendMessage(new TextMessage("{\"done\":true}"));
+                                return;
+                            }
+                            Map<String, Object> data = objectMapper.readValue(chunk, Map.class);
+                            wsSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(data)));
+                            Map<String, Object> choice = (Map<String, Object>)((List<Object>)data.get("choices")).get(0);
+                            Map<String, Object> delta = (Map<String, Object>) choice.get("delta");
+                            Object finishReason = choice.get("finish_reason");
+                            if (finishReason != null) {
+                                logger.info("[WS Debug] 检测到完成状态: {}", finishReason);
+                                wsSession.sendMessage(new TextMessage("{\"done\":true}"));
+                                return;
+                            }
+                            String content = delta != null ? (String) delta.get("content") : null;
+                            if (content != null) {
+                                generatedContent.append(content);
+                            }
+                        } catch (Exception e) {
+                            logger.error("[WS Debug] Error processing chunk: {} - {}", chunk, e.getMessage());
+                        }
+                    },
+                    error -> {
+                        logger.error("[WS Debug] 与模型 [{}] 通信时发生错误: {}", modelName, error.getMessage());
+                        String errorMessage = "调用模型服务失败: " + error.getMessage();
+                        try {
+                            wsSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("error", errorMessage))));
+                        } catch (Exception e) {
+                            logger.error("[WS Debug] Error sending error response: {}", e.getMessage());
+                        }
+                    },
+                    () -> {
+                        try {
+                            long duration = System.currentTimeMillis() - startTime;
+                            logger.info("[WS Debug] WebSocket流式完成，总耗时: {}ms, 生成内容长度: {}", duration, generatedContent.length());
+                            wsSession.sendMessage(new TextMessage("{\"done\":true}"));
+                        } catch (Exception e) {
+                            logger.error("[WS Debug] 完成WebSocket发送时发生错误: {}", e.getMessage());
+                        }
+                    }
+                );
+        } catch (Exception e) {
+            logger.error("[WS Debug] Error in streamChatCompletionWebSocket for model [{}]: {}", modelName, e.getMessage());
+            try {
+                wsSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("error", "系统错误: " + e.getMessage()))));
+            } catch (Exception ioException) {
+                logger.error("[WS Debug] Error sending error response: {}", ioException.getMessage());
+            }
         }
     }
 }
