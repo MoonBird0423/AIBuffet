@@ -3,6 +3,7 @@ package com.aibuffet.controller;
 import com.aibuffet.service.ChatCompletionService;
 import com.aibuffet.service.ChatService;
 import com.aibuffet.model.User;
+import com.aibuffet.security.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,9 @@ public class ChatCompletionWebSocketHandler extends TextWebSocketHandler {
     @Autowired
     private ChatService chatService;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
     @Value("${ai.chat.default.model}")
     private String defaultModel;
 
@@ -35,11 +39,13 @@ public class ChatCompletionWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) {
         try {
-            // 强制输出错误级别日志，确保能看到
-            logger.error("[WebSocket Handler] ===== WebSocket消息处理器被调用 =====");
+            // 使用INFO级别日志
+            logger.info("[WebSocket Handler] ===== WebSocket消息处理器被调用 =====");
             logger.info("[WebSocket Handler] 收到WebSocket消息: {}", message.getPayload());
             
             Map<String, Object> req = objectMapper.readValue(message.getPayload(), Map.class);
+            
+            // Token已经在握手时验证，这里不再需要验证
             List<Map<String, Object>> messages = (List<Map<String, Object>>) req.get("messages");
             String modelName = req.get("model") != null && !((String)req.get("model")).isBlank() ? (String) req.get("model") : defaultModel;
             
@@ -75,8 +81,8 @@ public class ChatCompletionWebSocketHandler extends TextWebSocketHandler {
             messages = objectMapper.readValue(enhancedJson, List.class);
             logger.info("[WebSocket Handler] 消息增强完成，最终消息数量: {}", messages.size());
             
-            // 强制输出错误级别日志，确保能看到处理完成
-            logger.error("[WebSocket Handler] ===== 开始调用ChatCompletionService =====");
+            // 使用INFO级别日志
+            logger.info("[WebSocket Handler] ===== 开始调用ChatCompletionService =====");
             
             chatCompletionService.streamChatCompletionWebSocket(messages, modelName, session);
         } catch (Exception e) {

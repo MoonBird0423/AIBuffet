@@ -16,13 +16,16 @@ import jakarta.annotation.PostConstruct;
 public class JwtUtil {
     @Value("${jwt.expiration}")
     private long expirationTime;
+    
+    @Value("${jwt.secret:aibuffet-secret-key-for-jwt-token-generation-and-validation}")
+    private String jwtSecret;
 
     private SecretKey key;
 
     @PostConstruct
     public void init() {
-        // 使用Keys工具类生成安全的HS512密钥
-        this.key = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+        // 使用固定的密钥，确保应用重启后token仍然有效
+        this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
     /**

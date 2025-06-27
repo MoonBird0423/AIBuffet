@@ -268,24 +268,22 @@ export function createChatWebSocket({ messages, onMessage, onError, onFinish }) 
   // 获取认证token
   const authUser = localStorage.getItem('auth_user');
   let token = '';
-  
   if (authUser) {
     try {
-      const userData = JSON.parse(authUser);
-      token = userData.token || '';
+      const user = JSON.parse(authUser);
+      token = user.token;
     } catch (e) {
-      console.warn('解析用户信息失败:', e);
+      console.error('解析认证信息失败:', e);
     }
   }
   
-  if (!token) {
-    onError?.(new Error('未找到认证信息，请重新登录'));
-    return () => {};
-  }
-
-  const wsUrl = process.env.NODE_ENV === 'production'
-    ? `wss://${window.location.host}/ws/chat/completions?token=${encodeURIComponent(token)}`
-    : `ws://localhost:8080/ws/chat/completions?token=${encodeURIComponent(token)}`;
+  // 统一使用域名访问，本地开发时通过Nginx代理到localhost:8080
+  // 在URL中添加token参数用于WebSocket握手认证
+  const baseUrl = process.env.NODE_ENV === 'production'
+    ? `wss://${window.location.host}/ws/chat/completions`
+    : `ws://${window.location.host}/ws/chat/completions`;
+  
+  const wsUrl = token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl;
 
   let ws;
   let finished = false;
@@ -298,7 +296,12 @@ export function createChatWebSocket({ messages, onMessage, onError, onFinish }) 
   }
 
   ws.onopen = () => {
-    ws.send(JSON.stringify({ messages, stream: true, temperature: 0.7 }));
+    // 发送消息体（不再包含token，因为已经在URL中传递）
+    ws.send(JSON.stringify({ 
+      messages, 
+      stream: true, 
+      temperature: 0.7
+    }));
   };
 
   ws.onmessage = (event) => {
