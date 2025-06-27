@@ -265,9 +265,27 @@ export const clearQuestionTarget = async (sessionId) => {
 
 // 新增WebSocket流式聊天方法
 export function createChatWebSocket({ messages, onMessage, onError, onFinish }) {
+  // 获取认证token
+  const authUser = localStorage.getItem('auth_user');
+  let token = '';
+  
+  if (authUser) {
+    try {
+      const userData = JSON.parse(authUser);
+      token = userData.token || '';
+    } catch (e) {
+      console.warn('解析用户信息失败:', e);
+    }
+  }
+  
+  if (!token) {
+    onError?.(new Error('未找到认证信息，请重新登录'));
+    return () => {};
+  }
+
   const wsUrl = process.env.NODE_ENV === 'production'
-    ? `wss://${window.location.host}/ws/chat/completions`
-    : `ws://localhost:8080/ws/chat/completions`;
+    ? `wss://${window.location.host}/ws/chat/completions?token=${encodeURIComponent(token)}`
+    : `ws://localhost:8080/ws/chat/completions?token=${encodeURIComponent(token)}`;
 
   let ws;
   let finished = false;

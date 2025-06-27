@@ -212,12 +212,16 @@ public class ChatServiceImpl implements ChatService {
      */
     public String enhanceMessageWithReferences(String messagesJson, Long userId) {
         try {
+            logger.info("[Message Enhancement] 开始处理消息增强，用户ID: {}, 原始消息长度: {}", userId, messagesJson.length());
+            
             JsonNode messagesNode = objectMapper.readTree(messagesJson);
             if (!messagesNode.isArray()) {
+                logger.warn("[Message Enhancement] 消息格式不是数组，跳过增强处理");
                 return messagesJson;
             }
             
             ArrayNode messages = (ArrayNode) messagesNode;
+            logger.info("[Message Enhancement] 消息数组长度: {}", messages.size());
             
             // 查找最后一条用户消息
             ObjectNode lastUserMessage = null;
@@ -225,26 +229,40 @@ public class ChatServiceImpl implements ChatService {
                 JsonNode message = messages.get(i);
                 if ("user".equals(message.get("role").asText())) {
                     lastUserMessage = (ObjectNode) message;
+                    logger.info("[Message Enhancement] 找到最后一条用户消息，索引: {}", i);
                     break;
                 }
             }
             
-            if (lastUserMessage == null || !lastUserMessage.has("questionTarget")) {
-                return messagesJson; // 没有找到带questionTarget的用户消息
+            if (lastUserMessage == null) {
+                logger.warn("[Message Enhancement] 未找到用户消息，跳过增强处理");
+                return messagesJson;
+            }
+            
+            if (!lastUserMessage.has("questionTarget")) {
+                logger.info("[Message Enhancement] 用户消息没有questionTarget，跳过增强处理");
+                return messagesJson;
             }
             
             JsonNode questionTarget = lastUserMessage.get("questionTarget");
             String userQuery = lastUserMessage.get("content").asText();
             
+            logger.info("[Message Enhancement] 检测到questionTarget: {}", questionTarget.toString());
+            logger.info("[Message Enhancement] 用户查询内容: {}", userQuery);
+            
             // 执行向量检索
+            logger.info("[Message Enhancement] 开始执行向量检索...");
             List<SearchResult> searchResults = performVectorSearch(questionTarget, userQuery, userId);
+            logger.info("[Message Enhancement] 向量检索完成，结果数量: {}", searchResults.size());
             
             if (searchResults.isEmpty()) {
                 // 如果没有检索到结果，添加提示
                 String enhancedContent = userQuery + "\n\n[注：未找到相关参考内容]";
                 lastUserMessage.put("content", enhancedContent);
+                logger.info("[Message Enhancement] 未找到相关参考内容，添加提示信息");
             } else {
                 // 构造增强消息
+                logger.info("[Message Enhancement] 找到{}个相关结果，开始构造增强消息", searchResults.size());
                 String enhancedContent = constructEnhancedMessage(userQuery, searchResults);
                 lastUserMessage.put("content", enhancedContent);
                 
@@ -259,11 +277,17 @@ public class ChatServiceImpl implements ChatService {
                     references.add(ref);
                 }
                 lastUserMessage.set("searchReferences", references);
+                
+                logger.info("[Message Enhancement] 增强消息构造完成，内容长度: {}", enhancedContent.length());
+                logger.info("[Message Enhancement] 增强消息预览: {}", 
+                    enhancedContent.length() > 200 ? enhancedContent.substring(0, 200) + "..." : enhancedContent);
             }
             
-            return objectMapper.writeValueAsString(messages);
+            String result = objectMapper.writeValueAsString(messages);
+            logger.info("[Message Enhancement] 消息增强处理完成，最终消息长度: {}", result.length());
+            return result;
         } catch (Exception e) {
-            logger.error("Error enhancing message with references", e);
+            logger.error("[Message Enhancement] 消息增强处理过程中发生错误", e);
             return messagesJson; // 降级返回原消息
         }
     }
@@ -276,33 +300,58 @@ public class ChatServiceImpl implements ChatService {
             String type = questionTarget.get("type").asText();
             String id = questionTarget.get("id").asText();
             
+            logger.info("[Vector Search] 开始向量检索，类型: {}, ID: {}, 查询: {}", type, id, query);
+            
             SearchRequest searchRequest = new SearchRequest();
             searchRequest.setQuery(query);
             searchRequest.setLimit(10); // 检索10个相关块
             searchRequest.setSimilarityThreshold(0.7f);
             
+            logger.info("[Vector Search] 搜索请求参数: limit={}, threshold={}", 
+                searchRequest.getLimit(), searchRequest.getSimilarityThreshold());
+            
             if ("book".equals(type)) {
                 searchRequest.setDocumentId(Long.valueOf(id));
+                logger.info("[Vector Search] 文档搜索，文档ID: {}", id);
+                
                 // 验证文档权限
                 if (!searchService.validateDocumentPermission(Long.valueOf(id), userId)) {
-                    logger.warn("User {} does not have permission to access document {}", userId, id);
+                    logger.warn("[Vector Search] 用户 {} 没有权限访问文档 {}", userId, id);
                     return Collections.emptyList();
                 }
+                logger.info("[Vector Search] 文档权限验证通过");
+                
             } else if ("knowledge".equals(type)) {
                 searchRequest.setKnowledgeBaseId(Long.valueOf(id));
+                logger.info("[Vector Search] 知识库搜索，知识库ID: {}", id);
+                
                 // 验证知识库权限
                 if (!searchService.validateKnowledgeBasePermission(Long.valueOf(id), userId)) {
-                    logger.warn("User {} does not have permission to access knowledge base {}", userId, id);
+                    logger.warn("[Vector Search] 用户 {} 没有权限访问知识库 {}", userId, id);
                     return Collections.emptyList();
                 }
+                logger.info("[Vector Search] 知识库权限验证通过");
+                
             } else {
-                logger.warn("Unknown question target type: {}", type);
+                logger.warn("[Vector Search] 未知的question target类型: {}", type);
                 return Collections.emptyList();
             }
             
-            return searchService.search(searchRequest);
+            logger.info("[Vector Search] 调用SearchService执行搜索...");
+            List<SearchResult> results = searchService.search(searchRequest);
+            logger.info("[Vector Search] 搜索完成，返回结果数量: {}", results.size());
+            
+            // 输出前几个结果的详细信息
+            for (int i = 0; i < Math.min(results.size(), 3); i++) {
+                SearchResult result = results.get(i);
+                logger.info("[Vector Search] 结果{}: 文件={}, 相似度={}, 内容长度={}", 
+                    i + 1, result.getFileName(), result.getSimilarity(), 
+                    result.getContent() != null ? result.getContent().length() : 0);
+            }
+            
+            return results;
         } catch (Exception e) {
-            logger.error("Error performing vector search", e);
+            logger.error("[Vector Search] 向量检索过程中发生错误", e);
             return Collections.emptyList();
         }
     }
