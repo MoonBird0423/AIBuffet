@@ -281,7 +281,7 @@ export function createChatWebSocket({ messages, onMessage, onError, onFinish }) 
   // 在URL中添加token参数用于WebSocket握手认证
   const baseUrl = process.env.NODE_ENV === 'production'
     ? `wss://${window.location.host}/ws/chat/completions`
-    : `ws://${window.location.host}/ws/chat/completions`;
+    : `ws://localhost:8080/ws/chat/completions`;
   
   const wsUrl = token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl;
 

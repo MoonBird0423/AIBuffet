@@ -21,18 +21,19 @@ WebSocket connection to 'ws://lovesuyi.cn/ws/chat/completions' failed
 - 修改了`createChatWebSocket`函数
 - 在WebSocket URL中添加token参数用于握手认证
 - 移除了消息中的token字段
+- **优化：本地开发环境下WebSocket连接直接指向后端8080端口，避免通过3000端口，确保本地调试时WebSocket能正常连接后端。生产环境保持不变。**
 
 ```javascript
 // 修改前
-const wsUrl = process.env.NODE_ENV === 'production'
+const baseUrl = process.env.NODE_ENV === 'production'
   ? `wss://${window.location.host}/ws/chat/completions`
   : `ws://${window.location.host}/ws/chat/completions`;
+const wsUrl = token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl;
 
 // 修改后
 const baseUrl = process.env.NODE_ENV === 'production'
   ? `wss://${window.location.host}/ws/chat/completions`
-  : `ws://${window.location.host}/ws/chat/completions`;
-
+  : `ws://localhost:8080/ws/chat/completions`;
 const wsUrl = token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl;
 ```
 
