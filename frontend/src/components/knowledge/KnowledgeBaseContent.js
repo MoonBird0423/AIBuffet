@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import FileList from './FileList';
 import FileUploadModal from './FileUploadModal';
-import PublishModal from './PublishModal';
 import FavoriteList from './FavoriteList';
 import { getDocuments } from '../../services/api';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 
 function KnowledgeBaseContent({ knowledgeBase }) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
   const [error, setError] = useState(null);
   const [files, setFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -129,10 +126,6 @@ function KnowledgeBaseContent({ knowledgeBase }) {
                 total={total}
                 onPageChange={setPage}
                 onRefresh={fetchFiles}
-                onPublish={(file) => {
-                  setSelectedFile(file);
-                  setIsPublishModalOpen(true);
-                }}
               />
             )}
           </div>
@@ -145,25 +138,6 @@ function KnowledgeBaseContent({ knowledgeBase }) {
           </div>
         )}
       </div>
-
-      {/* 发布弹窗 */}
-      {selectedFile && (
-        <PublishModal
-          isOpen={isPublishModalOpen}
-          onClose={() => {
-            // 关闭时清空状态，确保下次打开时重新开始
-            setIsPublishModalOpen(false);
-            setSelectedFile(null);
-          }}
-          onSuccess={() => {
-            setIsPublishModalOpen(false);
-            setSelectedFile(null);
-            fetchFiles(); // 发布成功后刷新
-          }}
-          fileName={selectedFile.name}
-          documentId={selectedFile.id}
-        />
-      )}
 
       {/* 文件上传弹窗 */}
       <FileUploadModal

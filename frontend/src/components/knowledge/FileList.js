@@ -7,7 +7,6 @@ import Tooltip from '../common/Tooltip';
 import Popover from '../common/Popover';
 import Modal from '../common/Modal';
 import ChunkViewModal from './ChunkViewModal';
-import PublishModal from './PublishModal';
 import InterpretationModal from './InterpretationModal';
 import BookPublishModal from './BookPublishModal';
 
@@ -24,7 +23,6 @@ const FileList = ({
   const navigate = useNavigate();  const [deletingId, setDeletingId] = useState(null);
   const [selectedFileId, setSelectedFileId] = useState(null);
   const [showChunkModal, setShowChunkModal] = useState(false);
-  const [showPublishModal, setShowPublishModal] = useState(false);
   const [publishingFileId, setPublishingFileId] = useState(null);
   const [showUnpublishModal, setShowUnpublishModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -41,11 +39,6 @@ const FileList = ({
       return `${name}...${ext}`;
     }
     return fileName;
-  };
-
-  const handlePublish = (fileId) => {
-    setPublishingFileId(fileId);
-    setShowPublishModal(true);
   };
 
   const handleSmartInterpretation = (fileId) => {
@@ -70,12 +63,6 @@ const FileList = ({
   const handleViewDetails = (fileId) => {
     setSelectedFileId(fileId);
     setShowChunkModal(true);
-  };
-
-  const handlePublishSuccess = () => {
-    onRefresh();
-    setShowPublishModal(false);
-    setPublishingFileId(null);
   };
 
   const handleBookPublishSuccess = () => {
@@ -418,16 +405,6 @@ const FileList = ({
         fileId={selectedFileId}
       />
 
-      <PublishModal
-        isOpen={showPublishModal}
-        onClose={() => {
-          setShowPublishModal(false);
-          setPublishingFileId(null);
-        }}
-        onSuccess={handlePublishSuccess}
-        fileName={files.find(f => f.id === publishingFileId)?.fileName || ''}
-        documentId={publishingFileId}
-      />
 
       <Modal
         isOpen={showUnpublishModal}
