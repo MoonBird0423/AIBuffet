@@ -858,6 +858,39 @@ export const updateQuiz = async (docId, content) => {
   }
 };
 
+// 删除解读内容
+export const deleteInterpretation = async (docId) => {
+  try {
+    const response = await apiClient.delete(`/publish/docs/${docId}/interpretation`);
+    return response.data;
+  } catch (error) {
+    console.error('删除解读内容失败:', error);
+    throw error;
+  }
+};
+
+// 删除脑图内容
+export const deleteMindmap = async (docId) => {
+  try {
+    const response = await apiClient.delete(`/publish/docs/${docId}/mindmap`);
+    return response.data;
+  } catch (error) {
+    console.error('删除脑图内容失败:', error);
+    throw error;
+  }
+};
+
+// 删除测试题内容
+export const deleteQuiz = async (docId) => {
+  try {
+    const response = await apiClient.delete(`/publish/docs/${docId}/quiz`);
+    return response.data;
+  } catch (error) {
+    console.error('删除测试题内容失败:', error);
+    throw error;
+  }
+};
+
 // 音频相关API
 export const synthesizeAudio = async (docId) => {
   try {

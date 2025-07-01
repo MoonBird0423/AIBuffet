@@ -413,4 +413,64 @@ public class PublishServiceImpl implements PublishService {
             }
         });
     }
+
+    @Override
+    public CompletableFuture<Void> deleteInterpretation(Long docId, Long userId) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                log.info("开始删除解读内容，docId: {}, userId: {}", docId, userId);
+                verifyDocAccess(docId, userId);
+
+                docInterpretationRepository.findByDocId(docId)
+                        .ifPresent(interpretation -> {
+                            docInterpretationRepository.delete(interpretation);
+                            log.info("解读内容删除成功，docId: {}", docId);
+                        });
+            } catch (Exception e) {
+                String errorMsg = String.format("删除解读内容失败：docId=%s, error=%s", docId, e.getMessage());
+                log.error(errorMsg, e);
+                throw new RuntimeException(errorMsg, e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> deleteMindmap(Long docId, Long userId) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                log.info("开始删除脑图内容，docId: {}, userId: {}", docId, userId);
+                verifyDocAccess(docId, userId);
+
+                docMindmapRepository.findByDocId(docId)
+                        .ifPresent(mindmap -> {
+                            docMindmapRepository.delete(mindmap);
+                            log.info("脑图内容删除成功，docId: {}", docId);
+                        });
+            } catch (Exception e) {
+                String errorMsg = String.format("删除脑图内容失败：docId=%s, error=%s", docId, e.getMessage());
+                log.error(errorMsg, e);
+                throw new RuntimeException(errorMsg, e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> deleteQuiz(Long docId, Long userId) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                log.info("开始删除测试题内容，docId: {}, userId: {}", docId, userId);
+                verifyDocAccess(docId, userId);
+
+                docQuizRepository.findByDocId(docId)
+                        .ifPresent(quiz -> {
+                            docQuizRepository.delete(quiz);
+                            log.info("测试题内容删除成功，docId: {}", docId);
+                        });
+            } catch (Exception e) {
+                String errorMsg = String.format("删除测试题内容失败：docId=%s, error=%s", docId, e.getMessage());
+                log.error(errorMsg, e);
+                throw new RuntimeException(errorMsg, e);
+            }
+        });
+    }
 }

@@ -13,7 +13,10 @@ import {
   getQuiz,
   updateInterpretation,
   updateMindmap,
-  updateQuiz
+  updateQuiz,
+  deleteInterpretation,
+  deleteMindmap,
+  deleteQuiz
 } from '../../services/api';
 import MindmapViewer from './MindmapViewer';
 import QuizViewer from './QuizViewer';
@@ -23,20 +26,20 @@ import ProgressBar from '../common/ProgressBar';
 import { ToastManager } from '../common/Toast';
 
 function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [activeTab, setActiveTab] = useState('interpretation');
   
-  const steps = [
-    { number: 1, text: '生成解读' },
-    { number: 2, text: '生成音频' },
-    { number: 3, text: '生成脑图' },
-    { number: 4, text: '生成测试' }
+  const tabs = [
+    { key: 'interpretation', label: '生成解读', icon: '📖' },
+    { key: 'audio', label: '生成音频', icon: '🎵' },
+    { key: 'mindmap', label: '生成脑图', icon: '🧠' },
+    { key: 'quiz', label: '生成测试', icon: '📝' }
   ];
 
   const [progress, setProgress] = useState({
-    interpretation: 0,  // 步骤1：解读进度
-    audio: 0,          // 步骤2：音频进度
-    mindmap: 0,        // 步骤3：脑图进度
-    quiz: 0           // 步骤4：测试进度
+    interpretation: 0,
+    audio: 0,
+    mindmap: 0,
+    quiz: 0
   });
 
   const [interpretation, setInterpretation] = useState('');
@@ -52,17 +55,20 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
   // 编辑弹窗状态
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editContent, setEditContent] = useState('');
-  const [editType, setEditType] = useState(''); // 'interpretation', 'mindmap', 'quiz'
+  const [editType, setEditType] = useState('');
 
-  // 音频删除相关状态
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  // 删除确认弹窗状态
+  const [deleteConfirm, setDeleteConfirm] = useState({
+    open: false,
+    type: '', // 'interpretation', 'mindmap', 'quiz', 'audio'
+    loading: false
+  });
 
   // 监听弹窗打开状态，重置所有状态
   useEffect(() => {
     if (isOpen) {
       // 重置所有状态
-      setCurrentStep(1);
+      setActiveTab('interpretation');
       setProgress({
         interpretation: 0,
         audio: 0,
@@ -80,16 +86,35 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
       setQuizLoading(false);
       
       if (documentId) {
-        // 自动开始第一步：检查并加载现有解读内容，如果没有则开始生成
-        setTimeout(async () => {
-          const hasExisting = await loadExistingInterpretation();
-          if (!hasExisting) {
-            startInterpretation();
-          }
-        }, 100);
+        // 初始加载解读内容
+        loadExistingInterpretation();
       }
     }
   }, [isOpen, documentId]);
+
+  // 切换选项卡时加载对应内容
+  useEffect(() => {
+    if (!isOpen || !documentId) return;
+
+    const loadTabContent = async () => {
+      switch (activeTab) {
+        case 'interpretation':
+          await loadExistingInterpretation();
+          break;
+        case 'audio':
+          await loadExistingAudio();
+          break;
+        case 'mindmap':
+          await loadExistingMindmap();
+          break;
+        case 'quiz':
+          await loadExistingQuiz();
+          break;
+      }
+    };
+
+    loadTabContent();
+  }, [activeTab, isOpen, documentId]);
 
   // 重新生成解读内容
   const regenerateInterpretation = async () => {
@@ -144,28 +169,52 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
     }
   };
 
-  // 删除音频的处理函数
-  const handleDeleteAudio = async () => {
+  // 统一的删除处理函数
+  const handleDelete = async () => {
     try {
-      setIsDeleting(true);
-      const response = await deleteAudio(documentId);
+      setDeleteConfirm(prev => ({ ...prev, loading: true }));
       
-      if (response.code === 200) {
-        ToastManager.success('音频删除成功');
-        setShowDeleteConfirm(false);
-        // 重置音频相关状态
-        setHasAudio(false);
-        setAudioUrl('');
-        setProgress(prev => ({ ...prev, audio: 0 }));
-      } else {
-        throw new Error(response.message || '删除失败');
+      const { type } = deleteConfirm;
+      let response;
+      
+      if (type === 'interpretation') {
+        response = await deleteInterpretation(documentId);
+        setInterpretation('');
+        setProgress(prev => ({ ...prev, interpretation: 0 }));
+        ToastManager.success('解读内容删除成功');
+      } else if (type === 'mindmap') {
+        response = await deleteMindmap(documentId);
+        setMindmap('');
+        setProgress(prev => ({ ...prev, mindmap: 0 }));
+        ToastManager.success('脑图内容删除成功');
+      } else if (type === 'quiz') {
+        response = await deleteQuiz(documentId);
+        setQuiz('');
+        setProgress(prev => ({ ...prev, quiz: 0 }));
+        ToastManager.success('测试题内容删除成功');
+      } else if (type === 'audio') {
+        response = await deleteAudio(documentId);
+        if (response.code === 200) {
+          setHasAudio(false);
+          setAudioUrl('');
+          setProgress(prev => ({ ...prev, audio: 0 }));
+          ToastManager.success('音频删除成功');
+        } else {
+          throw new Error(response.message || '删除失败');
+        }
       }
+      
+      setDeleteConfirm({ open: false, type: '', loading: false });
     } catch (error) {
-      ToastManager.error('删除音频失败: ' + error.message);
-      console.error('删除音频失败:', error);
-    } finally {
-      setIsDeleting(false);
+      ToastManager.error('删除失败：' + (error.response?.data?.message || error.message));
+      console.error('删除失败:', error);
+      setDeleteConfirm(prev => ({ ...prev, loading: false }));
     }
+  };
+
+  // 打开删除确认弹窗
+  const openDeleteConfirm = (type) => {
+    setDeleteConfirm({ open: true, type, loading: false });
   };
 
   // 生成解读内容
@@ -414,75 +463,66 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
     }
   };
 
-  const handleNextStep = async () => {
-    if (currentStep === 1) {
-      // 第1步：生成解读 -> 第2步：生成音频
-      setCurrentStep(currentStep + 1);
-      const hasExisting = await loadExistingAudio();
-      if (!hasExisting) {
-        // 音频是可选的，如果没有解读内容则不自动生成
-        if (interpretation) {
-          startAudio();
-        }
-      }
-    } else if (currentStep === 2) {
-      // 第2步：生成音频 -> 第3步：生成脑图
-      setCurrentStep(currentStep + 1);
-      const hasExisting = await loadExistingMindmap();
-      if (!hasExisting) {
-        startMindmap();
-      }
-    } else if (currentStep === 3) {
-      // 第3步：生成脑图 -> 第4步：生成测试
-      setCurrentStep(currentStep + 1);
-      const hasExisting = await loadExistingQuiz();
-      if (!hasExisting) {
-        startQuiz();
-      }
-    } else if (currentStep === 4) {
-      // 第4步：生成测试 - 完成并关闭
-      ToastManager.success('智能解读完成');
-      onClose();
-    }
-  };
+  // 示例图片组件
+  const ExampleImageWithButton = ({ imageSrc, onGenerate, title, loading }) => (
+    <div className="relative w-full h-96 rounded-xl overflow-hidden group">
+      <img 
+        src={imageSrc} 
+        alt={title}
+        className="w-full h-full object-cover"
+      />
+      <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+        <button
+          onClick={onGenerate}
+          disabled={loading}
+          className="px-8 py-4 bg-white bg-opacity-90 text-gray-800 font-medium rounded-lg 
+                   hover:bg-opacity-100 transition-all duration-200 transform hover:scale-105
+                   disabled:opacity-50 disabled:transform-none shadow-lg"
+        >
+          {loading ? '生成中...' : '立即生成'}
+        </button>
+      </div>
+    </div>
+  );
 
-  const renderStepIndicators = () => (
-    <div className="p-4 bg-gray-50">
-      <div className="grid grid-cols-4 gap-4">
-        {steps.map((step) => (
-          <div key={step.number} className="flex-1">
-            <div 
-              className={`h-12 flex items-center rounded-md shadow-sm transition-all duration-200 ease-in-out
-                ${currentStep >= step.number ? 'bg-indigo-400' : 'bg-gray-100'}`}
-            >
-              <div className={`flex items-center px-4 
-                ${currentStep >= step.number ? 'text-white' : 'text-gray-500'}`}>
-                <span className="font-medium mr-3">{step.number}</span>
-                <span className="text-sm whitespace-nowrap">{step.text}</span>
-              </div>
-            </div>
-          </div>
+  // 渲染选项卡
+  const renderTabs = () => (
+    <div className="border-b border-gray-200 bg-gray-50">
+      <div className="flex">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex-1 py-4 px-6 text-center font-medium transition-all duration-200
+              ${activeTab === tab.key
+                ? 'border-b-2 border-indigo-500 text-indigo-600 bg-white'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              }`}
+          >
+            <span className="mr-2">{tab.icon}</span>
+            {tab.label}
+          </button>
         ))}
       </div>
     </div>
   );
 
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 1:
+  // 渲染选项卡内容
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'interpretation':
         return (
           <div className="space-y-6">
             {interpretationLoading ? (
               <ProgressBar
                 progress={progress.interpretation}
                 title="生成解读中"
-                description="系统正在生成解读内容，请稍候..."
+                description="生成过程可能较长，你可以关闭窗口稍后查看结果"
                 icon="M13 10V3L4 14h7v7l9-11h-7z"
               />
             ) : interpretation ? (
               <div className="space-y-4">
                 <InterpretationViewer content={interpretation} />
-                {/* 操作按钮 */}
                 <div className="flex justify-center gap-3">
                   <button
                     onClick={() => openEditModal('interpretation', interpretation)}
@@ -490,36 +530,45 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
                   >
                     编辑
                   </button>
+                  <button
+                    onClick={() => openDeleteConfirm('interpretation')}
+                    className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                  >
+                    删除
+                  </button>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">暂无解读内容</p>
-                <button
-                  onClick={startInterpretation}
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  开始生成
-                </button>
-              </div>
+              <ExampleImageWithButton
+                imageSrc="/语音解读.png"
+                onGenerate={startInterpretation}
+                title="生成解读"
+                loading={interpretationLoading}
+              />
             )}
           </div>
         );
-      case 2:
+
+      case 'audio':
         return (
           <div className="space-y-6">
-            {/* 检查是否有解读内容 */}
             {!interpretation ? (
-              <div className="text-center py-8">
-                <i className="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
+              <div className="text-center py-12">
+                <div className="text-yellow-500 text-6xl mb-4">⚠️</div>
                 <h3 className="text-xl font-medium text-gray-700 mb-2">图书文字解读还未完成</h3>
-                <p className="text-gray-500">暂不能生成解读音频，请先完成第一步的文字解读</p>
+                <p className="text-gray-500 mb-4">暂不能生成解读音频，请先完成解读内容</p>
+                <button
+                  onClick={() => setActiveTab('interpretation')}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  去生成解读
+                </button>
               </div>
             ) : audioLoading ? (
               <ProgressBar
                 progress={progress.audio}
                 title="生成音频中"
-                description="系统正在生成音频内容，请稍候..."
+                description="生成过程可能较长，你可以关闭窗口稍后查看结果"
                 icon="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M6 10H3a1 1 0 00-1 1v2a1 1 0 001 1h3l3.928 2.321A1 1 0 0011 16V8a1 1 0 00-1.072-.928L6 10z"
               />
             ) : hasAudio && audioUrl ? (
@@ -527,45 +576,39 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6">
                   <AudioPlayer audioUrl={audioUrl} bookTitle={fileName} bookId={documentId} />
                 </div>
-                {/* 操作按钮 */}
                 <div className="flex justify-center gap-3">
                   <button
-                    onClick={() => setShowDeleteConfirm(true)}
-                    disabled={isDeleting}
-                    className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors disabled:opacity-50"
+                    onClick={() => openDeleteConfirm('audio')}
+                    className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
                   >
-                    {isDeleting ? '删除中...' : '删除音频'}
+                    删除音频
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <i className="fas fa-microphone text-4xl text-blue-500 mb-4"></i>
-                <p className="text-gray-500 mb-4">可以为解读内容生成音频</p>
-                <button
-                  onClick={startAudio}
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  开始生成
-                </button>
-              </div>
+              <ExampleImageWithButton
+                imageSrc="/语音解读.png"
+                onGenerate={startAudio}
+                title="生成音频"
+                loading={audioLoading}
+              />
             )}
           </div>
         );
-      case 3:
+
+      case 'mindmap':
         return (
           <div className="space-y-6">
             {mindmapLoading ? (
               <ProgressBar
                 progress={progress.mindmap}
                 title="生成脑图中"
-                description="系统正在生成脑图内容，请稍候..."
+                description="生成过程可能较长，你可以关闭窗口稍后查看结果"
                 icon="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
               />
             ) : mindmap ? (
               <div className="space-y-4">
                 <MindmapViewer content={mindmap} height="60vh" />
-                {/* 操作按钮 */}
                 <div className="flex justify-center gap-3">
                   <button
                     onClick={() => openEditModal('mindmap', mindmap)}
@@ -573,35 +616,38 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
                   >
                     编辑
                   </button>
+                  <button
+                    onClick={() => openDeleteConfirm('mindmap')}
+                    className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                  >
+                    删除
+                  </button>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">暂无脑图内容</p>
-                <button
-                  onClick={startMindmap}
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  开始生成
-                </button>
-              </div>
+              <ExampleImageWithButton
+                imageSrc="/知识脑图.png"
+                onGenerate={startMindmap}
+                title="生成脑图"
+                loading={mindmapLoading}
+              />
             )}
           </div>
         );
-      case 4:
+
+      case 'quiz':
         return (
           <div className="space-y-6">
             {quizLoading ? (
               <ProgressBar
                 progress={progress.quiz}
                 title="生成测试题中"
-                description="系统正在生成测试题内容，请稍候..."
+                description="生成过程可能较长，你可以关闭窗口稍后查看结果"
                 icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
               />
             ) : quiz ? (
               <div className="space-y-4">
                 <QuizViewer questions={quiz} />
-                {/* 操作按钮 */}
                 <div className="flex justify-center gap-3">
                   <button
                     onClick={() => openEditModal('quiz', quiz)}
@@ -609,39 +655,37 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
                   >
                     编辑
                   </button>
+                  <button
+                    onClick={() => openDeleteConfirm('quiz')}
+                    className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                  >
+                    删除
+                  </button>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">暂无测试题内容</p>
-                <button
-                  onClick={startQuiz}
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  开始生成
-                </button>
-              </div>
+              <ExampleImageWithButton
+                imageSrc="/知识测试.png"
+                onGenerate={startQuiz}
+                title="生成测试"
+                loading={quizLoading}
+              />
             )}
           </div>
         );
+
+      default:
+        return null;
     }
   };
 
   const footer = (
-    <div className="flex justify-end gap-2">
-      {currentStep > 1 && (
-        <button
-          onClick={() => setCurrentStep(currentStep - 1)}
-          className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          上一步
-        </button>
-      )}
+    <div className="flex justify-end">
       <button
-        onClick={handleNextStep}
-        className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        onClick={onClose}
+        className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
       >
-        {currentStep === 4 ? '完成' : '下一步'}
+        关闭
       </button>
     </div>
   );
@@ -672,9 +716,9 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
         footer={footer}
         width="5xl"
       >
-        {renderStepIndicators()}
+        {renderTabs()}
         <div className="p-6">
-          {renderStepContent()}
+          {renderTabContent()}
         </div>
       </Modal>
 
@@ -697,32 +741,38 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
         </div>
       </Modal>
 
-      {/* 删除音频确认弹窗 */}
-      {showDeleteConfirm && (
+      {/* 统一删除确认弹窗 */}
+      {deleteConfirm.open && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <div className="text-center">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
                 <i className="fas fa-exclamation-triangle text-red-600"></i>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">确认删除音频</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                确认删除{deleteConfirm.type === 'interpretation' ? '解读内容' : 
+                         deleteConfirm.type === 'mindmap' ? '脑图内容' : 
+                         deleteConfirm.type === 'quiz' ? '测试题内容' : '音频'}
+              </h3>
               <p className="text-sm text-gray-500 mb-6">
-                删除后将无法恢复，您确定要删除这个音频文件吗？
+                删除后将无法恢复，您确定要删除这个{deleteConfirm.type === 'interpretation' ? '解读内容' : 
+                                                 deleteConfirm.type === 'mindmap' ? '脑图内容' : 
+                                                 deleteConfirm.type === 'quiz' ? '测试题内容' : '音频文件'}吗？
               </p>
               <div className="flex space-x-4">
                 <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  disabled={isDeleting}
+                  onClick={() => setDeleteConfirm({ open: false, type: '', loading: false })}
+                  disabled={deleteConfirm.loading}
                   className="flex-1 px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50"
                 >
                   取消
                 </button>
                 <button
-                  onClick={handleDeleteAudio}
-                  disabled={isDeleting}
+                  onClick={handleDelete}
+                  disabled={deleteConfirm.loading}
                   className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
                 >
-                  {isDeleting ? '删除中...' : '确认删除'}
+                  {deleteConfirm.loading ? '删除中...' : '确认删除'}
                 </button>
               </div>
             </div>

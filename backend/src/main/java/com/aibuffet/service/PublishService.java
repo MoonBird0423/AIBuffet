@@ -102,4 +102,28 @@ public interface PublishService {
      * @return void
      */
     CompletableFuture<Void> updateQuiz(Long docId, String content, Long userId);
+
+    /**
+     * 删除图书解读内容
+     * @param docId 文档ID
+     * @param userId 用户ID
+     * @return void
+     */
+    CompletableFuture<Void> deleteInterpretation(Long docId, Long userId);
+
+    /**
+     * 删除图书脑图内容
+     * @param docId 文档ID
+     * @param userId 用户ID
+     * @return void
+     */
+    CompletableFuture<Void> deleteMindmap(Long docId, Long userId);
+
+    /**
+     * 删除图书测试题内容
+     * @param docId 文档ID
+     * @param userId 用户ID
+     * @return void
+     */
+    CompletableFuture<Void> deleteQuiz(Long docId, Long userId);
 }

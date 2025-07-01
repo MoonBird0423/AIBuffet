@@ -213,7 +213,22 @@ const FileList = ({
             content={
               <div className="py-1">
                 {file.publishStatus === 'PUBLISHED' ? (
-                  <>{/* 已发布状态：显示处理详情、取消发布 */}
+                  <>{/* 已发布状态：显示智能解读、处理详情、取消发布 */}
+                    {file.processing_status === 'COMPLETED' ? (
+                      <button
+                        onClick={() => handleSmartInterpretation(file.id)}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                      >
+                        <i className="fas fa-brain mr-2"></i>智能解读
+                      </button>
+                    ) : (
+                      <button
+                        disabled
+                        className="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed flex items-center"
+                      >
+                        <i className="fas fa-brain mr-2"></i>智能解读（处理中）
+                      </button>
+                    )}
                     <button
                       onClick={() => handleViewDetails(file.id)}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"

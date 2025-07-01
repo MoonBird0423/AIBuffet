@@ -156,4 +156,49 @@ public class PublishController {
             return ApiResponse.error(ErrorCode.SYSTEM_ERROR);
         }
     }
+
+    @DeleteMapping("/docs/{docId}/interpretation")
+    public ApiResponse<Void> deleteInterpretation(
+            @PathVariable Long docId,
+            @AuthenticationPrincipal User user) {
+        try {
+            logger.info("删除文档解读: docId={}, userId={}", docId, user.getId());
+            publishService.deleteInterpretation(docId, user.getId()).get();
+            return ApiResponse.success();
+        } catch (Exception e) {
+            logger.error("删除文档解读失败: docId={}, userId={}, error={}", 
+                docId, user.getId(), e.getMessage(), e);
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR);
+        }
+    }
+
+    @DeleteMapping("/docs/{docId}/mindmap")
+    public ApiResponse<Void> deleteMindmap(
+            @PathVariable Long docId,
+            @AuthenticationPrincipal User user) {
+        try {
+            logger.info("删除思维导图: docId={}, userId={}", docId, user.getId());
+            publishService.deleteMindmap(docId, user.getId()).get();
+            return ApiResponse.success();
+        } catch (Exception e) {
+            logger.error("删除思维导图失败: docId={}, userId={}, error={}", 
+                docId, user.getId(), e.getMessage(), e);
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR);
+        }
+    }
+
+    @DeleteMapping("/docs/{docId}/quiz")
+    public ApiResponse<Void> deleteQuiz(
+            @PathVariable Long docId,
+            @AuthenticationPrincipal User user) {
+        try {
+            logger.info("删除测试题: docId={}, userId={}", docId, user.getId());
+            publishService.deleteQuiz(docId, user.getId()).get();
+            return ApiResponse.success();
+        } catch (Exception e) {
+            logger.error("删除测试题失败: docId={}, userId={}, error={}", 
+                docId, user.getId(), e.getMessage(), e);
+            return ApiResponse.error(ErrorCode.SYSTEM_ERROR);
+        }
+    }
 }
