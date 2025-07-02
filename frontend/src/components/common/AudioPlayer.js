@@ -53,6 +53,26 @@ const AudioPlayer = ({ audioUrl, bookTitle, bookId, className = '' }) => {
     return null;
   }
 
+  // 检测是否为错误信息
+  const isErrorMessage = audioUrl && audioUrl.startsWith('#生成内容失败');
+
+  // 如果是错误信息，显示错误提示
+  if (isErrorMessage) {
+    return (
+      <div className={`bg-red-50 border border-red-200 rounded-2xl p-6 ${className}`}>
+        <div className="flex items-center space-x-6">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <i className="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+          </div>
+          <div className="flex-1">
+            <h4 className="text-lg font-medium text-red-800 mb-2">音频生成失败</h4>
+            <p className="text-red-600 text-sm leading-relaxed">{audioUrl}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // 判断是否是当前播放的音频
   const isCurrentAudio = currentAudio.id === bookId && currentAudio.audioUrl === audioUrl;
   const progressPercentage = isCurrentAudio && currentAudio.duration > 0 

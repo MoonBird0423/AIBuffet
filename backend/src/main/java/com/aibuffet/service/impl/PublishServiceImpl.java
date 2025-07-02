@@ -209,8 +209,16 @@ public class PublishServiceImpl implements PublishService {
 
                 return content;
             } catch (Exception e) {
-                String errorMsg = String.format("生成解读失败：docId=%s, error=%s", docId, e.getMessage());
-                log.error(errorMsg, e);
+                String errorMsg = "#生成内容失败，请删除后重试。错误信息：" + e.getMessage();
+                log.error("生成解读失败：docId={}, error={}", docId, e.getMessage(), e);
+                
+                // 保存错误信息到数据库
+                DocInterpretation interpretation = docInterpretationRepository.findByDocId(docId)
+                        .orElse(new DocInterpretation());
+                interpretation.setDocId(docId);
+                interpretation.setContent(errorMsg);
+                docInterpretationRepository.save(interpretation);
+                
                 throw new RuntimeException(errorMsg, e);
             }
         });
@@ -241,8 +249,16 @@ public class PublishServiceImpl implements PublishService {
 
                 return content;
             } catch (Exception e) {
-                String errorMsg = String.format("生成脑图失败：docId=%s, error=%s", docId, e.getMessage());
-                log.error(errorMsg, e);
+                String errorMsg = "#生成内容失败，请删除后重试。错误信息：" + e.getMessage();
+                log.error("生成脑图失败：docId={}, error={}", docId, e.getMessage(), e);
+                
+                // 保存错误信息到数据库
+                DocMindmap mindmap = docMindmapRepository.findByDocId(docId)
+                        .orElse(new DocMindmap());
+                mindmap.setDocId(docId);
+                mindmap.setContent(errorMsg);
+                docMindmapRepository.save(mindmap);
+                
                 throw new RuntimeException(errorMsg, e);
             }
         });
@@ -272,8 +288,16 @@ public class PublishServiceImpl implements PublishService {
 
                 return content;
             } catch (Exception e) {
-                String errorMsg = String.format("生成测试题失败：docId=%s, error=%s", docId, e.getMessage());
-                log.error(errorMsg, e);
+                String errorMsg = "#生成内容失败，请删除后重试。错误信息：" + e.getMessage();
+                log.error("生成测试题失败：docId={}, error={}", docId, e.getMessage(), e);
+                
+                // 保存错误信息到数据库
+                DocQuiz quiz = docQuizRepository.findByDocId(docId)
+                        .orElse(new DocQuiz());
+                quiz.setDocId(docId);
+                quiz.setQuestions(errorMsg);
+                docQuizRepository.save(quiz);
+                
                 throw new RuntimeException(errorMsg, e);
             }
         });

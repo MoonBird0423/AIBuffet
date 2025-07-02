@@ -148,8 +148,28 @@ public class MultiRoleAudioSynthesisService {
             return audioUrl;
 
         } catch (Exception e) {
+            String errorMsg = "#生成内容失败，请删除后重试。错误信息：" + e.getMessage();
             logger.error("多角色语音合成失败，文档ID: {}, 错误: {}", docId, e.getMessage(), e);
-            throw new RuntimeException("多角色语音合成失败: " + e.getMessage(), e);
+            
+            // 保存错误信息到interpretation的audio_url字段
+            try {
+                Optional<DocInterpretation> interpretationOpt = docInterpretationRepository.findByDocId(docId);
+                if (interpretationOpt.isPresent()) {
+                    DocInterpretation interpretation = interpretationOpt.get();
+                    interpretation.setAudioUrl(errorMsg);
+                    docInterpretationRepository.save(interpretation);
+                } else {
+                    // 如果解读记录不存在，创建一个新的记录来保存错误信息
+                    DocInterpretation interpretation = new DocInterpretation();
+                    interpretation.setDocId(docId);
+                    interpretation.setAudioUrl(errorMsg);
+                    docInterpretationRepository.save(interpretation);
+                }
+            } catch (Exception saveException) {
+                logger.error("保存音频错误信息失败: {}", saveException.getMessage(), saveException);
+            }
+            
+            throw new RuntimeException(errorMsg, e);
         }
     }
 

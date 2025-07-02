@@ -225,11 +225,6 @@ function Chat() {
       };
     }
 
-    console.log('[Chat Debug] 用户发送消息:', {
-      content: content,
-      userMessage: userMessage,
-      sessionId: sessionId
-    });
     
     setCurrentUserMessage(userMessage);
 
@@ -245,10 +240,6 @@ function Chat() {
           setCurrentSessionId(activeSessionId);
           setCurrentSession(newSession);
           
-          console.log('[Chat Debug] 新会话创建成功:', {
-            sessionId: newSession.sessionId,
-            messages: newSession.messages
-          });
           
           // 使用后端返回的消息列表
           const serverMessages = JSON.parse(newSession.messages);
@@ -307,17 +298,8 @@ function Chat() {
       // 如果已有会话ID，更新会话
       if (activeSessionId) {
         try {
-          console.log('[Chat Debug] 准备保存用户消息:', {
-            sessionId: activeSessionId,
-            messages: newMessages
-          });
-          
           const updatedChat = await updateChatSession(activeSessionId, JSON.stringify(newMessages));
           
-          console.log('[Chat Debug] 用户消息保存成功:', {
-            sessionId: activeSessionId,
-            updatedChat: updatedChat
-          });
           if (sidebarRef.current) {
             sidebarRef.current.handleChatUpdated(updatedChat);
           }
@@ -350,13 +332,6 @@ function Chat() {
         messages: newMessages,
         onMessage: (data) => {
           const content = data.choices?.[0]?.delta?.content || '';
-          console.log('[Chat Debug] 收到流式数据:', {
-            hasContent: !!content,
-            contentLength: content.length,
-            contentPreview: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
-            sessionId: activeSessionId,
-            currentPartialLength: partialResponseMap.get(activeSessionId)?.length || 0
-          });
           
           streamDebugger.log('CHAT_MESSAGE_RECEIVED', {
             hasContent: !!content,
@@ -369,12 +344,6 @@ function Chat() {
             setPartialResponseMap(prev => {
               const newMap = new Map(prev);
               const currentPartial = (newMap.get(activeSessionId) || '') + content;
-              console.log('[Chat Debug] 更新partialResponse:', {
-                sessionId: activeSessionId,
-                oldLength: newMap.get(activeSessionId)?.length || 0,
-                newLength: currentPartial.length,
-                addedContent: content
-              });
               newMap.set(activeSessionId, currentPartial);
               return newMap;
             });
@@ -386,22 +355,12 @@ function Chat() {
             
             // 累积AI响应内容
             aiMessage.content += content;
-            console.log('[Chat Debug] 累积AI消息内容:', {
-              sessionId: activeSessionId,
-              aiMessageLength: aiMessage.content.length,
-              addedContent: content
-            });
             
             // 更新UI中的消息
             setMessagesMap(prev => {
               const newMap = new Map(prev);
               const sessionMessages = [...(newMap.get(activeSessionId) || [])];
               sessionMessages[sessionMessages.length - 1] = { ...aiMessage };
-              console.log('[Chat Debug] 更新消息映射:', {
-                sessionId: activeSessionId,
-                messageCount: sessionMessages.length,
-                lastMessageLength: aiMessage.content.length
-              });
               newMap.set(activeSessionId, sessionMessages);
               return newMap;
             });
@@ -449,11 +408,6 @@ function Chat() {
         },
         onFinish: async () => {
           try {
-            console.log('[Chat Debug] 模型回复完成:', {
-              sessionId: activeSessionId,
-              aiMessage: aiMessage
-            });
-            
             streamDebugger.log('CHAT_COMPLETED', {
               sessionId: activeSessionId,
               finalLength: aiMessage.content.length
@@ -469,17 +423,7 @@ function Chat() {
             // 使用完整的AI响应更新数据库
             const finalMessages = [...newMessages, { ...aiMessage }];
             
-            console.log('[Chat Debug] 准备保存模型回复:', {
-              sessionId: activeSessionId,
-              finalMessages: finalMessages
-            });
-            
             const updatedChat = await updateChatSession(activeSessionId, JSON.stringify(finalMessages));
-            
-            console.log('[Chat Debug] 模型回复保存成功:', {
-              sessionId: activeSessionId,
-              updatedChat: updatedChat
-            });
 
             // 更新UI状态
             setMessagesMap(prev => {
