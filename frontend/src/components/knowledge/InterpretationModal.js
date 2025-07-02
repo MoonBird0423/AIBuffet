@@ -253,10 +253,22 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
     try {
       const response = await getInterpretation(documentId);
       if (response.data) {
-        setInterpretation(response.data);
-        setProgress(prev => ({ ...prev, interpretation: 100 }));
-        setInterpretationLoading(false);
-        return true;
+        // 处理新的响应结构
+        if (response.data.content !== undefined) {
+          // 新的API响应格式
+          if (response.data.interpretationStatus === '结束') {
+            setInterpretation(response.data.content || '');
+            setProgress(prev => ({ ...prev, interpretation: 100 }));
+            setInterpretationLoading(false);
+            return true;
+          }
+        } else {
+          // 兼容旧的API响应格式
+          setInterpretation(response.data);
+          setProgress(prev => ({ ...prev, interpretation: 100 }));
+          setInterpretationLoading(false);
+          return true;
+        }
       }
       return false;
     } catch (error) {
@@ -270,10 +282,22 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
     try {
       const response = await getMindmap(documentId);
       if (response.data) {
-        setMindmap(response.data);
-        setProgress(prev => ({ ...prev, mindmap: 100 }));
-        setMindmapLoading(false);
-        return true;
+        // 处理新的响应结构
+        if (response.data.content !== undefined) {
+          // 新的API响应格式
+          if (response.data.generationStatus === '结束') {
+            setMindmap(response.data.content || '');
+            setProgress(prev => ({ ...prev, mindmap: 100 }));
+            setMindmapLoading(false);
+            return true;
+          }
+        } else {
+          // 兼容旧的API响应格式
+          setMindmap(response.data);
+          setProgress(prev => ({ ...prev, mindmap: 100 }));
+          setMindmapLoading(false);
+          return true;
+        }
       }
       return false;
     } catch (error) {
@@ -287,10 +311,22 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
     try {
       const response = await getQuiz(documentId);
       if (response.data) {
-        setQuiz(response.data);
-        setProgress(prev => ({ ...prev, quiz: 100 }));
-        setQuizLoading(false);
-        return true;
+        // 处理新的响应结构
+        if (response.data.questions !== undefined) {
+          // 新的API响应格式
+          if (response.data.generationStatus === '结束') {
+            setQuiz(response.data.questions || '');
+            setProgress(prev => ({ ...prev, quiz: 100 }));
+            setQuizLoading(false);
+            return true;
+          }
+        } else {
+          // 兼容旧的API响应格式
+          setQuiz(response.data);
+          setProgress(prev => ({ ...prev, quiz: 100 }));
+          setQuizLoading(false);
+          return true;
+        }
       }
       return false;
     } catch (error) {
@@ -359,12 +395,20 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
   const pollAudio = async () => {
     try {
       const response = await getAudioStatus(documentId);
-      if (response.code === 200 && response.data.hasAudio) {
-        setHasAudio(true);
-        setAudioUrl(response.data.audioUrl);
-        setProgress(prev => ({ ...prev, audio: 100 }));
-        setAudioLoading(false);
-        return true;
+      if (response.code === 200) {
+        // 检查音频状态
+        if (response.data.audioStatus === '结束' && response.data.hasAudio) {
+          setHasAudio(true);
+          setAudioUrl(response.data.audioUrl);
+          setProgress(prev => ({ ...prev, audio: 100 }));
+          setAudioLoading(false);
+          return true;
+        } else if (response.data.audioStatus === '结束' && !response.data.hasAudio) {
+          // 生成结束但没有音频，可能是错误
+          setAudioLoading(false);
+          setProgress(prev => ({ ...prev, audio: 0 }));
+          return true;
+        }
       }
       return false;
     } catch (error) {
@@ -406,8 +450,34 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
     try {
       const response = await getInterpretation(documentId);
       if (response.data) {
-        setInterpretation(response.data);
-        setProgress(prev => ({ ...prev, interpretation: 100 }));
+        // 处理新的响应结构（包含状态信息）
+        if (response.data.content !== undefined) {
+          // 新的API响应格式
+          setInterpretation(response.data.content || '');
+          
+          // 检查解读生成状态
+          if (response.data.interpretationStatus === '生成中') {
+            setInterpretationLoading(true);
+            // 开始轮询
+            const pollInterval = setInterval(async () => {
+              const hasContent = await pollInterpretation();
+              if (hasContent) {
+                clearInterval(pollInterval);
+              } else {
+                setProgress(prev => ({
+                  ...prev,
+                  interpretation: Math.min(prev.interpretation + 5, 95)
+                }));
+              }
+            }, 2000);
+          } else if (response.data.interpretationStatus === '结束') {
+            setProgress(prev => ({ ...prev, interpretation: 100 }));
+          }
+        } else {
+          // 兼容旧的API响应格式
+          setInterpretation(response.data);
+          setProgress(prev => ({ ...prev, interpretation: 100 }));
+        }
         return true;
       }
       return false;
@@ -421,8 +491,34 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
     try {
       const response = await getMindmap(documentId);
       if (response.data) {
-        setMindmap(response.data);
-        setProgress(prev => ({ ...prev, mindmap: 100 }));
+        // 处理新的响应结构（包含状态信息）
+        if (response.data.content !== undefined) {
+          // 新的API响应格式
+          setMindmap(response.data.content || '');
+          
+          // 检查脑图生成状态
+          if (response.data.generationStatus === '生成中') {
+            setMindmapLoading(true);
+            // 开始轮询
+            const pollInterval = setInterval(async () => {
+              const hasContent = await pollMindmap();
+              if (hasContent) {
+                clearInterval(pollInterval);
+              } else {
+                setProgress(prev => ({
+                  ...prev,
+                  mindmap: Math.min(prev.mindmap + 5, 95)
+                }));
+              }
+            }, 2000);
+          } else if (response.data.generationStatus === '结束') {
+            setProgress(prev => ({ ...prev, mindmap: 100 }));
+          }
+        } else {
+          // 兼容旧的API响应格式
+          setMindmap(response.data);
+          setProgress(prev => ({ ...prev, mindmap: 100 }));
+        }
         return true;
       }
       return false;
@@ -435,11 +531,28 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
   const loadExistingAudio = async () => {
     try {
       const response = await getAudioStatus(documentId);
-      if (response.code === 200 && response.data.hasAudio) {
-        setHasAudio(true);
-        setAudioUrl(response.data.audioUrl);
-        setProgress(prev => ({ ...prev, audio: 100 }));
-        return true;
+      if (response.code === 200) {
+        // 检查音频状态
+        if (response.data.audioStatus === '生成中') {
+          setAudioLoading(true);
+          // 开始轮询
+          const pollInterval = setInterval(async () => {
+            const hasContent = await pollAudio();
+            if (hasContent) {
+              clearInterval(pollInterval);
+            } else {
+              setProgress(prev => ({
+                ...prev,
+                audio: Math.min(prev.audio + 5, 95)
+              }));
+            }
+          }, 2000);
+        } else if (response.data.hasAudio) {
+          setHasAudio(true);
+          setAudioUrl(response.data.audioUrl);
+          setProgress(prev => ({ ...prev, audio: 100 }));
+        }
+        return response.data.hasAudio || response.data.audioStatus === '生成中';
       }
       return false;
     } catch (error) {
@@ -452,8 +565,34 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
     try {
       const response = await getQuiz(documentId);
       if (response.data) {
-        setQuiz(response.data);
-        setProgress(prev => ({ ...prev, quiz: 100 }));
+        // 处理新的响应结构（包含状态信息）
+        if (response.data.questions !== undefined) {
+          // 新的API响应格式
+          setQuiz(response.data.questions || '');
+          
+          // 检查测试题生成状态
+          if (response.data.generationStatus === '生成中') {
+            setQuizLoading(true);
+            // 开始轮询
+            const pollInterval = setInterval(async () => {
+              const hasContent = await pollQuiz();
+              if (hasContent) {
+                clearInterval(pollInterval);
+              } else {
+                setProgress(prev => ({
+                  ...prev,
+                  quiz: Math.min(prev.quiz + 5, 95)
+                }));
+              }
+            }, 2000);
+          } else if (response.data.generationStatus === '结束') {
+            setProgress(prev => ({ ...prev, quiz: 100 }));
+          }
+        } else {
+          // 兼容旧的API响应格式
+          setQuiz(response.data);
+          setProgress(prev => ({ ...prev, quiz: 100 }));
+        }
         return true;
       }
       return false;

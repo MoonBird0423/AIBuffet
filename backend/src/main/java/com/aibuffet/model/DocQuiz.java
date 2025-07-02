@@ -18,6 +18,10 @@ public class DocQuiz {
     @Column(name = "questions", columnDefinition = "text")
     private String questions;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "generation_status")
+    private GenerationStatus generationStatus;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

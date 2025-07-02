@@ -5,6 +5,7 @@ import com.aibuffet.model.DocFile;
 import com.aibuffet.model.DocInterpretation;
 import com.aibuffet.model.DocMindmap;
 import com.aibuffet.model.DocQuiz;
+import com.aibuffet.model.GenerationStatus;
 import com.aibuffet.model.Model;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -191,19 +192,24 @@ public class PublishServiceImpl implements PublishService {
             try {
                 verifyDocAccess(docId, userId);
 
-                // 1. 上传文件获取fileId
+                // 1. 先在数据库中插入记录并设置状态为"生成中"
                 log.info("开始为文档生成解读，docId: {}", docId);
-                String fileId = uploadFileAndGetFileId(docId, userId).get();
-
-                // 2. 调用AI生成解读内容
-                String prompt = promptTemplateService.getActivePromptContent("book.interpretation.user-prompt");
-                String content = generateContent(fileId, prompt, userId).get();
-
-                // 3. 保存解读内容（如果已存在则覆盖）
                 DocInterpretation interpretation = docInterpretationRepository.findByDocId(docId)
                         .orElse(new DocInterpretation());
                 interpretation.setDocId(docId);
+                interpretation.setInterpretationStatus(GenerationStatus.生成中);
+                docInterpretationRepository.save(interpretation);
+
+                // 2. 上传文件获取fileId
+                String fileId = uploadFileAndGetFileId(docId, userId).get();
+
+                // 3. 调用AI生成解读内容
+                String prompt = promptTemplateService.getActivePromptContent("book.interpretation.user-prompt");
+                String content = generateContent(fileId, prompt, userId).get();
+
+                // 4. 保存解读内容并设置状态为"结束"
                 interpretation.setContent(content);
+                interpretation.setInterpretationStatus(GenerationStatus.结束);
                 docInterpretationRepository.save(interpretation);
                 log.info("解读内容已生成并保存，docId: {}", docId);
 
@@ -217,6 +223,7 @@ public class PublishServiceImpl implements PublishService {
                         .orElse(new DocInterpretation());
                 interpretation.setDocId(docId);
                 interpretation.setContent(errorMsg);
+                interpretation.setInterpretationStatus(GenerationStatus.结束);
                 docInterpretationRepository.save(interpretation);
                 
                 throw new RuntimeException(errorMsg, e);
@@ -230,20 +237,25 @@ public class PublishServiceImpl implements PublishService {
             try {
                 verifyDocAccess(docId, userId);
 
-                // 1. 上传文件获取fileId
+                // 1. 先在数据库中插入记录并设置状态为"生成中"
                 log.info("开始为文档生成脑图，docId: {}", docId);
+                DocMindmap mindmap = docMindmapRepository.findByDocId(docId)
+                        .orElse(new DocMindmap());
+                mindmap.setDocId(docId);
+                mindmap.setGenerationStatus(GenerationStatus.生成中);
+                docMindmapRepository.save(mindmap);
+
+                // 2. 上传文件获取fileId
                 String fileId = uploadFileAndGetFileId(docId, userId).get();
 
-                // 2. 调用AI生成脑图内容
+                // 3. 调用AI生成脑图内容
                 String prompt = promptTemplateService.getActivePromptContent("book.mindmap.user-prompt");
                 String content = generateContent(fileId, prompt, userId).get();
                 log.debug("AI生成的脑图内容: {}", content);
 
-                // 3. 保存脑图内容（如果已存在则覆盖）
-                DocMindmap mindmap = docMindmapRepository.findByDocId(docId)
-                        .orElse(new DocMindmap());
-                mindmap.setDocId(docId);
+                // 4. 保存脑图内容并设置状态为"结束"
                 mindmap.setContent(content);
+                mindmap.setGenerationStatus(GenerationStatus.结束);
                 docMindmapRepository.save(mindmap);
                 log.info("脑图内容已生成并保存，docId: {}", docId);
 
@@ -257,6 +269,7 @@ public class PublishServiceImpl implements PublishService {
                         .orElse(new DocMindmap());
                 mindmap.setDocId(docId);
                 mindmap.setContent(errorMsg);
+                mindmap.setGenerationStatus(GenerationStatus.结束);
                 docMindmapRepository.save(mindmap);
                 
                 throw new RuntimeException(errorMsg, e);
@@ -270,19 +283,24 @@ public class PublishServiceImpl implements PublishService {
             try {
                 verifyDocAccess(docId, userId);
 
-                // 1. 上传文件获取fileId
+                // 1. 先在数据库中插入记录并设置状态为"生成中"
                 log.info("开始为文档生成测试题，docId: {}", docId);
-                String fileId = uploadFileAndGetFileId(docId, userId).get();
-
-                // 2. 调用AI生成测试题内容
-                String prompt = promptTemplateService.getActivePromptContent("book.quiz.user-prompt");
-                String content = generateContent(fileId, prompt, userId).get();
-
-                // 3. 保存测试题内容（如果已存在则覆盖）
                 DocQuiz quiz = docQuizRepository.findByDocId(docId)
                         .orElse(new DocQuiz());
                 quiz.setDocId(docId);
+                quiz.setGenerationStatus(GenerationStatus.生成中);
+                docQuizRepository.save(quiz);
+
+                // 2. 上传文件获取fileId
+                String fileId = uploadFileAndGetFileId(docId, userId).get();
+
+                // 3. 调用AI生成测试题内容
+                String prompt = promptTemplateService.getActivePromptContent("book.quiz.user-prompt");
+                String content = generateContent(fileId, prompt, userId).get();
+
+                // 4. 保存测试题内容并设置状态为"结束"
                 quiz.setQuestions(content);
+                quiz.setGenerationStatus(GenerationStatus.结束);
                 docQuizRepository.save(quiz);
                 log.info("测试题内容已生成并保存，docId: {}", docId);
 
@@ -296,6 +314,7 @@ public class PublishServiceImpl implements PublishService {
                         .orElse(new DocQuiz());
                 quiz.setDocId(docId);
                 quiz.setQuestions(errorMsg);
+                quiz.setGenerationStatus(GenerationStatus.结束);
                 docQuizRepository.save(quiz);
                 
                 throw new RuntimeException(errorMsg, e);
@@ -333,6 +352,28 @@ public class PublishServiceImpl implements PublishService {
             DocInterpretation interpretation = docInterpretationRepository.findByDocId(docId)
                     .orElse(null);
             return interpretation != null ? interpretation.getContent() : null;
+        });
+    }
+
+    // 新增获取带状态信息的方法
+    public CompletableFuture<DocMindmap> getMindmapWithStatus(Long docId, Long userId) {
+        return CompletableFuture.supplyAsync(() -> {
+            verifyDocAccess(docId, userId);
+            return docMindmapRepository.findByDocId(docId).orElse(null);
+        });
+    }
+
+    public CompletableFuture<DocQuiz> getQuizWithStatus(Long docId, Long userId) {
+        return CompletableFuture.supplyAsync(() -> {
+            verifyDocAccess(docId, userId);
+            return docQuizRepository.findByDocId(docId).orElse(null);
+        });
+    }
+
+    public CompletableFuture<DocInterpretation> getInterpretationWithStatus(Long docId, Long userId) {
+        return CompletableFuture.supplyAsync(() -> {
+            verifyDocAccess(docId, userId);
+            return docInterpretationRepository.findByDocId(docId).orElse(null);
         });
     }
 

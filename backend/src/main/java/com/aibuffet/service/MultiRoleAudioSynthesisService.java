@@ -6,6 +6,7 @@ import com.alibaba.dashscope.audio.ttsv2.SpeechSynthesizer;
 import com.alibaba.dashscope.common.ResultCallback;
 import com.aibuffet.model.Model;
 import com.aibuffet.model.DocInterpretation;
+import com.aibuffet.model.GenerationStatus;
 import com.aibuffet.repository.ModelRepository;
 import com.aibuffet.repository.DocInterpretationRepository;
 import com.alibaba.dashscope.aigc.generation.Generation;
@@ -96,7 +97,7 @@ public class MultiRoleAudioSynthesisService {
      */
     public String synthesizeMultiRoleAudioForInterpretation(Long docId, Long userId) {
         try {
-            // 1. 获取解读内容
+            // 1. 获取解读内容并设置音频状态为"生成中"
             Optional<DocInterpretation> interpretationOpt = docInterpretationRepository.findByDocId(docId);
             if (interpretationOpt.isEmpty()) {
                 throw new RuntimeException("找不到文档ID为 " + docId + " 的解读内容");
@@ -106,6 +107,11 @@ public class MultiRoleAudioSynthesisService {
             if (interpretation.getContent() == null || interpretation.getContent().trim().isEmpty()) {
                 throw new RuntimeException("解读内容为空，无法生成语音");
             }
+
+            // 设置音频生成状态为"生成中"
+            interpretation.setAudioStatus(GenerationStatus.生成中);
+            docInterpretationRepository.save(interpretation);
+            logger.info("音频生成状态已设置为生成中，docId: {}", docId);
 
             // 2. 获取qwen3-32b模型配置
             Optional<Model> qwenModelOpt = modelRepository.findByPurposeExact("语音合成SSML标记生成");
@@ -140,8 +146,9 @@ public class MultiRoleAudioSynthesisService {
             String fileName = "multi_role_interpretation_" + docId + ".wav";
             String audioUrl = ossService.uploadInterpretationAudio(audioBytes, fileName, userId, docId);
 
-            // 8. 更新解读记录的音频URL
+            // 8. 更新解读记录的音频URL并设置音频状态为"结束"
             interpretation.setAudioUrl(audioUrl);
+            interpretation.setAudioStatus(GenerationStatus.结束);
             docInterpretationRepository.save(interpretation);
 
             logger.info("多角色语音合成完成，文档ID: {}, 音频URL: {}", docId, audioUrl);
@@ -151,18 +158,20 @@ public class MultiRoleAudioSynthesisService {
             String errorMsg = "#生成内容失败，请删除后重试。错误信息：" + e.getMessage();
             logger.error("多角色语音合成失败，文档ID: {}, 错误: {}", docId, e.getMessage(), e);
             
-            // 保存错误信息到interpretation的audio_url字段
+            // 保存错误信息到interpretation的audio_url字段并设置音频状态为"结束"
             try {
                 Optional<DocInterpretation> interpretationOpt = docInterpretationRepository.findByDocId(docId);
                 if (interpretationOpt.isPresent()) {
                     DocInterpretation interpretation = interpretationOpt.get();
                     interpretation.setAudioUrl(errorMsg);
+                    interpretation.setAudioStatus(GenerationStatus.结束);
                     docInterpretationRepository.save(interpretation);
                 } else {
                     // 如果解读记录不存在，创建一个新的记录来保存错误信息
                     DocInterpretation interpretation = new DocInterpretation();
                     interpretation.setDocId(docId);
                     interpretation.setAudioUrl(errorMsg);
+                    interpretation.setAudioStatus(GenerationStatus.结束);
                     docInterpretationRepository.save(interpretation);
                 }
             } catch (Exception saveException) {

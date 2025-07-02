@@ -2,8 +2,15 @@ package com.aibuffet.controller;
 
 import com.aibuffet.common.ApiResponse;
 import com.aibuffet.common.ErrorCode;
+import com.aibuffet.dto.InterpretationResponse;
+import com.aibuffet.dto.MindmapResponse;
+import com.aibuffet.dto.QuizResponse;
+import com.aibuffet.model.DocInterpretation;
+import com.aibuffet.model.DocMindmap;
+import com.aibuffet.model.DocQuiz;
 import com.aibuffet.model.User;
 import com.aibuffet.service.PublishService;
+import com.aibuffet.service.impl.PublishServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,14 +26,28 @@ public class PublishController {
     private final PublishService publishService;
 
     @GetMapping("/docs/{docId}/interpretation")
-    public ApiResponse<String> getInterpretation(
+    public ApiResponse<InterpretationResponse> getInterpretation(
             @PathVariable Long docId,
             @AuthenticationPrincipal(errorOnInvalidType = false) User user) {
         try {
             Long userId = user != null ? user.getId() : null;
             logger.info("获取文档解读: docId={}, userId={}", docId, userId);
-            String content = publishService.getInterpretation(docId, userId).get();
-            return ApiResponse.success(content);
+            
+            // 获取带状态的解读信息
+            DocInterpretation interpretation = ((PublishServiceImpl) publishService).getInterpretationWithStatus(docId, userId).get();
+            
+            if (interpretation == null) {
+                return ApiResponse.success(null);
+            }
+            
+            InterpretationResponse response = new InterpretationResponse(
+                interpretation.getContent(),
+                interpretation.getInterpretationStatus(),
+                interpretation.getAudioUrl(),
+                interpretation.getAudioStatus()
+            );
+            
+            return ApiResponse.success(response);
         } catch (Exception e) {
             logger.error("获取文档解读失败: docId={}, userId={}, error={}", 
                 docId, user != null ? user.getId() : null, e.getMessage(), e);
@@ -50,13 +71,25 @@ public class PublishController {
     }
 
     @GetMapping("/docs/{docId}/mindmap")
-    public ApiResponse<String> getMindmap(
+    public ApiResponse<MindmapResponse> getMindmap(
             @PathVariable Long docId,
             @AuthenticationPrincipal User user) {
         try {
             logger.info("获取思维导图: docId={}, userId={}", docId, user.getId());
-            String content = publishService.getMindmap(docId, user.getId()).get();
-            return ApiResponse.success(content);
+            
+            // 获取带状态的脑图信息
+            DocMindmap mindmap = ((PublishServiceImpl) publishService).getMindmapWithStatus(docId, user.getId()).get();
+            
+            if (mindmap == null) {
+                return ApiResponse.success(null);
+            }
+            
+            MindmapResponse response = new MindmapResponse(
+                mindmap.getContent(),
+                mindmap.getGenerationStatus()
+            );
+            
+            return ApiResponse.success(response);
         } catch (Exception e) {
             logger.error("获取思维导图失败: docId={}, userId={}, error={}", 
                 docId, user.getId(), e.getMessage(), e);
@@ -80,13 +113,25 @@ public class PublishController {
     }
 
     @GetMapping("/docs/{docId}/quiz")
-    public ApiResponse<String> getQuiz(
+    public ApiResponse<QuizResponse> getQuiz(
             @PathVariable Long docId,
             @AuthenticationPrincipal User user) {
         try {
             logger.info("获取测试题: docId={}, userId={}", docId, user.getId());
-            String content = publishService.getQuiz(docId, user.getId()).get();
-            return ApiResponse.success(content);
+            
+            // 获取带状态的测试题信息
+            DocQuiz quiz = ((PublishServiceImpl) publishService).getQuizWithStatus(docId, user.getId()).get();
+            
+            if (quiz == null) {
+                return ApiResponse.success(null);
+            }
+            
+            QuizResponse response = new QuizResponse(
+                quiz.getQuestions(),
+                quiz.getGenerationStatus()
+            );
+            
+            return ApiResponse.success(response);
         } catch (Exception e) {
             logger.error("获取测试题失败: docId={}, userId={}, error={}", 
                 docId, user.getId(), e.getMessage(), e);

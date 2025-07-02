@@ -5,6 +5,7 @@ import com.aibuffet.common.ErrorCode;
 import com.aibuffet.model.User;
 import com.aibuffet.service.AudioSynthesisService;
 import com.aibuffet.service.MultiRoleAudioSynthesisService;
+import com.aibuffet.service.PublishService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,9 @@ public class DocumentAudioController {
 
     @Autowired
     private MultiRoleAudioSynthesisService multiRoleAudioSynthesisService;
+
+    @Autowired
+    private PublishService publishService;
 
     /**
      * 为指定文档生成音频
@@ -104,7 +108,7 @@ public class DocumentAudioController {
      * 检查指定文档是否有音频
      * @param docId 文档ID
      * @param user 用户信息（可选）
-     * @return 是否有音频
+     * @return 是否有音频及状态信息
      */
     @GetMapping("/{docId}/audio/status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getAudioStatus(
@@ -117,11 +121,28 @@ public class DocumentAudioController {
             boolean hasAudio = audioSynthesisService.hasAudioSecure(docId, userId);
             String audioUrl = hasAudio ? audioSynthesisService.getAudioUrlSecure(docId, userId) : null;
             
+            // 获取音频生成状态
+            String audioStatus = null;
+            try {
+                // 通过PublishService获取解读信息中的音频状态
+                com.aibuffet.service.impl.PublishServiceImpl publishServiceImpl = 
+                    (com.aibuffet.service.impl.PublishServiceImpl) publishService;
+                com.aibuffet.model.DocInterpretation interpretation = 
+                    publishServiceImpl.getInterpretationWithStatus(docId, userId).get();
+                
+                if (interpretation != null && interpretation.getAudioStatus() != null) {
+                    audioStatus = interpretation.getAudioStatus().name();
+                }
+            } catch (Exception e) {
+                logger.warn("获取音频状态失败: docId={}, error={}", docId, e.getMessage());
+            }
+            
             Map<String, Object> result = new HashMap<>();
             result.put("hasAudio", hasAudio);
             result.put("audioUrl", audioUrl);
+            result.put("audioStatus", audioStatus);
             
-            logger.info("音频状态检查完成: 文档ID={}, 有音频={}", docId, hasAudio);
+            logger.info("音频状态检查完成: 文档ID={}, 有音频={}, 状态={}", docId, hasAudio, audioStatus);
             return ResponseEntity.ok(ApiResponse.success(result));
 
         } catch (Exception e) {

@@ -24,6 +24,14 @@ public class DocInterpretation {
     @Column(name = "audio_url", length = 500)
     private String audioUrl;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "interpretation_status")
+    private GenerationStatus interpretationStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "audio_status")
+    private GenerationStatus audioStatus;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

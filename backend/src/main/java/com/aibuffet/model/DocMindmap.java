@@ -18,6 +18,10 @@ public class DocMindmap {
     @Column(name = "content", columnDefinition = "text")
     private String content;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "generation_status")
+    private GenerationStatus generationStatus;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

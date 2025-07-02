@@ -84,15 +84,15 @@ function BookDetails() {
         switch (activeTab) {
           case 'interpretation':
             const interpretationResponse = await getInterpretation(id);
-            content = interpretationResponse.data;
+            content = interpretationResponse.data.content;
             break;
           case 'mindmap':
             const mindmapResponse = await getMindmap(id);
-            content = mindmapResponse.data;
+            content = mindmapResponse.data.content;
             break;
           case 'quiz':
             const quizResponse = await getQuiz(id);
-            content = quizResponse.data;
+            content = quizResponse.data.questions;
             break;
           default:
             setContentStatus('empty');
