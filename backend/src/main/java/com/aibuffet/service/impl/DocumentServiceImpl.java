@@ -238,6 +238,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional(readOnly = true)
     public Page<DocFile> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, String relationType, int page, int size, Long userId) {
+        long startTime = System.currentTimeMillis();
         logger.info("DocumentService: 开始优化查询文档列表: knowledgeBaseId={}, keyword={}, category={}, relationType={}, page={}, size={}, userId={}", 
             knowledgeBaseId, keyword, category, relationType, page, size, userId);
         
@@ -307,8 +308,13 @@ public class DocumentServiceImpl implements DocumentService {
         }
         
         // 不再需要手动计算收藏数量，直接使用favoriteCount字段
-        logger.info("DocumentService: 优化查询完成: 总数={}, 总页数={}, 当前页数据量={}", 
-            result.getTotalElements(), result.getTotalPages(), result.getContent().size());
+        long duration = System.currentTimeMillis() - startTime;
+        logger.info("DocumentService: 优化查询完成: 总数={}, 总页数={}, 当前页数据量={}, 耗时={}ms", 
+            result.getTotalElements(), result.getTotalPages(), result.getContent().size(), duration);
+        if (duration > 1000) {
+            logger.warn("慢查询警告: 查询耗时超过1秒, 参数: knowledgeBaseId={}, keyword={}, category={}, relationType={}, page={}, size={}", 
+                knowledgeBaseId, keyword, category, relationType, page, size);
+        }
         return result;
     }
 

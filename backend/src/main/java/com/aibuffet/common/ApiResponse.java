@@ -7,6 +7,7 @@ public class ApiResponse<T> {
     private int code;
     private String message;
     private T data;
+    private Long serverProcessTime; // 服务器处理耗时(毫秒)
 
     private ApiResponse(int code, String message, T data) {
         this.code = code;

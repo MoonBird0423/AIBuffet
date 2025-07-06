@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.aibuffet.model.User;
+import org.springframework.http.ResponseEntity;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -157,12 +158,17 @@ public class DocumentController {
             @RequestParam(defaultValue = "20") int size,
             @AuthenticationPrincipal(errorOnInvalidType = false) User user) {
         try {
+            long startTime = System.currentTimeMillis();
             Long userId = user != null ? user.getId() : null;
             logger.info("DocumentController: 接收到查询请求: knowledgeBaseId={}, keyword={}, category={}, relationType={}, page={}, size={}, userId={}", 
                 knowledgeBaseId, keyword, category, relationType, page, size, userId);
             Page<DocFile> documents = documentService.getDocuments(knowledgeBaseId, keyword, category, relationType, page, size, userId);
-            logger.info("DocumentController: 查询完成，返回结果数量: {}", documents.getContent().size());
-            return ApiResponse.success(documents);
+            long duration = System.currentTimeMillis() - startTime;
+            logger.info("DocumentController: 查询完成，返回结果数量: {}, 耗时: {}ms", documents.getContent().size(), duration);
+            
+            ApiResponse<Page<DocFile>> response = ApiResponse.success(documents);
+            response.setServerProcessTime(duration);
+            return response;
         } catch (Exception e) {
             logger.error("获取文档列表失败: ", e);
             return ApiResponse.error(ErrorCode.SYSTEM_ERROR, e.getMessage());
