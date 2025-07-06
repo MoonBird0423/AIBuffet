@@ -2,6 +2,7 @@ package com.aibuffet.service;
 
 import com.aibuffet.controller.DocumentController;
 import com.aibuffet.dto.UploadResult;
+import com.aibuffet.dto.DocFileSummary;
 import com.aibuffet.model.DocChunk;
 import com.aibuffet.model.DocFile;
 import org.springframework.data.domain.Page;
@@ -38,7 +39,7 @@ public interface DocumentService {
      * @param userId 用户ID，可选，为null时只返回公开发布的文档
      * @return 分页的文档列表
      */
-    Page<DocFile> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, String relationType, int page, int size, Long userId);
+    Page<DocFileSummary> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, String relationType, int page, int size, Long userId);
 
     /**
      * 重新处理文档

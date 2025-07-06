@@ -4,6 +4,7 @@ import com.aibuffet.common.ApiResponse;
 import com.aibuffet.common.ErrorCode;
 import com.aibuffet.common.ResourceNotFoundException;
 import com.aibuffet.model.DocFile;
+import com.aibuffet.dto.DocFileSummary;
 import com.aibuffet.model.DocChunk;
 import com.aibuffet.dto.UploadResult;
 import com.aibuffet.service.DocumentService;
@@ -149,7 +150,7 @@ public class DocumentController {
     }
 
     @GetMapping
-    public ApiResponse<Page<DocFile>> getDocuments(
+    public ApiResponse<Page<DocFileSummary>> getDocuments(
             @RequestParam(required = false) Long knowledgeBaseId,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) DocFile.Category category,
@@ -162,11 +163,11 @@ public class DocumentController {
             Long userId = user != null ? user.getId() : null;
             logger.info("DocumentController: 接收到查询请求: knowledgeBaseId={}, keyword={}, category={}, relationType={}, page={}, size={}, userId={}", 
                 knowledgeBaseId, keyword, category, relationType, page, size, userId);
-            Page<DocFile> documents = documentService.getDocuments(knowledgeBaseId, keyword, category, relationType, page, size, userId);
+            Page<DocFileSummary> documents = documentService.getDocuments(knowledgeBaseId, keyword, category, relationType, page, size, userId);
             long duration = System.currentTimeMillis() - startTime;
             logger.info("DocumentController: 查询完成，返回结果数量: {}, 耗时: {}ms", documents.getContent().size(), duration);
             
-            ApiResponse<Page<DocFile>> response = ApiResponse.success(documents);
+            ApiResponse<Page<DocFileSummary>> response = ApiResponse.success(documents);
             response.setServerProcessTime(duration);
             return response;
         } catch (Exception e) {

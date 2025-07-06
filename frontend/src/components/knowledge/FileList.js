@@ -189,14 +189,14 @@ const FileList = ({
       <td className="px-6 py-4">
         <div className="flex items-center">
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-            file.processing_status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
-            file.processing_status === 'FAILED' ? 'bg-red-100 text-red-800' :
+            file.processingStatus === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
+            file.processingStatus === 'FAILED' ? 'bg-red-100 text-red-800' :
             'bg-yellow-100 text-yellow-800'
           }`}>
-            {getStatusText(file.processing_status)}
+            {getStatusText(file.processingStatus)}
           </span>
-          {file.processing_status === 'FAILED' && file.error_message && (
-            <Tooltip content={file.error_message} position="top">
+          {file.processingStatus === 'FAILED' && file.errorMessage && (
+            <Tooltip content={file.errorMessage} position="top">
               <ExclamationCircleIcon className="ml-2 h-5 w-5 text-red-500 cursor-help" />
             </Tooltip>
           )}
@@ -214,7 +214,7 @@ const FileList = ({
               <div className="py-1">
                 {file.publishStatus === 'PUBLISHED' ? (
                   <>{/* 已发布状态：显示智能解读、处理详情、取消发布 */}
-                    {file.processing_status === 'COMPLETED' ? (
+                    {file.processingStatus === 'COMPLETED' ? (
                       <button
                         onClick={() => handleSmartInterpretation(file.id)}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
@@ -222,12 +222,12 @@ const FileList = ({
                         <i className="fas fa-brain mr-2"></i>智能解读
                       </button>
                     ) : (
-                      <button
-                        disabled
-                        className="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed flex items-center"
-                      >
-                        <i className="fas fa-brain mr-2"></i>智能解读（处理中）
-                      </button>
+                    <button
+                      disabled
+                      className="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed flex items-center"
+                    >
+                      <i className="fas fa-brain mr-2"></i>智能解读（处理中）
+                    </button>
                     )}
                     <button
                       onClick={() => handleViewDetails(file.id)}
@@ -244,7 +244,7 @@ const FileList = ({
                   </>
                 ) : (
                   <>{/* 未发布状态：显示智能解读、发布、解析详情、删除 */}
-                    {file.processing_status === 'COMPLETED' ? (
+                    {file.processingStatus === 'COMPLETED' ? (
                       <>
                         <button
                           onClick={() => handleSmartInterpretation(file.id)}
@@ -261,12 +261,12 @@ const FileList = ({
                       </>
                     ) : (
                       <>
-                        <button
-                          disabled
-                          className="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed flex items-center"
-                        >
-                          <i className="fas fa-brain mr-2"></i>智能解读（处理中）
-                        </button>
+                    <button
+                      disabled
+                      className="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed flex items-center"
+                    >
+                      <i className="fas fa-brain mr-2"></i>智能解读（处理中）
+                    </button>
                         <button
                           disabled
                           className="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed flex items-center"

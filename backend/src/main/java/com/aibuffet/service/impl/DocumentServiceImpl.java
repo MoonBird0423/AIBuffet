@@ -11,6 +11,7 @@ import com.aibuffet.service.*;
 import com.aibuffet.service.processing.*;
 import com.aibuffet.service.processing.stages.*;
 import com.aibuffet.dto.UploadResult;
+import com.aibuffet.dto.DocFileSummary;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -237,7 +238,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<DocFile> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, String relationType, int page, int size, Long userId) {
+    public Page<DocFileSummary> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, String relationType, int page, int size, Long userId) {
         long startTime = System.currentTimeMillis();
         logger.info("DocumentService: 开始优化查询文档列表: knowledgeBaseId={}, keyword={}, category={}, relationType={}, page={}, size={}, userId={}", 
             knowledgeBaseId, keyword, category, relationType, page, size, userId);
@@ -291,31 +292,32 @@ public class DocumentServiceImpl implements DocumentService {
             }
         } else {
             logger.info("DocumentService: 使用优化的公共图书馆查询分支");
-            // 使用优化后的简单查询
+            // 使用新的投影查询方法
             if (keyword != null && category != null) {
-                logger.info("DocumentService: 执行优化的公共图书馆关键词+分类查询");
-                result = docFileRepository.findPublishedDocumentsByKeywordAndCategory(keyword, category, pageRequest);
+                logger.info("DocumentService: 执行优化的公共图书馆关键词+分类投影查询");
+                return docFileRepository.findPublishedDocumentSummariesByKeywordAndCategory(
+                    keyword, category, pageRequest);
             } else if (keyword != null) {
-                logger.info("DocumentService: 执行优化的公共图书馆关键词查询");
-                result = docFileRepository.findPublishedDocumentsByKeyword(keyword, pageRequest);
+                logger.info("DocumentService: 执行优化的公共图书馆关键词投影查询");
+                return docFileRepository.findPublishedDocumentSummariesByKeyword(keyword, pageRequest);
             } else if (category != null) {
-                logger.info("DocumentService: 执行优化的公共图书馆分类查询");
-                result = docFileRepository.findPublishedDocumentsByCategory(category, pageRequest);
+                logger.info("DocumentService: 执行优化的公共图书馆分类投影查询");
+                return docFileRepository.findPublishedDocumentSummariesByCategory(category, pageRequest);
             } else {
-                logger.info("DocumentService: 执行优化的公共图书馆全部查询");
-                result = docFileRepository.findPublishedDocuments(pageRequest);
+                logger.info("DocumentService: 执行优化的公共图书馆全部投影查询");
+                return docFileRepository.findPublishedDocumentSummaries(pageRequest);
             }
         }
         
-        // 不再需要手动计算收藏数量，直接使用favoriteCount字段
+        // 知识库查询分支结果转换为DocFileSummary
         long duration = System.currentTimeMillis() - startTime;
-        logger.info("DocumentService: 优化查询完成: 总数={}, 总页数={}, 当前页数据量={}, 耗时={}ms", 
+        logger.info("DocumentService: 查询完成: 总数={}, 总页数={}, 当前页数据量={}, 耗时={}ms", 
             result.getTotalElements(), result.getTotalPages(), result.getContent().size(), duration);
         if (duration > 1000) {
             logger.warn("慢查询警告: 查询耗时超过1秒, 参数: knowledgeBaseId={}, keyword={}, category={}, relationType={}, page={}, size={}", 
                 knowledgeBaseId, keyword, category, relationType, page, size);
         }
-        return result;
+        return result.map(DocFileSummary::new);
     }
 
     @Override

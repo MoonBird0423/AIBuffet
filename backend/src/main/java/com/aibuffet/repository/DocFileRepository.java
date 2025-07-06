@@ -1,5 +1,6 @@
 package com.aibuffet.repository;
 
+import com.aibuffet.dto.DocFileSummary;
 import com.aibuffet.model.DocFile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -268,4 +269,69 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
     // 支持按热度排序
     @Query("SELECT d FROM DocFile d WHERE d.status = 'ACTIVE' AND d.publishStatus = 'PUBLISHED' ORDER BY d.favoriteCount DESC, d.uploadedAt DESC")
     Page<DocFile> findPublishedDocumentsOrderByPopularity(Pageable pageable);
+
+    // 投影查询 - 只查询DocFileSummary需要的字段
+    @Query("""
+        SELECT new com.aibuffet.dto.DocFileSummary(
+            d.id, d.fileName, d.fileType, d.fileSize,
+            d.fileUrl, d.uploadedBy, d.uploadedAt,
+            d.coverUrl, d.category, d.favoriteCount,
+            d.author, d.publishStatus, d.description,
+            d.processingStatus
+        )
+        FROM DocFile d
+        WHERE d.status = 'ACTIVE' 
+        AND d.publishStatus = 'PUBLISHED'
+    """)
+    Page<DocFileSummary> findPublishedDocumentSummaries(Pageable pageable);
+
+    // 带关键词的投影查询
+    @Query("""
+        SELECT new com.aibuffet.dto.DocFileSummary(
+            d.id, d.fileName, d.fileType, d.fileSize,
+            d.fileUrl, d.uploadedBy, d.uploadedAt,
+            d.coverUrl, d.category, d.favoriteCount,
+            d.author, d.publishStatus, d.description,
+            d.processingStatus
+        )
+        FROM DocFile d
+        WHERE d.status = 'ACTIVE' 
+        AND d.publishStatus = 'PUBLISHED'
+        AND d.fileName LIKE %:keyword%
+    """)
+    Page<DocFileSummary> findPublishedDocumentSummariesByKeyword(String keyword, Pageable pageable);
+
+    // 带分类的投影查询
+    @Query("""
+        SELECT new com.aibuffet.dto.DocFileSummary(
+            d.id, d.fileName, d.fileType, d.fileSize,
+            d.fileUrl, d.uploadedBy, d.uploadedAt,
+            d.coverUrl, d.category, d.favoriteCount,
+            d.author, d.publishStatus, d.description,
+            d.processingStatus
+        )
+        FROM DocFile d
+        WHERE d.status = 'ACTIVE' 
+        AND d.publishStatus = 'PUBLISHED'
+        AND d.category = :category
+    """)
+    Page<DocFileSummary> findPublishedDocumentSummariesByCategory(DocFile.Category category, Pageable pageable);
+
+    // 带关键词和分类的投影查询
+    @Query("""
+        SELECT new com.aibuffet.dto.DocFileSummary(
+            d.id, d.fileName, d.fileType, d.fileSize,
+            d.fileUrl, d.uploadedBy, d.uploadedAt,
+            d.coverUrl, d.category, d.favoriteCount,
+            d.author, d.publishStatus, d.description,
+            d.processingStatus
+        )
+        FROM DocFile d
+        WHERE d.status = 'ACTIVE' 
+        AND d.publishStatus = 'PUBLISHED'
+        AND d.fileName LIKE %:keyword%
+        AND d.category = :category
+    """)
+    Page<DocFileSummary> findPublishedDocumentSummariesByKeywordAndCategory(
+        String keyword, DocFile.Category category, Pageable pageable);
 }
