@@ -39,7 +39,7 @@ function BookCard({ document }) {
         <p className="text-sm text-gray-600 mb-4 truncate">{document.author || '未知作者'}</p>
         <div className="mt-auto flex items-center text-sm text-gray-500">
           <FaUsers className="mr-2" />
-          <span>{(document.learnerCount || 0).toLocaleString()}次收藏</span>
+          <span>{(document.favoriteCount || 0).toLocaleString()}次收藏</span>
         </div>
       </div>
     </Link>

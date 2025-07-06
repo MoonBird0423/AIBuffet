@@ -8,6 +8,7 @@ import { getDocuments, DocumentCategory } from '../services/api';
 function Library() {
   useDocumentTitle('图书馆 | 书意');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [debouncedKeyword, setDebouncedKeyword] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +27,14 @@ function Library() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // 增加防抖时间到800ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedKeyword(searchKeyword);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [searchKeyword]);
 
   // 实现Intersection Observer监测
   useEffect(() => {
@@ -48,7 +57,7 @@ function Library() {
       setLoading(true);
       setError(null);
       const params = {
-        keyword: searchKeyword || undefined
+        keyword: debouncedKeyword || undefined
       };
       if (selectedCategory !== 'all') {
         params.category = selectedCategory;
@@ -82,13 +91,21 @@ function Library() {
     }
   };
 
-  // 在搜索关键词或分类变化时重置列表
+  // 使用防抖后的关键词触发查询
   useEffect(() => {
     setDocuments([]);
     setHasMore(true);
-    const debounceTimer = setTimeout(() => fetchDocuments(true), 300);
-    return () => clearTimeout(debounceTimer);
-  }, [searchKeyword, selectedCategory]);
+    fetchDocuments(true);
+  }, [debouncedKeyword, selectedCategory]);
+
+  // 骨架屏组件
+  const SkeletonCard = () => (
+    <div className="animate-pulse">
+      <div className="bg-gray-300 h-48 rounded-lg mb-4"></div>
+      <div className="h-4 bg-gray-300 rounded mb-2"></div>
+      <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col font-sf">
@@ -149,9 +166,11 @@ function Library() {
                 </div>
               )}
               
-              {loading ? (
-                <div className="flex justify-center items-center h-64">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              {loading && documents.length === 0 ? (
+                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <SkeletonCard key={index} />
+                  ))}
                 </div>
               ) : documents.length > 0 ? (
                 <>

@@ -240,4 +240,32 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
     @Transactional
     @Query("UPDATE DocFile d SET d.processingStatus = :status, d.errorMessage = :errorMessage WHERE d.id = :id")
     void updateProcessingStatusAndError(Long id, DocFile.ProcessingStatus status, String errorMessage);
+
+    // 收藏计数更新方法
+    @Modifying
+    @Transactional
+    @Query("UPDATE DocFile d SET d.favoriteCount = d.favoriteCount + 1 WHERE d.id = :docId")
+    void incrementFavoriteCount(@org.springframework.data.repository.query.Param("docId") Long docId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE DocFile d SET d.favoriteCount = d.favoriteCount - 1 WHERE d.id = :docId AND d.favoriteCount > 0")
+    void decrementFavoriteCount(@org.springframework.data.repository.query.Param("docId") Long docId);
+
+    // 简化的公共图书馆查询（使用favoriteCount字段，无需JOIN）
+    @Query("SELECT d FROM DocFile d WHERE d.status = 'ACTIVE' AND d.publishStatus = 'PUBLISHED' ORDER BY d.uploadedAt DESC")
+    Page<DocFile> findPublishedDocuments(Pageable pageable);
+
+    @Query("SELECT d FROM DocFile d WHERE d.status = 'ACTIVE' AND d.publishStatus = 'PUBLISHED' AND d.fileName LIKE %:keyword% ORDER BY d.uploadedAt DESC")
+    Page<DocFile> findPublishedDocumentsByKeyword(@org.springframework.data.repository.query.Param("keyword") String keyword, Pageable pageable);
+
+    @Query("SELECT d FROM DocFile d WHERE d.status = 'ACTIVE' AND d.publishStatus = 'PUBLISHED' AND d.category = :category ORDER BY d.uploadedAt DESC")
+    Page<DocFile> findPublishedDocumentsByCategory(@org.springframework.data.repository.query.Param("category") DocFile.Category category, Pageable pageable);
+
+    @Query("SELECT d FROM DocFile d WHERE d.status = 'ACTIVE' AND d.publishStatus = 'PUBLISHED' AND d.fileName LIKE %:keyword% AND d.category = :category ORDER BY d.uploadedAt DESC")
+    Page<DocFile> findPublishedDocumentsByKeywordAndCategory(@org.springframework.data.repository.query.Param("keyword") String keyword, @org.springframework.data.repository.query.Param("category") DocFile.Category category, Pageable pageable);
+
+    // 支持按热度排序
+    @Query("SELECT d FROM DocFile d WHERE d.status = 'ACTIVE' AND d.publishStatus = 'PUBLISHED' ORDER BY d.favoriteCount DESC, d.uploadedAt DESC")
+    Page<DocFile> findPublishedDocumentsOrderByPopularity(Pageable pageable);
 }

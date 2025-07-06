@@ -59,8 +59,8 @@ public class DocFile {
     @Enumerated(EnumType.STRING)
     private Category category;
 
-    @Transient
-    private Integer learnerCount = 0;
+    @Column(name = "favorite_count")
+    private Integer favoriteCount = 0;
 
     @Column(name = "author")
     private String author;

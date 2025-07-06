@@ -62,7 +62,7 @@ function BookInfo({ bookData, onFavorite, onShare }) {
             </p>
             <div className="flex items-center text-white/70">
               <i className="fas fa-heart mr-2"></i>
-              <span>{bookData.learnerCount || 0}次收藏</span>
+              <span>{(bookData.favoriteCount || 0).toLocaleString()}次收藏</span>
             </div>
           </div>
 
