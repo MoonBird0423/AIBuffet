@@ -182,7 +182,7 @@ function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Section Header */}
           <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">为什么选择DocuChat？</h2>
+            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">为什么选择书意？</h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               AI伴读，直达书魂，30分钟读懂一本书。
             </p>

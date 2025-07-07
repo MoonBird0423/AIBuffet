@@ -30,7 +30,7 @@ public class VerificationCode {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-        expiredAt = createdAt.plusMinutes(5); // 5分钟有效期
+        expiredAt = createdAt.plusMinutes(5); // 默认5分钟有效期，可通过服务层设置
         status = 0;
     }
 

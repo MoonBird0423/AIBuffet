@@ -15,21 +15,37 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Random;
 import java.util.Optional;
+import com.aliyun.tea.TeaException;
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 @RequiredArgsConstructor
 public class VerificationCodeService {
     private final VerificationCodeRepository verificationCodeRepository;
     private final CaptchaRecordRepository captchaRecordRepository;
-    private static final int SMS_RATE_LIMIT_PER_MINUTE = 3; // 每分钟最多发送3条验证码
     private final Random random = new Random();
+
+    // 直接写死短信签名，避免乱码问题
+    private final String signName = "征鸿于野软件开发工作室";
+
+    @Value("${sms.verification-template-code}")
+    private String verificationTemplateCode;
+
+    @Value("${sms.endpoint:dysmsapi.aliyuncs.com}")
+    private String endpoint;
+
+    @Value("${sms.code-expiration-minutes:5}")
+    private int codeExpirationMinutes;
+
+    @Value("${sms.rate-limit-per-minute:3}")
+    private int rateLimitPerMinute;
 
     // 创建阿里云短信客户端
     private Client createClient() throws Exception {
         Config config = new Config()
                 .setAccessKeyId(System.getenv("ALIBABA_CLOUD_ACCESS_KEY_ID"))
                 .setAccessKeySecret(System.getenv("ALIBABA_CLOUD_ACCESS_KEY_SECRET"));
-        config.endpoint = "dysmsapi.aliyuncs.com";
+        config.endpoint = endpoint;
         return new Client(config);
     }
 
@@ -60,9 +76,9 @@ public class VerificationCodeService {
         LocalDateTime oneMinuteAgo = LocalDateTime.now().minusMinutes(1);
         long recentCount = verificationCodeRepository.countRecentCodes(phone, oneMinuteAgo);
         System.out.println("最近一分钟发送次数: " + recentCount);
-        if (recentCount >= SMS_RATE_LIMIT_PER_MINUTE) {
+        if (recentCount >= rateLimitPerMinute) {
             System.out.println("发送频率超限 - 最近一分钟发送次数: " + recentCount);
-            throw new RuntimeException("短信发送过于频繁，每分钟最多发送" + SMS_RATE_LIMIT_PER_MINUTE + "条，请稍后重试");
+            throw new RuntimeException("短信发送过于频繁，每分钟最多发送" + rateLimitPerMinute + "条，请稍后重试");
         }
 
         // 生成验证码
@@ -76,24 +92,43 @@ public class VerificationCodeService {
             System.out.println("AccessKeyId是否存在: " + (accessKeyId != null));
             System.out.println("AccessKeySecret是否存在: " + (accessKeySecret != null));
 
+            // 发送短信前输出签名
+            System.out.println("短信签名: " + signName);
             // 发送短信
             Client client = createClient();
             SendSmsRequest sendSmsRequest = new SendSmsRequest()
-                    .setSignName("阿里云短信测试")
-                    .setTemplateCode("SMS_154950909")
+                    .setSignName(signName)
+                    .setTemplateCode(verificationTemplateCode)
                     .setPhoneNumbers(phone)
                     .setTemplateParam("{\"code\":\"" + code + "\"}");
             
             System.out.println("开始调用阿里云短信服务");
-            client.sendSmsWithOptions(sendSmsRequest, new com.aliyun.teautil.models.RuntimeOptions());
+            var response = client.sendSmsWithOptions(sendSmsRequest, new com.aliyun.teautil.models.RuntimeOptions());
+            // 打印阿里云短信服务返回的详细信息
+            var responseBody = response.getBody();
+            System.out.println("阿里云短信服务返回: " + responseBody.toString());
+            String codeResp = responseBody.getCode();
+            String messageResp = responseBody.getMessage();
+            String requestId = responseBody.getRequestId();
+            String bizId = responseBody.getBizId();
+            System.out.println("短信服务返回Code: " + codeResp + ", Message: " + messageResp + ", RequestId: " + requestId + ", BizId: " + bizId);
+            if (!"OK".equals(codeResp)) {
+                System.out.println("短信服务返回非OK状态，终止流程");
+                throw new RuntimeException("短信服务返回异常: " + codeResp + " - " + messageResp);
+            }
             System.out.println("阿里云短信服务调用成功");
 
             // 保存验证码记录
             VerificationCode verificationCode = new VerificationCode();
             verificationCode.setPhone(phone);
             verificationCode.setCode(code);
+            // 设置过期时间
+            LocalDateTime now = LocalDateTime.now();
+            verificationCode.setCreatedAt(now);
+            verificationCode.setExpiredAt(now.plusMinutes(codeExpirationMinutes));
+            verificationCode.setStatus(0);
             verificationCodeRepository.save(verificationCode);
-            System.out.println("验证码记录保存成功");
+            System.out.println("验证码记录保存成功，过期时间: " + verificationCode.getExpiredAt());
 
             // 短信发送成功后，将图形验证码标记为已使用
             CaptchaRecord record = captchaRecord.get();
@@ -104,6 +139,13 @@ public class VerificationCodeService {
         } catch (Exception e) {
             System.out.println("发送短信失败: " + e.getMessage());
             e.printStackTrace();
+            // 如果是阿里云SDK的异常，尝试打印更多信息
+            if (e instanceof TeaException) {
+                TeaException teaEx = (TeaException) e;
+                System.out.println("阿里云SDK异常Code: " + teaEx.getCode());
+                System.out.println("阿里云SDK异常Message: " + teaEx.getMessage());
+                System.out.println("阿里云SDK异常Data: " + teaEx.getData());
+            }
             throw new RuntimeException(ErrorCode.SMS_SEND_FAILED.getMessage());
         }
     }
