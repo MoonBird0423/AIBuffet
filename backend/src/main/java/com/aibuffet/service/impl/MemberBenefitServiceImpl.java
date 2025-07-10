@@ -1,7 +1,11 @@
 package com.aibuffet.service.impl;
 
 import com.aibuffet.model.Benefit;
+import com.aibuffet.model.BenefitUsage;
 import com.aibuffet.model.RoleBenefit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.transaction.annotation.Propagation;
 import com.aibuffet.model.User;
 import com.aibuffet.repository.BenefitRepository;
 import com.aibuffet.repository.BenefitUsageRepository;
@@ -17,6 +21,7 @@ import java.util.List;
 
 @Service
 public class MemberBenefitServiceImpl implements MemberBenefitService {
+    private static final Logger logger = LoggerFactory.getLogger(MemberBenefitServiceImpl.class);
 
     private final BenefitRepository benefitRepository;
     private final RoleRepository roleRepository;
@@ -64,13 +69,6 @@ public class MemberBenefitServiceImpl implements MemberBenefitService {
 
     @Override
     @Transactional
-    public ApiResponse useBenefit(Long userId, String benefitIdentifier, int amount) {
-        // TODO: 实现权益消耗逻辑
-        return ApiResponse.success("权益消耗逻辑待实现");
-    }
-
-    @Override
-    @Transactional
     public void assignRoleBenefits(Long userId, Long roleId) {
         // TODO: 实现角色权益分配逻辑
     }
@@ -79,5 +77,23 @@ public class MemberBenefitServiceImpl implements MemberBenefitService {
     @Transactional
     public void removeRoleBenefits(Long userId, Long roleId) {
         // TODO: 实现角色权益移除逻辑
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void recordBenefitUsage(Long userId, String identifier, int amount, Long roleId) {
+        Benefit benefit = benefitRepository.findByIdentifier(identifier);
+        if (benefit == null) {
+            throw new IllegalArgumentException("无效的权益标识: " + identifier);
+        }
+
+        BenefitUsage usage = new BenefitUsage();
+        usage.setUserId(userId);
+        usage.setBenefitId(benefit.getId());
+        usage.setAmount(amount);
+        usage.setRoleId(roleId);
+        benefitUsageRepository.save(usage);
+        
+        logger.info("记录权益消耗: 用户[{}] 权益[{}] 数量[{}]", userId, identifier, amount);
     }
 }
