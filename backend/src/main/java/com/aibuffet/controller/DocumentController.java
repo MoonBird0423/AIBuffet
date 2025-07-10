@@ -1,6 +1,7 @@
 package com.aibuffet.controller;
 
 import com.aibuffet.common.ApiResponse;
+import com.aibuffet.common.BenefitCheck;
 import com.aibuffet.common.ErrorCode;
 import com.aibuffet.common.ResourceNotFoundException;
 import com.aibuffet.model.DocFile;
@@ -55,6 +56,7 @@ public class DocumentController {
         });
     }
 
+    @BenefitCheck("api:document:upload")
     @PostMapping("/upload")
     public ApiResponse<Map<String, Object>> uploadDocuments(
             @RequestParam("files") MultipartFile[] files,

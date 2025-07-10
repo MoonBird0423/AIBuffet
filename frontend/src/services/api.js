@@ -132,31 +132,42 @@ const isAuthenticationError = (error) => {
   return false;
 };
 
-// 响应拦截器处理认证错误，添加重试机制
+// 响应拦截器处理认证错误，添加业务错误码统一处理
 apiClient.interceptors.response.use(
-  response => response,
+  response => {
+    if (response.data && response.data.code && response.data.code !== 200) {
+      // 业务错误，统一弹 toast
+      if (response.data.code === 4002) {
+        import('../components/common/Toast').then(({ ToastManager }) => {
+          ToastManager.warning(response.data.message || '权限未开通或消耗完', 3000);
+        });
+      }
+      // 其他业务错误也可统一处理
+      const error = new Error(response.data.message || '业务错误');
+      error.response = { data: response.data };
+      return Promise.reject(error);
+    }
+    return response;
+  },
   async error => {
+    console.log('axios拦截器 error 分支被触发:', error, error?.response?.data);
+    // HTTP 层面错误
     if (isAuthenticationError(error)) {
-      // 显示Toast提示
       try {
         const { ToastManager } = await import('../components/common/Toast');
         ToastManager.warning('访问此功能需要登录', 3000);
       } catch (toastError) {
         console.warn('无法显示Toast提示:', toastError);
       }
-
       const authUser = localStorage.getItem('auth_user');
       if (authUser) {
-        // 确保用户不在登录页面才清除状态和跳转
         if (!window.location.pathname.includes('/login')) {
           localStorage.removeItem('auth_user');
-          // 延迟跳转，让用户看到提示
           setTimeout(() => {
             window.location.href = '/login';
           }, 1000);
         }
       } else {
-        // 用户本来就没有登录，直接跳转（但仍有延迟让用户看到提示）
         if (!window.location.pathname.includes('/login')) {
           setTimeout(() => {
             window.location.href = '/login';
@@ -526,58 +537,33 @@ export const getDocuments = async (page = 0, size = 20, params = {}) => {
 
 // 修改上传文档的功能
 export const uploadDocuments = async (files, knowledgeBaseId, onProgress) => {
-  try {
-    const formData = new FormData();
-    files.forEach(file => {
-      formData.append('files', file);
-    });
-    formData.append('knowledgeBaseId', knowledgeBaseId);
+  const formData = new FormData();
+  files.forEach(file => formData.append('files', file));
+  formData.append('knowledgeBaseId', knowledgeBaseId);
 
-    const response = await apiClient.post('/documents/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      },
-      timeout: 300000, // 5分钟超时
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity,
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent.total) {
-          const overallProgress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          // 计算每个文件的进度并更新
-          const progressMap = {};
-          files.forEach(file => {
-          const fileProgress = Math.min(overallProgress, 99); // 保留最后1%给处理时间
+  const response = await apiClient.post('/documents/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 300000,
+    maxContentLength: Infinity,
+    maxBodyLength: Infinity,
+    onUploadProgress: (progressEvent) => {
+      if (progressEvent.total) {
+        const overallProgress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        const progressMap = {};
+        files.forEach(file => {
+          const fileProgress = Math.min(overallProgress, 99);
           progressMap[file.name] = fileProgress;
-          });
-          // 调用回调更新进度状态
-          onProgress?.(progressMap);
-        }
+        });
+        onProgress?.(progressMap);
       }
-    });
+    }
+  });
 
-    // 提取 API 返回的数据结构
-    const responseData = response.data.data || {};
-    return {
-      results: responseData.results || [],
-      errors: responseData.errors || []
-    };
-
-  } catch (error) {
-    console.error('文档上传失败:', {
-      error,
-      errorMessage: error.message,
-      errorResponse: error.response?.data,
-      errorStack: error.stack
-    });
-    
-    return {
-      results: [],
-      errors: files.map(file => ({
-        fileName: file.name,
-        error: error.response?.data?.message || error.message
-      }))
-    };
-  }
+  const responseData = response.data.data || {};
+  return {
+    results: responseData.results || [],
+    errors: responseData.errors || []
+  };
 };
 
 export const deleteDocument = async (documentId, knowledgeBaseId) => {

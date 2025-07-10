@@ -94,7 +94,8 @@ public class AuthenticationFilter extends OncePerRequestFilter {
                 user.getAuthorities()
             );
             SecurityContextHolder.getContext().setAuthentication(auth);
-            logger.debug("Successfully authenticated user with phone: {}, userId: {}", phone, userId);
+            logger.info("Auth SUCCESS - userId: {}, phone: {}", userId, phone);
+            logger.debug("SecurityContext set with auth: {}", auth);
         } else {
             logger.warn("User not found or phone number mismatch for userId: {}, phone: {}", userId, phone);
             SecurityContextHolder.clearContext();

@@ -149,7 +149,9 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
       }
 
     } catch (error) {
-      ToastManager.error('上传过程发生错误，请重试');
+      console.log('FileUploadModal catch 捕获到异常:', error, error?.response?.data);
+      // 不再弹toast，交给axios拦截器统一处理
+      // 只做降级处理
     }
 
     setIsUploading(false);

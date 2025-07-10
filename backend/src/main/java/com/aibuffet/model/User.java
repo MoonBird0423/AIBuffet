@@ -14,6 +14,17 @@ import java.util.Collections;
 @Entity
 @Table(name = "user")
 public class User implements UserDetails {
+
+    @Column(name = "role_id")
+    private Long roleId;
+
+    public Long getRoleId() {
+        return roleId;
+    }
+
+    public void setRoleId(Long roleId) {
+        this.roleId = roleId;
+    }
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
