@@ -42,6 +42,14 @@ function Navbar() {
                 图书馆
               </Link>
               <Link 
+                to="/pricing" 
+                className={`text-white hover:text-gray-300 px-3 py-2 text-sm font-medium ${
+                  location.pathname === '/pricing' ? 'bg-white/20 rounded-lg' : ''
+                }`}
+              >
+                定价
+              </Link>
+              <Link 
                 to="/my-knowledge" 
                 className={`text-white hover:text-gray-300 px-3 py-2 text-sm font-medium ${
                   location.pathname === '/my-knowledge' ? 'bg-white/20 rounded-lg' : ''

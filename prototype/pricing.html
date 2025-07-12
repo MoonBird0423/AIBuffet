@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会员定价 - DocuChat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sf': ['-apple-system', 'BlinkMacSystemFont', 'San Francisco', 'Helvetica Neue', 'sans-serif'],
+                    },
+                    colors: {
+                        'apple-blue': '#007AFF',
+                        'apple-gray': '#F2F2F7',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg-vip {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .gradient-bg-svip {
+            background: linear-gradient(135deg, #ffb347 0%, #ff5e62 100%);
+        }
+        .gradient-bg-free {
+            background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .pricing-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .pricing-card:hover {
+            transform: translateY(-6px) scale(1.03);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+        }
+        .check-icon {
+            color: #22c55e;
+            margin-right: 0.5rem;
+        }
+        .cross-icon {
+            color: #d1d5db;
+            margin-right: 0.5rem;
+        }
+        .highlight-price {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #fff;
+        }
+        .pricing-btn {
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 1.5rem;
+            padding: 0.75rem 2.5rem;
+        }
+        .modal-bg {
+            background: #f3f4f6;
+        }
+        .modal-card {
+            background: #fff;
+            border-radius: 2rem;
+            box-shadow: none;
+            padding: 2.5rem 2rem;
+        }
+        .modal-left-card {
+            min-height: 420px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+        .modal-right-card {
+            min-height: 420px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .modal-tab {
+            transition: box-shadow 0.2s, background 0.2s;
+        }
+        .modal-tab.selected {
+            background: linear-gradient(90deg, #ffb347 0%, #ff5e62 100%);
+            color: #fff;
+        }
+        .modal-tab.unselected {
+            background: #f3f4f6;
+            color: #ff5e62;
+        }
+        .modal-plan {
+            background: #fff;
+            border-radius: 1.5rem;
+            box-shadow: none;
+            transition: box-shadow 0.2s, border 0.2s, background 0.2s;
+            width: 10rem;
+        }
+        .modal-plan.selected {
+            border: 2px solid #ffb347;
+            background: linear-gradient(90deg, #ffecd2 0%, #ffe2b7 100%);
+        }
+        .modal-plan.unselected {
+            border: 2px solid #e5e7eb;
+            background: #fff;
+        }
+        .modal-pay-bg {
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
+        }
+        .modal-qrcode {
+            background: #fff;
+            border-radius: 1rem;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body class="font-sf bg-apple-gray">
+    <!-- Navigation -->
+    <nav class="fixed top
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="index.html" class="text-2xl font-bold text-white hover:text-gray-300 transition-colors">DocuChat</a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <a href="index.html" class="text-white hover:text-gray-300 px-3 py-2 text-sm font-medium">首页</a>
+                        <a href="library.html" class="text-white hover:text-gray-300 px-3 py-2 text-sm font-medium">图书馆</a>
+                        <a href="#" class="text-white hover:text-gray-300 px-3 py-2 text-sm font-medium">我的学习</a>
+                        <a href="#" class="bg-white text-blue-600 px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-100">登录</a>
+                    </div>
+                </div>
+                <div class="md:hidden">
+                    <button class="text-white">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 会员介绍区 -->
+    <section class="pt-24 pb-16 gradient-bg-vip">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 class="text-4xl font-bold text-white text-center mb-12">升级VIP会员，尽享AI智能</h1>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- 普通注册用户卡片 -->
+                <div class="pricing-card gradient-bg-free rounded-3xl p-8 text-center shadow-xl">
+                    <h2 class="text-2xl font-bold text-white mb-2">普通用户</h2>
+                    <div class="highlight-price mb-2">免费</div>
+                    <button class="pricing-btn bg-white text-blue-600 hover:bg-gray-100 transition mb-6">立即注册</button>
+                    <ul class="text-white text-left space-y-3 mt-6">
+                        <li><i class="fas fa-check check-icon"></i>100+精品图书文字解读</li>
+                        <li><i class="fas fa-check check-icon"></i>100+精品图书语音解读</li>
+                    </ul>
+                </div>
+                <!-- VIP用户卡片 -->
+                <div class="pricing-card gradient-bg-vip rounded-3xl p-8 text-center shadow-2xl border-4 border-white scale-105">
+                    <h2 class="text-2xl font-bold text-white mb-2">VIP会员</h2>
+                    <div class="highlight-price mb-2">低至9.9元/月</div>
+                    <button class="pricing-btn bg-white text-purple-600 hover:bg-white/90 transition mb-6" onclick="openPurchaseModal('vip')">立即购买</button>
+                    <ul class="text-white text-left space-y-3 mt-6">
+                        <li><i class="fas fa-check check-icon"></i>100+精品图书文字解读</li>
+                        <li><i class="fas fa-check check-icon"></i>100+精品图书语音解读</li>
+                        <li><i class="fas fa-check check-icon"></i>100+精品图书脑图</li>
+                        <li><i class="fas fa-check check-icon"></i>100+精品图书测试题</li>
+                        <li><i class="fas fa-check check-icon"></i>100本图书上传</li>
+                        <li><i class="fas fa-check check-icon"></i>10次AI文字解读</li>
+                        <li><i class="fas fa-check check-icon"></i>5次AI语音生成</li>
+                        <li><i class="fas fa-check check-icon"></i>10次AI脑图生成</li>
+                        <li><i class="fas fa-check check-icon"></i>10次AI测试题生成</li>
+                        <li><i class="fas fa-check check-icon"></i>无限次图书知识问答</li>
+                    </ul>
+                </div>
+                <!-- SVIP用户卡片 -->
+                <div class="pricing-card gradient-bg-svip rounded-3xl p-8 text-center shadow-xl">
+                    <h2 class="text-2xl font-bold text-white mb-2">SVIP会员</h2>
+                    <div class="highlight-price mb-2">低至19.9元/月</div>
+                    <button class="pricing-btn bg-white text-orange-600 hover:bg-white/90 transition mb-6" onclick="openPurchaseModal('svip')">立即购买</button>
+                    <ul class="text-white text-left space-y-3 mt-6">
+                        <li><i class="fas fa-check check-icon"></i>100+精品图书文字解读</li>
+                        <li><i class="fas fa-check check-icon"></i>100+精品图书语音解读</li>
+                        <li><i class="fas fa-check check-icon"></i>100+精品图书脑图</li>
+                        <li><i class="fas fa-check check-icon"></i>100+精品图书测试题</li>
+                        <li><i class="fas fa-check check-icon"></i>200本图书上传</li>
+                        <li><i class="fas fa-check check-icon"></i>20次AI文字解读</li>
+                        <li><i class="fas fa-check check-icon"></i>10次AI语音生成</li>
+                        <li><i class="fas fa-check check-icon"></i>20次AI脑图生成</li>
+                        <li><i class="fas fa-check check-icon"></i>20次AI测试题生成</li>
+                        <li><i class="fas fa-check check-icon"></i>无限次图书知识问答</li>
+                        <li><i class="fas fa-check check-icon"></i>无限次知识库问答</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 权益对比区 -->
+    <section class="py-16 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-gray-900 text-center mb-10">会员权益对比</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white rounded-2xl shadow-xl text-center">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="py-4 px-2 text-lg font-semibold">权益</th>
+                            <th class="py-4 px-2 text-lg font-semibold">普通用户</th>
+                            <th class="py-4 px-2 text-lg font-semibold">VIP用户</th>
+                            <th class="py-4 px-2 text-lg font-semibold">SVIP用户</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-700">
+                        <tr>
+                            <td class="py-3 px-2">热门图书文字解读</td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr class="bg-gray-50">
+                            <td class="py-3 px-2">热门图书语音解读</td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-2">热门图书脑图</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr class="bg-gray-50">
+                            <td class="py-3 px-2">热门图书知识测试题</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-2">上传图书</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td>100本</td>
+                            <td>200本</td>
+                        </tr>
+                        <tr class="bg-gray-50">
+                            <td class="py-3 px-2">生成对话式文字解读</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td>10次</td>
+                            <td>20次</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-2">生成对话式语音解读</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td>5次</td>
+                            <td>10次</td>
+                        </tr>
+                        <tr class="bg-gray-50">
+                            <td class="py-3 px-2">生成核心知识脑图</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td>10次</td>
+                            <td>20次</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-2">生成核心知识测试题</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td>10次</td>
+                            <td>20次</td>
+                        </tr>
+                        <tr class="bg-gray-50">
+                            <td class="py-3 px-2">图书问答</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><span class="text-green-600 font-bold">不限次数</span></td>
+                            <td><span class="text-green-600 font-bold">不限次数</span></td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-2">知识库问答</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><span class="text-green-600 font-bold">不限次数</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div>
+                    <h4 class="text-2xl font-bold mb-4">DocuChat</h4>
+                    <p class="text-gray-400">AI伴读，让阅读更高效</p>
+                </div>
+                <div>
+                    <h5 class="font-semibold mb-4">产品</h5>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-white">语音解读</a></li>
+                        <li><a href="#" class="hover:text-white">知识脑图</a></li>
+                        <li><a href="#" class="hover:text-white">知识测试</a></li>
+                        <li><a href="#" class="hover:text-white">知识问答</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="font-semibold mb-4">支持</h5>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-white">帮助中心</a></li>
+                        <li><a href="#" class="hover:text-white">联系我们</a></li>
+                        <li><a href="#" class="hover:text-white">用户指南</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="font-semibold mb-4">关注我们</h5>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fab fa-twitter text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fab fa-weixin text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fab fa-weibo text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+                <p>&copy; 2024 DocuChat. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 购买弹窗 -->
+    <div id="purchaseModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 hidden">
+        <div class="modal-bg rounded-3xl shadow-2xl w-full max-w-5xl p-0 relative flex flex-col md:flex-row border border-gray-200 items-stretch">
+            <!-- 关闭按钮 -->
+            <button class="absolute top-6 right-8 text-gray-400 hover:text-gray-700 text-2xl" onclick="closePurchaseModal()"><i class="fas fa-times"></i></button>
+            <!-- 左侧权益介绍卡片（加宽） -->
+            <div class="w-full md:w-1/3 flex items-center justify-center p-6 md:pr-3">
+                <div class="modal-card modal-left-card w-full h-full">
+                    <!-- 用户头像和用户名 -->
+                    <div class="flex flex-col items-center mb-6">
+                        <img src="../public/知婷老师.png" alt="用户头像" class="w-20 h-20 rounded-full mb-2 border-2 border-gray-200 object-cover bg-white">
+                        <div class="font-bold text-gray-700 text-base">知婷老师</div>
+                    </div>
+                    <hr class="border-t border-gray-200 mb-6 w-full">
+                    <h2 id="modalTitle" class="text-lg font-semibold mb-4 text-gray-700 text-center">VIP会员权益</h2>
+                    <ul id="modalBenefits" class="space-y-2 text-gray-500 text-sm pl-2">
+                        <!-- 动态插入权益 -->
+                    </ul>
+                </div>
+            </div>
+            <!-- 右侧支付区卡片（高度与左侧一致） -->
+            <div class="w-full md:w-2/3 flex items-center justify-center p-6 md:pl-3">
+                <div class="modal-card modal-right-card w-full h-full">
+                    <!-- 选项卡 -->
+                    <div class="flex mb-8 gap-4 justify-center">
+                        <button id="tabVip" class="flex-1 py-3 text-2xl font-bold rounded-2xl modal-tab transition-colors" onclick="switchTab('vip')">VIP</button>
+                        <button id="tabSvip" class="flex-1 py-3 text-2xl font-bold rounded-2xl modal-tab transition-colors" onclick="switchTab('svip')">SVIP</button>
+                    </div>
+                    <!-- 周期选项 -->
+                    <div id="modalPlans" class="flex space-x-8 mb-8 justify-center">
+                        <!-- 动态插入周期选项 -->
+                    </div>
+                    <!-- 价格展示 -->
+                    <div class="mb-8 flex items-end justify-center gap-4">
+                        <div class="text-5xl font-extrabold text-orange-600 text-center leading-none" id="modalPrice">¥83</div>
+                        <div class="text-lg text-gray-500 mb-1" id="modalSave">节省0元</div>
+                    </div>
+                    <!-- 支付方式切换 -->
+                    <div class="flex space-x-8 mb-8 justify-center">
+                        <button id="payWeChat" class="px-8 py-3 rounded-full border-2 border-green-500 text-green-600 font-bold text-lg" onclick="switchPay('wechat')">微信支付</button>
+                        <button id="payAlipay" class="px-8 py-3 rounded-full border-2 border-blue-500 text-blue-600 font-bold text-lg" onclick="switchPay('alipay')">支付宝</button>
+                    </div>
+                    <!-- 二维码展示 -->
+                    <div class="flex flex-col items-center">
+                        <div id="modalQrcode" class="w-48 h-48 modal-qrcode flex items-center justify-center text-xl mb-2">
+                            <span class="text-gray-400">二维码</span>
+                        </div>
+                        <div class="mt-1 text-gray-500 text-base">请使用对应App扫码支付</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    // 权益内容
+    const benefits = {
+        vip: [
+            '100+精品图书文字解读',
+            '100+精品图书语音解读',
+            '100+精品图书脑图',
+            '100+精品图书测试题',
+            '100本图书上传',
+            '10次AI文字解读',
+            '5次AI语音生成',
+            '10次AI脑图生成',
+            '10次AI测试题生成',
+            '无限次图书知识问答'
+        ],
+        svip: [
+            '100+精品图书文字解读',
+            '100+精品图书语音解读',
+            '100+精品图书脑图',
+            '100+精品图书测试题',
+            '200本图书上传',
+            '20次AI文字解读',
+            '10次AI语音生成',
+            '20次AI脑图生成',
+            '20次AI测试题生成',
+            '无限次图书知识问答',
+            '无限次知识库问答'
+        ]
+    };
+    // 周期和价格
+    const plans = {
+        vip: [
+            {label: '12个月', price: 86, desc: '7.2¥/月'},
+            {label: '3个月', price: 26, desc: '8.7¥/月'},
+            {label: '1个月', price: 9.9, desc: ''}
+        ],
+        svip: [
+            {label: '12个月', price: 168, desc: '14¥/月'},
+            {label: '3个月', price: 48, desc: '16¥/月'},
+            {label: '1个月', price: 19.9, desc: ''}
+        ]
+    };
+    let currentType = 'vip';
+    let currentPlanIdx = 0;
+    let currentPay = 'wechat';
+    function openPurchaseModal(type) {
+        currentType = type;
+        currentPlanIdx = 0;
+        currentPay = 'wechat';
+        document.getElementById('purchaseModal').classList.remove('hidden');
+        renderModal();
+    }
+    function closePurchaseModal() {
+        document.getElementById('purchaseModal').classList.add('hidden');
+    }
+    function switchTab(type) {
+        currentType = type;
+        currentPlanIdx = 0;
+        renderModal();
+    }
+    function switchPlan(idx) {
+        currentPlanIdx = idx;
+        renderModal();
+    }
+    function switchPay(pay) {
+        currentPay = pay;
+        renderModal();
+    }
+    function renderModal() {
+        // 选项卡高亮
+        document.getElementById('tabVip').classList.toggle('selected', currentType==='vip');
+        document.getElementById('tabVip').classList.toggle('unselected', currentType!=='vip');
+        document.getElementById('tabSvip').classList.toggle('selected', currentType==='svip');
+        document.getElementById('tabSvip').classList.toggle('unselected', currentType!=='svip');
+        // 标题
+        document.getElementById('modalTitle').textContent = currentType==='vip' ? 'VIP会员权益' : 'SVIP会员权益';
+        // 权益
+        const ul = document.getElementById('modalBenefits');
+        ul.innerHTML = benefits[currentType].map(b=>`<li><i class='fas fa-check check-icon'></i>${b}</li>`).join('');
+        // 周期
+        const planDiv = document.getElementById('modalPlans');
+        planDiv.innerHTML = plans[currentType].map((p,i)=>
+            `<div onclick='switchPlan(${i})' class='modal-plan ${currentPlanIdx===i?'selected':'unselected'} cursor-pointer px-6 py-4 flex flex-col items-center'>
+                <div class='font-bold text-lg text-gray-700 mb-1'>${p.label}</div>
+                <div class='text-3xl text-orange-600 font-extrabold mb-1'>¥${p.price}</div>
+                <div class='text-xs text-gray-400'>${p.desc}</div>
+            </div>`
+        ).join('');
+        // 价格
+        document.getElementById('modalPrice').textContent = `¥${plans[currentType][currentPlanIdx].price}`;
+        // 节省金额
+        let save = 0;
+        if(currentPlanIdx === 0) { // 12个月
+            const monthPrice = plans[currentType][2].price;
+            save = Math.round((monthPrice * 12 - plans[currentType][0].price)*10)/10;
+        } else if(currentPlanIdx === 1) { // 3个月
+            const monthPrice = plans[currentType][2].price;
+            save = Math.round((monthPrice * 3 - plans[currentType][1].price)*10)/10;
+        }
+        document.getElementById('modalSave').textContent = save > 0 ? `节省${save}元` : '';
+        // 支付方式高亮
+        document.getElementById('payWeChat').classList.toggle('bg-green-50', currentPay==='wechat');
+        document.getElementById('payWeChat').classList.toggle('border-green-600', currentPay==='wechat');
+        document.getElementById('payAlipay').classList.toggle('bg-blue-50', currentPay==='alipay');
+        document.getElementById('payAlipay').classList.toggle('border-blue-600', currentPay==='alipay');
+        // 二维码（此处可替换为实际二维码图片）
+        document.getElementById('modalQrcode').innerHTML = `<span class='text-gray-400'>二维码</span>`;
+    }
+    </script>
+</body>
+</html>
