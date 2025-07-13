@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { createOrder, getOrderStatus } from '../../services/api';
+import QRCode from 'qrcode';
 
 const BENEFITS = {
   vip: [
@@ -46,13 +48,118 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
   const { user } = useAuth();
   const [type, setType] = useState(defaultType);
   const [planIdx, setPlanIdx] = useState(0);
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [payStatus, setPayStatus] = useState('未支付');
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
+  const [pollingInterval, setPollingInterval] = useState(null);
 
-  React.useEffect(() => {
+  // 创建订单
+  const createOrder = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const plans = PLANS[type];
+      const selectedPlan = plans[planIdx];
+      const periodMonths = planIdx === 0 ? 12 : planIdx === 1 ? 3 : 1;
+      const amount = Math.round(selectedPlan.price * 100); // 转换为分
+      const description = `书意平台【${type.toUpperCase()}】订阅-【${periodMonths}】个月`;
+      
+      const response = await createOrder({
+        userId: user.id,
+        memberType: type.toUpperCase(),
+        periodMonths: periodMonths,
+        payType: '微信',
+        amount: amount,
+        description: description
+      });
+      
+      setOrder(response);
+      setQrCodeUrl(response.codeUrl);
+      setPayStatus(response.payStatus);
+      
+      // 生成二维码
+      if (response.codeUrl) {
+        try {
+          const dataUrl = await QRCode.toDataURL(response.codeUrl, {
+            width: 192,
+            margin: 2,
+            color: {
+              dark: '#000000',
+              light: '#FFFFFF'
+            }
+          });
+          setQrCodeDataUrl(dataUrl);
+        } catch (error) {
+          console.error('生成二维码失败:', error);
+        }
+      }
+      
+      // 开始轮询订单状态
+      startPolling(response.outTradeNo);
+    } catch (error) {
+      console.error('创建订单失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 轮询订单状态
+  const startPolling = (outTradeNo) => {
+    const interval = setInterval(async () => {
+      try {
+              const orderStatus = await getOrderStatus(outTradeNo);
+        
+        if (orderStatus.payStatus === '已支付') {
+          setPayStatus('已支付');
+          clearInterval(interval);
+          // 支付成功，关闭弹窗
+          setTimeout(() => {
+            onClose();
+            alert('支付成功！');
+          }, 1000);
+        } else if (orderStatus.payStatus === '支付超时' || orderStatus.payStatus === '已关闭') {
+          setPayStatus(orderStatus.payStatus);
+          clearInterval(interval);
+        }
+      } catch (error) {
+        console.error('查询订单状态失败:', error);
+      }
+    }, 3000); // 每3秒查询一次
+    
+    setPollingInterval(interval);
+  };
+
+  // 停止轮询
+  const stopPolling = () => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
+  };
+
+  useEffect(() => {
     if (open) {
       setType(defaultType);
       setPlanIdx(0);
+      setOrder(null);
+      setPayStatus('未支付');
+      setQrCodeUrl('');
+      setQrCodeDataUrl('');
+      stopPolling();
+    } else {
+      stopPolling();
     }
   }, [open, defaultType]);
+
+  // 组件卸载时清理轮询
+  useEffect(() => {
+    return () => {
+      stopPolling();
+    };
+  }, []);
 
   if (!open) return null;
 
@@ -137,13 +244,52 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
               <i className="fab fa-weixin text-green-500 text-2xl mr-2"></i>
               <span className="text-lg font-semibold text-gray-700">微信支付</span>
             </div>
-            {/* 二维码展示 */}
-            <div className="flex flex-col items-center">
-              <div className="w-48 h-48 bg-white rounded-xl flex items-center justify-center text-xl mb-2 border border-gray-200">
-                <span className="text-gray-400">二维码</span>
+            
+            {/* 支付状态和二维码展示 */}
+            {!order ? (
+              <div className="flex flex-col items-center">
+                <button
+                  onClick={createOrder}
+                  disabled={loading}
+                  className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-bold py-3 px-8 rounded-xl transition-colors"
+                >
+                  {loading ? '创建订单中...' : '立即支付'}
+                </button>
               </div>
-              <div className="mt-1 text-gray-500 text-base">请使用对应APP扫码支付</div>
-            </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                {payStatus === '未支付' && (
+                  <>
+                    <div className="w-48 h-48 bg-white rounded-xl flex items-center justify-center text-xl mb-2 border border-gray-200">
+                      {qrCodeDataUrl ? (
+                        <img src={qrCodeDataUrl} alt="支付二维码" className="w-full h-full object-contain" />
+                      ) : (
+                        <span className="text-gray-400">二维码加载中...</span>
+                      )}
+                    </div>
+                    <div className="mt-1 text-gray-500 text-base">请使用微信扫码支付</div>
+                    <div className="mt-2 text-sm text-gray-400">订单号: {order.outTradeNo}</div>
+                  </>
+                )}
+                {payStatus === '已支付' && (
+                  <div className="text-center">
+                    <div className="text-green-500 text-2xl mb-2">✓ 支付成功</div>
+                    <div className="text-gray-500">正在为您开通会员...</div>
+                  </div>
+                )}
+                {(payStatus === '支付超时' || payStatus === '已关闭') && (
+                  <div className="text-center">
+                    <div className="text-red-500 text-2xl mb-2">✗ {payStatus}</div>
+                    <button
+                      onClick={createOrder}
+                      className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition-colors mt-2"
+                    >
+                      重新支付
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

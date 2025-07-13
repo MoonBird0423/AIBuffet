@@ -973,4 +973,35 @@ export const getRecentQuestionTargets = async (limit = 10) => {
   }
 };
 
+// 订单相关API
+export const createOrder = async (orderData) => {
+  try {
+    const response = await apiClient.post('/order/create', orderData);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating order:', error);
+    throw error;
+  }
+};
+
+export const getOrderStatus = async (outTradeNo) => {
+  try {
+    const response = await apiClient.get(`/order/status/${outTradeNo}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting order status:', error);
+    throw error;
+  }
+};
+
+export const getUserOrders = async (userId) => {
+  try {
+    const response = await apiClient.get(`/order/list?userId=${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting user orders:', error);
+    throw error;
+  }
+};
+
 export default apiClient;
