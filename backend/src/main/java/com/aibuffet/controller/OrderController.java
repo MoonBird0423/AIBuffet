@@ -1,8 +1,10 @@
 package com.aibuffet.controller;
 
 import com.aibuffet.model.UserOrder;
+import com.aibuffet.model.User;
 import com.aibuffet.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,9 +20,11 @@ public class OrderController {
      * 创建/获取订单
      */
     @PostMapping("/create")
-    public UserOrder createOrder(@RequestBody CreateOrderRequest request) {
+    public UserOrder createOrder(
+            @RequestBody CreateOrderRequest request,
+            @AuthenticationPrincipal User user) {
         return orderService.createOrGetOrder(
-                request.getUserId(), 
+                user.getId(),
                 request.getMemberType(), 
                 request.getPeriodMonths(), 
                 request.getPayType(), 
@@ -67,7 +71,6 @@ public class OrderController {
      * 创建订单请求DTO
      */
     public static class CreateOrderRequest {
-        private Long userId;
         private String memberType;
         private Integer periodMonths;
         private String payType;
@@ -75,14 +78,6 @@ public class OrderController {
         private String description;
 
         // Getters and Setters
-        public Long getUserId() {
-            return userId;
-        }
-
-        public void setUserId(Long userId) {
-            this.userId = userId;
-        }
-
         public String getMemberType() {
             return memberType;
         }
@@ -123,4 +118,4 @@ public class OrderController {
             this.description = description;
         }
     }
-} 
+}

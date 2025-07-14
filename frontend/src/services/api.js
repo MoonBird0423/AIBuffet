@@ -976,7 +976,8 @@ export const getRecentQuestionTargets = async (limit = 10) => {
 // 订单相关API
 export const createOrder = async (orderData) => {
   try {
-    const response = await apiClient.post('/order/create', orderData);
+    const { userId, ...restData } = orderData; // 移除userId
+    const response = await apiClient.post('/order/create', restData);
     return response.data;
   } catch (error) {
     console.error('Error creating order:', error);

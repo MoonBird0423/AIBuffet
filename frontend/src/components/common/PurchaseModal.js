@@ -56,7 +56,7 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
   const [pollingInterval, setPollingInterval] = useState(null);
 
   // 创建订单
-  const createOrder = async () => {
+  const handleCreateOrder = async () => {
     if (!user) return;
     
     setLoading(true);
@@ -68,7 +68,6 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
       const description = `书意平台【${type.toUpperCase()}】订阅-【${periodMonths}】个月`;
       
       const response = await createOrder({
-        userId: user.id,
         memberType: type.toUpperCase(),
         periodMonths: periodMonths,
         payType: '微信',
@@ -249,7 +248,7 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
             {!order ? (
               <div className="flex flex-col items-center">
                 <button
-                  onClick={createOrder}
+                  onClick={handleCreateOrder}
                   disabled={loading}
                   className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-bold py-3 px-8 rounded-xl transition-colors"
                 >
@@ -281,7 +280,7 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
                   <div className="text-center">
                     <div className="text-red-500 text-2xl mb-2">✗ {payStatus}</div>
                     <button
-                      onClick={createOrder}
+                      onClick={handleCreateOrder}
                       className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition-colors mt-2"
                     >
                       重新支付
