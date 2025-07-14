@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { createOrder, getOrderStatus } from '../../services/api';
 import QRCode from 'qrcode';
@@ -45,6 +46,7 @@ const PLANS = {
 };
 
 function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [type, setType] = useState(defaultType);
   const [planIdx, setPlanIdx] = useState(0);
@@ -148,10 +150,13 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
       setQrCodeUrl('');
       setQrCodeDataUrl('');
       stopPolling();
+      if (user) {
+        handleCreateOrder();
+      }
     } else {
       stopPolling();
     }
-  }, [open, defaultType]);
+  }, [open, defaultType, user]);
 
   // 组件卸载时清理轮询
   useEffect(() => {
@@ -159,6 +164,13 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
       stopPolling();
     };
   }, []);
+
+  // 监听type和planIdx变化，重新获取二维码
+  useEffect(() => {
+    if (open && user && order) {
+      handleCreateOrder();
+    }
+  }, [type, planIdx]);
 
   if (!open) return null;
 
@@ -194,6 +206,15 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
                 <li key={i}><i className="fas fa-check text-green-400 mr-2"></i>{b}</li>
               ))}
             </ul>
+            <button 
+              onClick={() => {
+                onClose();
+                navigate('/pricing');
+              }}
+              className="mt-6 w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors border border-gray-300"
+            >
+              <i className="fas fa-compress-alt mr-2"></i>权益对比
+            </button>
           </div>
         </div>
         {/* 右侧支付区卡片 */}
@@ -247,13 +268,16 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
             {/* 支付状态和二维码展示 */}
             {!order ? (
               <div className="flex flex-col items-center">
-                <button
-                  onClick={handleCreateOrder}
-                  disabled={loading}
-                  className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-bold py-3 px-8 rounded-xl transition-colors"
-                >
-                  {loading ? '创建订单中...' : '立即支付'}
-                </button>
+                {user ? (
+                  <div className="text-gray-500">正在生成支付二维码...</div>
+                ) : (
+                  <button
+                    onClick={() => navigate('/login')}
+                    className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-xl transition-colors"
+                  >
+                    立即登录
+                  </button>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center">

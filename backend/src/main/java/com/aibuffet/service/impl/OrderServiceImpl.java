@@ -41,7 +41,13 @@ public class OrderServiceImpl implements OrderService {
                 userId, memberType, periodMonths, payType, "未支付");
         
         if (existingOrder.isPresent()) {
-            return existingOrder.get();
+            UserOrder order = existingOrder.get();
+            // 检查订单是否过期
+            if (LocalDateTime.now().isAfter(order.getTimeExpire())) {
+                orderRepository.delete(order);
+            } else {
+                return order;
+            }
         }
 
         // 生成订单号
@@ -120,4 +126,4 @@ public class OrderServiceImpl implements OrderService {
     public List<UserOrder> getUserOrders(Long userId) {
         return orderRepository.findByUserIdOrderByCreateTimeDesc(userId);
     }
-} 
+}
