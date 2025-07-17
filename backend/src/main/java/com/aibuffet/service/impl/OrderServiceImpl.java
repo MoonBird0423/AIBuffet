@@ -1,9 +1,13 @@
 package com.aibuffet.service.impl;
 
 import com.aibuffet.model.UserOrder;
+import com.aibuffet.model.User;
 import com.aibuffet.repository.OrderRepository;
+import com.aibuffet.repository.UserRepository;
 import com.aibuffet.service.OrderService;
 import com.aibuffet.common.WeChatPayUtil;
+import com.aibuffet.common.BenefitException;
+import com.aibuffet.common.ErrorCode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +21,7 @@ import java.util.UUID;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
+    private final UserRepository userRepository;
     private final WeChatPayUtil weChatPayUtil;
 
     @Value("${wechatpay.appid}")
@@ -28,15 +33,25 @@ public class OrderServiceImpl implements OrderService {
     @Value("${wechatpay.merchant_id}")
     private String merchantId;
 
-    public OrderServiceImpl(OrderRepository orderRepository, WeChatPayUtil weChatPayUtil) {
+    public OrderServiceImpl(OrderRepository orderRepository, UserRepository userRepository, WeChatPayUtil weChatPayUtil) {
         this.orderRepository = orderRepository;
+        this.userRepository = userRepository;
         this.weChatPayUtil = weChatPayUtil;
     }
 
     @Override
     @Transactional
     public UserOrder createOrGetOrder(Long userId, String memberType, Integer periodMonths, String payType, Integer amount, String description) {
-        // 先查找是否有相同条件的未支付订单
+        // 检查用户会员状态
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BenefitException(ErrorCode.RESOURCE_NOT_FOUND, "用户不存在"));
+        if (user.getRoleId() != null && user.getRoleId() != 0L) {
+            if (user.getExpireTime() != null && user.getExpireTime().isAfter(LocalDateTime.now())) {
+                throw new BenefitException(ErrorCode.MEMBER_ALREADY_EXISTS, ErrorCode.MEMBER_ALREADY_EXISTS.getMessage());
+            }
+        }
+
+        // 查找是否有相同条件的未支付订单
         Optional<UserOrder> existingOrder = orderRepository.findFirstByUserIdAndMemberTypeAndPeriodMonthsAndPayTypeAndPayStatus(
                 userId, memberType, periodMonths, payType, "未支付");
         

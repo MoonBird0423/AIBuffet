@@ -30,7 +30,11 @@ public enum ErrorCode {
     UNAUTHORIZED(4003, "未经授权的访问"),
     
     // 请求相关错误码
-    INVALID_REQUEST(4004, "无效请求参数");
+    INVALID_REQUEST(4004, "无效请求参数"),
+    
+    // 会员订阅相关错误码
+    MEMBER_ALREADY_EXISTS(5001, "用户已存在订阅会员"),
+    MEMBER_EXPIRED(5002, "会员已过期");
 
     private final int code;
     private final String message;

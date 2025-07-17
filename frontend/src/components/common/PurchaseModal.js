@@ -56,6 +56,7 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   const [pollingInterval, setPollingInterval] = useState(null);
+  const [error, setError] = useState(null);
 
   // 创建订单
   const handleCreateOrder = async () => {
@@ -102,6 +103,7 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
       startPolling(response.outTradeNo);
     } catch (error) {
       console.error('创建订单失败:', error);
+      setError(error.message || '创建订单失败');
     } finally {
       setLoading(false);
     }
@@ -149,6 +151,7 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
       setPayStatus('未支付');
       setQrCodeUrl('');
       setQrCodeDataUrl('');
+      setError(null);
       stopPolling();
       if (user) {
         handleCreateOrder();
@@ -266,10 +269,17 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
             </div>
             
             {/* 支付状态和二维码展示 */}
-            {!order ? (
+              {!order ? (
               <div className="flex flex-col items-center">
                 {user ? (
-                  <div className="text-gray-500">正在生成支付二维码...</div>
+                  error ? (
+                    <div className="text-red-500 text-center">
+                      <div className="text-xl mb-2">✗ 二维码创建失败</div>
+                      <div className="text-sm">{error}</div>
+                    </div>
+                  ) : (
+                    <div className="text-gray-500">正在生成支付二维码...</div>
+                  )
                 ) : (
                   <button
                     onClick={() => navigate('/login')}

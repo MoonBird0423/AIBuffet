@@ -141,6 +141,10 @@ apiClient.interceptors.response.use(
         import('../components/common/Toast').then(({ ToastManager }) => {
           ToastManager.warning(response.data.message || '权限未开通或消耗完', 3000);
         });
+      } else if (response.data.code === 5001) { // 会员已存在错误
+        import('../components/common/Toast').then(({ ToastManager }) => {
+          ToastManager.warning(response.data.message || '用户已存在订阅会员', 3000);
+        });
       }
       // 其他业务错误也可统一处理
       const error = new Error(response.data.message || '业务错误');

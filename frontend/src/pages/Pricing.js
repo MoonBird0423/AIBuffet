@@ -32,18 +32,20 @@ function Pricing() {
             <div className="rounded-3xl p-8 text-center shadow-xl bg-gradient-to-r from-green-400 to-blue-500">
               <h2 className="text-2xl font-bold text-white mb-2">普通用户</h2>
               <div className="text-4xl font-bold text-white mb-2">免费</div>
-              <Link to="/login" className="text-lg font-semibold bg-white text-blue-600 rounded-full px-8 py-3 hover:bg-gray-100 transition mb-6 block text-center w-full">立即注册</Link>
-              <ul className="text-white text-left space-y-3 mt-6">
-                <li><i className="fas fa-check text-green-400 mr-2"></i>100+精品图书文字解读</li>
-                <li><i className="fas fa-check text-green-400 mr-2"></i>100+精品图书语音解读</li>
-              </ul>
+<div className="flex flex-col items-center">
+  <Link to="/login" className="text-lg font-semibold bg-white text-blue-600 rounded-full px-8 py-3 hover:bg-gray-100 transition mb-6 mx-auto">立即注册</Link>
+  <ul className="text-white text-left space-y-3 mt-6 w-full">
+    <li><i className="fas fa-check text-green-400 mr-2"></i>100+精品图书文字解读</li>
+    <li><i className="fas fa-check text-green-400 mr-2"></i>100+精品图书语音解读</li>
+  </ul>
+</div>
             </div>
 
             {/* VIP用户卡片 */}
             <div className="rounded-3xl p-8 text-center shadow-2xl border-4 border-white scale-105 bg-gradient-to-r from-blue-600 to-purple-600">
               <h2 className="text-2xl font-bold text-white mb-2">VIP会员</h2>
               <div className="text-4xl font-bold text-white mb-2">低至9.9元/月</div>
-              <button className="text-lg font-semibold bg-white text-purple-600 rounded-full px-8 py-3 hover:bg-gray-100 transition mb-6 w-full" onClick={() => handleOpenModal('vip')}>立即购买</button>
+<button className="text-lg font-semibold bg-white text-purple-600 rounded-full px-8 py-3 hover:bg-gray-100 transition mb-6" onClick={() => handleOpenModal('vip')}>立即购买</button>
               <ul className="text-white text-left space-y-3 mt-6">
                 <li><i className="fas fa-check text-green-400 mr-2"></i>100+精品图书文字解读</li>
                 <li><i className="fas fa-check text-green-400 mr-2"></i>100+精品图书语音解读</li>
@@ -62,8 +64,8 @@ function Pricing() {
             <div className="rounded-3xl p-8 text-center shadow-xl bg-gradient-to-r from-yellow-400 to-red-500">
               <h2 className="text-2xl font-bold text-white mb-2">SVIP会员</h2>
               <div className="text-4xl font-bold text-white mb-2">低至19.9元/月</div>
-              <button className="text-lg font-semibold bg-white text-orange-600 rounded-full px-8 py-3 hover:bg-gray-100 transition mb-6 w-full" onClick={() => handleOpenModal('svip')}>立即购买</button>
-              <ul className="text-white text-left space-y-3 mt-6">
+<button className="text-lg font-semibold bg-white text-orange-600 rounded-full px-8 py-3 hover:bg-gray-100 transition mb-6" onClick={() => handleOpenModal('svip')}>立即购买</button>
+<ul className="text-white text-left space-y-3 mt-6">
                 <li><i className="fas fa-check text-green-400 mr-2"></i>100+精品图书文字解读</li>
                 <li><i className="fas fa-check text-green-400 mr-2"></i>100+精品图书语音解读</li>
                 <li><i className="fas fa-check text-green-400 mr-2"></i>100+精品图书脑图</li>

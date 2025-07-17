@@ -50,6 +50,9 @@ public class User implements UserDetails {
     @Column(name = "last_login_time")
     private LocalDateTime lastLoginTime;
 
+    @Column(name = "expire_time")
+    private LocalDateTime expireTime;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -78,7 +81,15 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return true;
+        return expireTime == null || LocalDateTime.now().isBefore(expireTime);
+    }
+
+    public LocalDateTime getExpireTime() {
+        return expireTime;
+    }
+
+    public void setExpireTime(LocalDateTime expireTime) {
+        this.expireTime = expireTime;
     }
 
     @Override
