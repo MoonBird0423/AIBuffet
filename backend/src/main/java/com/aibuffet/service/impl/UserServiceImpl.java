@@ -20,6 +20,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriComponentsBuilder;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -38,6 +43,101 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    // 微信登录配置
+    @Value("${wechat.login.appid}")
+    private String wechatLoginAppid;
+
+    @Value("${wechat.login.secret}")
+    private String wechatLoginSecret;
+
+    // 微信扫码登录
+    @Transactional
+    public ApiResponse loginWithWeChat(String code, String state) {
+        try {
+            // 1. 获取access_token和openid、unionid
+            String tokenUrl = UriComponentsBuilder.fromHttpUrl("https://api.weixin.qq.com/sns/oauth2/access_token")
+                    .queryParam("appid", wechatLoginAppid)
+                    .queryParam("secret", wechatLoginSecret)
+                    .queryParam("code", code)
+                    .queryParam("grant_type", "authorization_code")
+                    .toUriString();
+
+            WebClient webClient = WebClient.create();
+            String tokenResp = webClient.get().uri(tokenUrl).retrieve().bodyToMono(String.class).block();
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode tokenJson = mapper.readTree(tokenResp);
+
+            if (tokenJson.has("errcode")) {
+                return ApiResponse.error(400, "微信授权失败: " + tokenJson.get("errmsg").asText());
+            }
+
+            String accessToken = tokenJson.get("access_token").asText();
+            String openid = tokenJson.get("openid").asText();
+            String unionid = tokenJson.has("unionid") ? tokenJson.get("unionid").asText() : null;
+
+            // 2. 获取微信用户信息
+            String userinfoUrl = UriComponentsBuilder.fromHttpUrl("https://api.weixin.qq.com/sns/userinfo")
+                    .queryParam("access_token", accessToken)
+                    .queryParam("openid", openid)
+                    .toUriString();
+            String userinfoResp = webClient.get().uri(userinfoUrl).retrieve().bodyToMono(String.class).block();
+            JsonNode userinfoJson = mapper.readTree(userinfoResp);
+
+            if (userinfoJson.has("errcode")) {
+                return ApiResponse.error(400, "获取微信用户信息失败: " + userinfoJson.get("errmsg").asText());
+            }
+
+            String nickname = userinfoJson.get("nickname").asText();
+
+            // 3. 查找或创建用户
+            User user = null;
+            if (unionid != null) {
+                user = userRepository.findByUnionid(unionid).orElse(null);
+            }
+            if (user == null) {
+                user = new User();
+                user.setUsername(nickname);
+                user.setOpenidApp1(openid);
+                user.setUnionid(unionid);
+                user = userRepository.save(user);
+
+                // 创建默认知识库
+                CreateKnowledgeBaseRequest request = new CreateKnowledgeBaseRequest();
+                request.setName("我的知识库");
+                knowledgeBaseService.createKnowledgeBase(request, user.getId());
+            } else {
+                user.setOpenidApp1(openid);
+                user.setUsername(nickname);
+                userRepository.save(user);
+            }
+
+            // 更新最后登录时间
+            user.setLastLoginTime(LocalDateTime.now());
+            userRepository.save(user);
+
+            // 认证信息
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                user,
+                null,
+                user.getAuthorities()
+            );
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            // 生成JWT Token
+            String token = jwtUtil.generateToken(user.getUsername(), user.getId());
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("userId", user.getId());
+            data.put("username", user.getUserDisplayName());
+            data.put("token", token);
+
+            return ApiResponse.success(data);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ApiResponse.error(500, "微信登录异常: " + e.getMessage());
+        }
+    }
 
     @Override
     @Transactional

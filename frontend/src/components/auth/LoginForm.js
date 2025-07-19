@@ -85,12 +85,7 @@ function LoginForm() {
   };
   return (
     <div className="max-w-md w-full">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
-          欢迎回来
-        </h2>
-        <p className="text-gray-600">请使用手机验证码登录</p>
-      </div>
+      
 
       {error && (
         <div className="mb-6 p-4 bg-red-50/80 backdrop-blur-sm border border-red-200 text-red-700 text-sm rounded-xl animate-shake">
@@ -106,9 +101,6 @@ function LoginForm() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-5">          {/* 手机号输入框 */}
           <div className="group">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              手机号码
-            </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <FaMobile className="h-5 w-5 text-gray-800" />
@@ -124,9 +116,6 @@ function LoginForm() {
             </div>
           </div>          {/* 验证码输入框 */}
           <div className="group">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              验证码
-            </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <FaLock className="h-5 w-5 text-gray-800" />

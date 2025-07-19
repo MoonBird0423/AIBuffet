@@ -4,6 +4,7 @@ import com.aibuffet.common.ApiResponse;
 import com.aibuffet.model.User;
 import com.aibuffet.service.OSSService;
 import com.aibuffet.service.UserService;
+import com.aibuffet.dto.WeChatLoginRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -99,6 +100,22 @@ public class UserController {
     public ResponseEntity<ApiResponse> logout(@AuthenticationPrincipal User user) {
         userService.logout(user.getId());
         return ResponseEntity.ok(ApiResponse.success("退出成功"));
+    }
+
+    /**
+     * 微信扫码登录
+     */
+    @PostMapping("/wechat-login")
+    public ResponseEntity<ApiResponse> wechatLogin(@RequestBody WeChatLoginRequest request) {
+        if (request == null || request.getCode() == null) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(400, "code不能为空"));
+        }
+        ApiResponse resp = ((com.aibuffet.service.impl.UserServiceImpl) userService).loginWithWeChat(request.getCode(), request.getState());
+        if (resp.getCode() == 200) {
+            return ResponseEntity.ok(resp);
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(resp);
+        }
     }
 }
 

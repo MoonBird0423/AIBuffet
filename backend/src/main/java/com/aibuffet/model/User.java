@@ -41,6 +41,12 @@ public class User implements UserDetails {
 
     private String wechat;
 
+    @Column(name = "openid_app1")
+    private String openidApp1;
+
+    @Column(name = "unionid")
+    private String unionid;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -110,5 +116,21 @@ public class User implements UserDetails {
     // 新增getter方法防止与UserDetails中的getUsername冲突
     public String getUserDisplayName() {
         return this.username;
+    }
+
+    public String getOpenidApp1() {
+        return openidApp1;
+    }
+
+    public void setOpenidApp1(String openidApp1) {
+        this.openidApp1 = openidApp1;
+    }
+
+    public String getUnionid() {
+        return unionid;
+    }
+
+    public void setUnionid(String unionid) {
+        this.unionid = unionid;
     }
 }

@@ -44,6 +44,7 @@ public class SecurityConfig {
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/knowledge-bases/public/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/user/wechat-login").permitAll()           // 微信扫码登录接口免认证
                 // 新增：无需登录的图书功能
                 .requestMatchers(HttpMethod.GET, "/api/documents").permitAll()                    // 图书搜索、分类筛选
                 .requestMatchers(HttpMethod.GET, "/api/documents/*").permitAll()                 // 图书信息查询  

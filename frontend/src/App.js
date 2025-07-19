@@ -7,6 +7,7 @@ import Chat from './pages/Chat';
 import Login from './pages/Login';
 import BookDetails from './pages/BookDetails';
 import Pricing from './pages/Pricing';
+import WechatCallback from './pages/WechatCallback';
 import MainLayout from './components/layout/MainLayout';
 import ToastContainer from './components/common/Toast';
 import { AuthProvider } from './contexts/AuthContext';
@@ -29,7 +30,9 @@ function App() {
         <Routes>
           {/* 登录页面 */}
           <Route path="/login" element={<Login />} />
-          
+          {/* 微信扫码回调页面 */}
+          <Route path="/wechat-callback" element={<WechatCallback />} />
+
           {/* 需要登录的独立页面 */}
           <Route path="/chat" element={
             <ProtectedRoute>
