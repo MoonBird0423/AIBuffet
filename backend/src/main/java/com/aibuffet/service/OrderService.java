@@ -1,6 +1,7 @@
 package com.aibuffet.service;
 
 import com.aibuffet.model.UserOrder;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -14,4 +15,6 @@ public interface OrderService {
     void handleWeChatNotify(String notifyBody, String serial, String signature, String timestamp, String nonce);
 
     List<UserOrder> getUserOrders(Long userId);
-} 
+
+    Page<UserOrder> getUserOrders(Long userId, int page, int size);
+}

@@ -8,6 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/order")
@@ -60,11 +61,21 @@ public class OrderController {
     }
 
     /**
-     * 查询用户所有订单
+     * 分页查询用户订单
      */
     @GetMapping("/list")
-    public List<UserOrder> getUserOrders(@RequestParam Long userId) {
-        return orderService.getUserOrders(userId);
+    public Map<String, Object> getUserOrders(
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        org.springframework.data.domain.Page<UserOrder> orderPage = orderService.getUserOrders(userId, page, size);
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("content", orderPage.getContent());
+        result.put("totalElements", orderPage.getTotalElements());
+        result.put("totalPages", orderPage.getTotalPages());
+        result.put("page", orderPage.getNumber());
+        result.put("size", orderPage.getSize());
+        return result;
     }
 
     /**

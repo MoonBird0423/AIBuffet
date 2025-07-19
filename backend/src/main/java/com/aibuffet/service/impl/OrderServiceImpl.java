@@ -17,6 +17,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -158,5 +160,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<UserOrder> getUserOrders(Long userId) {
         return orderRepository.findByUserIdOrderByCreateTimeDesc(userId);
+    }
+
+    @Override
+    public Page<UserOrder> getUserOrders(Long userId, int page, int size) {
+        return orderRepository.findByUserIdOrderByCreateTimeDesc(userId, PageRequest.of(page, size));
     }
 }

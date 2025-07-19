@@ -9,6 +9,8 @@ import com.aibuffet.service.KnowledgeBaseService;
 import com.aibuffet.service.UserService;
 import com.aibuffet.security.JwtUtil;
 import com.aibuffet.service.VerificationCodeService;
+import com.aibuffet.repository.RoleRepository;
+import com.aibuffet.model.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,6 +35,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private KnowledgeBaseService knowledgeBaseService;
+
+    @Autowired
+    private RoleRepository roleRepository;
 
     @Override
     @Transactional
@@ -118,6 +123,18 @@ public class UserServiceImpl implements UserService {
         profile.put("wechat", user.getWechat());
         profile.put("createdAt", user.getCreatedAt());
         profile.put("updatedAt", user.getUpdatedAt());
+        profile.put("roleId", user.getRoleId());
+        profile.put("expireTime", user.getExpireTime());
+
+        // 查询会员类型名称
+        String memberName = null;
+        if (user.getRoleId() != null) {
+            Role role = roleRepository.findById(user.getRoleId()).orElse(null);
+            if (role != null) {
+                memberName = role.getName();
+            }
+        }
+        profile.put("name", memberName);
 
         return profile;
     }
