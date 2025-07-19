@@ -8,11 +8,29 @@ function Login() {
   const [tab, setTab] = useState('wechat');
 
   useEffect(() => {
-    // 动态加载微信官方JS（新版内嵌二维码，stylelite: 1）
-    if (!window.WxLogin) {
-      const script = document.createElement('script');
-      script.src = 'https://res.wx.qq.com/connect/zh_CN/htmledition/js/wxLogin.js';
-      script.onload = () => {
+    if (tab === 'wechat') {
+      // 动态加载微信官方JS（新版内嵌二维码，stylelite: 1）
+      if (!window.WxLogin) {
+        const script = document.createElement('script');
+        script.src = 'https://res.wx.qq.com/connect/zh_CN/htmledition/js/wxLogin.js';
+        script.onload = () => {
+          new window.WxLogin({
+            id: "wechat-login-container",
+            appid: "wx0a89d967d8dc9614",
+            scope: "snsapi_login",
+            redirect_uri: encodeURIComponent('https://lovesuyi.cn/wechat-callback'),
+            state: Math.random().toString(36).slice(2),
+            style: "black",
+            self_redirect: false,
+            stylelite: 1,
+            onReady: function(isReady) {
+              // 可选：二维码iframe加载完成回调
+              // console.log('WxLogin ready:', isReady);
+            }
+          });
+        };
+        document.body.appendChild(script);
+      } else {
         new window.WxLogin({
           id: "wechat-login-container",
           appid: "wx0a89d967d8dc9614",
@@ -27,25 +45,9 @@ function Login() {
             // console.log('WxLogin ready:', isReady);
           }
         });
-      };
-      document.body.appendChild(script);
-    } else {
-      new window.WxLogin({
-        id: "wechat-login-container",
-        appid: "wx0a89d967d8dc9614",
-        scope: "snsapi_login",
-        redirect_uri: encodeURIComponent('https://lovesuyi.cn/wechat-callback'),
-        state: Math.random().toString(36).slice(2),
-        style: "black",
-        self_redirect: false,
-        stylelite: 1,
-        onReady: function(isReady) {
-          // 可选：二维码iframe加载完成回调
-          // console.log('WxLogin ready:', isReady);
-        }
-      });
+      }
     }
-  }, []);
+  }, [tab]);
 
   return (
     <div className="min-h-screen relative overflow-hidden">

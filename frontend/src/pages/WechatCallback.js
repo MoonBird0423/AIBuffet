@@ -1,9 +1,12 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { ToastManager } from '../components/common/Toast';
 
 function WechatCallback() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   useEffect(() => {
     // 解析URL参数
@@ -17,6 +20,8 @@ function WechatCallback() {
           if (res.data && res.data.code === 200 && res.data.data && res.data.data.token) {
             // 存储token到localStorage.auth_user，保持与全局一致
             localStorage.setItem('auth_user', JSON.stringify({ token: res.data.data.token }));
+            login({ token: res.data.data.token });
+            ToastManager.success('登录成功');
             navigate('/');
           } else {
             alert(res.data?.msg || '微信登录失败');
