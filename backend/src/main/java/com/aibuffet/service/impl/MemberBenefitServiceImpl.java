@@ -46,22 +46,28 @@ public class MemberBenefitServiceImpl implements MemberBenefitService {
     @Override
     @Transactional(readOnly = true)
     public boolean checkBenefit(Long userId, String benefitIdentifier) {
-        // 1. 查询权益
+        // 查询用户
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null || user.getRoleId() == null) return false;
+        // 检查角色是否过期
+        if (user.getExpireTime() != null && java.time.LocalDateTime.now().isAfter(user.getExpireTime())) {
+            return false;
+        }
+
+        // 查询权益
         Benefit benefit = benefitRepository.findByIdentifier(benefitIdentifier);
         if (benefit == null) return false;
 
-        // 2. 查询用户角色及角色权益
-        User user = userRepository.findById(userId).orElse(null);
-        if (user != null && user.getRoleId() != null) {
-            List<RoleBenefit> roleBenefits = roleBenefitRepository.findByRoleIdAndBenefitId(user.getRoleId(), benefit.getId());
-            for (RoleBenefit rb : roleBenefits) {
-                // 计算已使用量
-                int used = benefitUsageRepository.sumByUserAndRoleAndBenefit(userId, user.getRoleId(), benefit.getId());
-                int remaining = rb.getQuota() - used;
-                
-                if (rb.getQuota() == -1 || (rb.getQuota() > 0 && remaining > 0)) {
-                    return true;
-                }
+        // 查询角色权益
+        List<RoleBenefit> roleBenefits = roleBenefitRepository.findByRoleIdAndBenefitId(user.getRoleId(), benefit.getId());
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        int year = now.getYear();
+        int month = now.getMonthValue();
+
+        for (RoleBenefit rb : roleBenefits) {
+            int used = benefitUsageRepository.sumByUserAndRoleAndBenefitThisMonth(userId, user.getRoleId(), benefit.getId(), year, month);
+            if (rb.getQuota() == -1 || (rb.getQuota() > 0 && used < rb.getQuota())) {
+                return true;
             }
         }
         return false;

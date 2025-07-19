@@ -13,4 +13,7 @@ public interface BenefitUsageRepository extends JpaRepository<BenefitUsage, Long
     
     @Query("SELECT COALESCE(SUM(bu.amount), 0) FROM BenefitUsage bu WHERE bu.userId = :userId AND bu.roleId = :roleId AND bu.benefitId = :benefitId")
     int sumByUserAndRoleAndBenefit(@Param("userId") Long userId, @Param("roleId") Long roleId, @Param("benefitId") Long benefitId);
+
+    @Query("SELECT COALESCE(SUM(bu.amount), 0) FROM BenefitUsage bu WHERE bu.userId = :userId AND bu.roleId = :roleId AND bu.benefitId = :benefitId AND FUNCTION('YEAR', bu.createdAt) = :year AND FUNCTION('MONTH', bu.createdAt) = :month")
+    int sumByUserAndRoleAndBenefitThisMonth(@Param("userId") Long userId, @Param("roleId") Long roleId, @Param("benefitId") Long benefitId, @Param("year") int year, @Param("month") int month);
 }

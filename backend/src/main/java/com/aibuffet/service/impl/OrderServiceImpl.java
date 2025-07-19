@@ -4,6 +4,7 @@ import com.aibuffet.model.UserOrder;
 import com.aibuffet.model.User;
 import com.aibuffet.repository.OrderRepository;
 import com.aibuffet.repository.UserRepository;
+import com.aibuffet.repository.RoleRepository;
 import com.aibuffet.service.OrderService;
 import com.aibuffet.common.WeChatPayUtil;
 import com.aibuffet.common.BenefitException;
@@ -22,6 +23,7 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final WeChatPayUtil weChatPayUtil;
 
     @Value("${wechatpay.appid}")
@@ -33,9 +35,10 @@ public class OrderServiceImpl implements OrderService {
     @Value("${wechatpay.merchant_id}")
     private String merchantId;
 
-    public OrderServiceImpl(OrderRepository orderRepository, UserRepository userRepository, WeChatPayUtil weChatPayUtil) {
+    public OrderServiceImpl(OrderRepository orderRepository, UserRepository userRepository, RoleRepository roleRepository, WeChatPayUtil weChatPayUtil) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
         this.weChatPayUtil = weChatPayUtil;
     }
 
@@ -97,6 +100,20 @@ public class OrderServiceImpl implements OrderService {
         return orderRepository.findByOutTradeNo(outTradeNo).orElse(null);
     }
 
+    private void updateUserRoleAfterPayment(UserOrder order) {
+        // 只负责角色和过期时间处理
+        String memberType = order.getMemberType();
+        com.aibuffet.model.Role role = roleRepository.findByName(memberType);
+        if (role == null) {
+            throw new BenefitException(ErrorCode.RESOURCE_NOT_FOUND, "未找到对应角色: " + memberType);
+        }
+        User user = userRepository.findById(order.getUserId())
+                .orElseThrow(() -> new BenefitException(ErrorCode.RESOURCE_NOT_FOUND, "用户不存在"));
+        user.setRoleId(role.getId());
+        user.setExpireTime(LocalDateTime.now().plusMonths(order.getPeriodMonths()));
+        userRepository.save(user);
+    }
+
     @Override
     @Transactional
     public UserOrder updateOrderStatusFromWeChat(String outTradeNo) {
@@ -113,6 +130,8 @@ public class OrderServiceImpl implements OrderService {
             order.setPayTime(LocalDateTime.now());
             order.setTransactionId(status.getTransactionId());
             orderRepository.save(order);
+            // 新增：支付成功后设置用户角色
+            updateUserRoleAfterPayment(order);
         }
 
         return order;
@@ -130,9 +149,8 @@ public class OrderServiceImpl implements OrderService {
                 order.setPayTime(LocalDateTime.now());
                 order.setTransactionId(result.getTransactionId());
                 orderRepository.save(order);
-                
-                // TODO: 更新用户表，添加角色和过期时间
-                // 这里需要根据你的用户表结构来实现
+                // 新增：支付成功后设置用户角色
+                updateUserRoleAfterPayment(order);
             }
         }
     }
