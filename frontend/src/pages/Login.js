@@ -20,7 +20,7 @@ function Login() {
           redirect_uri: encodeURIComponent('https://lovesuyi.cn/wechat-callback'),
           state: Math.random().toString(36).slice(2),
           style: "black",
-          self_redirect: true,
+          self_redirect: false,
           stylelite: 1,
           onReady: function(isReady) {
             // 可选：二维码iframe加载完成回调
@@ -37,7 +37,7 @@ function Login() {
         redirect_uri: encodeURIComponent('https://lovesuyi.cn/wechat-callback'),
         state: Math.random().toString(36).slice(2),
         style: "black",
-        self_redirect: true,
+        self_redirect: false,
         stylelite: 1,
         onReady: function(isReady) {
           // 可选：二维码iframe加载完成回调
@@ -107,7 +107,9 @@ function Login() {
               {tab === 'wechat' ? (
                 <div className="flex flex-col items-center justify-center w-full">
                   <div className="flex justify-center w-full">
-                    <div id="wechat-login-container" className="mx-auto" style={{ width: 220, height: 220, background: 'transparent' }} />
+                    <div style={{ width: 300 }}>
+                      <div id="wechat-login-container" style={{ width: 300, height: 220, background: 'transparent', marginLeft: 'auto', marginRight: 'auto' }} />
+                    </div>
                   </div>
                   <div className="text-xs text-gray-500 mt-4 text-center">使用微信扫一扫，快速登录/注册</div>
                 </div>
