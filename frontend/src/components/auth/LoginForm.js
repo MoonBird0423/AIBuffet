@@ -61,8 +61,8 @@ function LoginForm() {
         code
       });
       
-      // 登录成功，直接使用API返回的完整用户数据
-      login(userData);
+      // 登录成功，等待用户信息拉取完毕
+      await login(userData);
 
       // 显示登录成功提示
       ToastManager.success('登录成功');
