@@ -47,6 +47,13 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public UserOrder createOrGetOrder(Long userId, String memberType, Integer periodMonths, String payType, Integer amount, String description) {
+
+        // 检查会员类型是否存在
+        com.aibuffet.model.Role role = roleRepository.findByName(memberType);
+        if (role == null) {
+            throw new BenefitException(ErrorCode.RESOURCE_NOT_FOUND, "会员不存在");
+        }
+
         // 检查用户会员状态
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BenefitException(ErrorCode.RESOURCE_NOT_FOUND, "用户不存在"));
