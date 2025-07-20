@@ -104,6 +104,7 @@ public class UserServiceImpl implements UserService {
             if (user == null) {
                 user = new User();
                 user.setUsername(nickname);
+                user.setAvatar(userinfoJson.get("headimgurl").asText());
                 user.setOpenidApp1(openid);
                 user.setUnionid(unionid);
                 user = userRepository.save(user);
@@ -115,12 +116,16 @@ public class UserServiceImpl implements UserService {
             } else {
                 user.setOpenidApp1(openid);
                 user.setUsername(nickname);
-                userRepository.save(user);
+                user.setAvatar(userinfoJson.get("headimgurl").asText());
+                user = userRepository.save(user);
             }
 
             // 更新最后登录时间
             user.setLastLoginTime(LocalDateTime.now());
-            userRepository.save(user);
+            user = userRepository.save(user);
+
+            // 重新查一次，确保所有字段为最新
+            user = userRepository.findById(user.getId()).orElse(null);
 
             // 认证信息
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
