@@ -25,9 +25,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class UserServiceImpl implements UserService {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -54,6 +58,7 @@ public class UserServiceImpl implements UserService {
     // 微信扫码登录
     @Transactional
     public ApiResponse loginWithWeChat(String code, String state) {
+        logger.info("loginWithWeChat called, code={}, state={}", code, state);
         try {
             // 1. 获取access_token和openid、unionid
             String tokenUrl = UriComponentsBuilder.fromHttpUrl("https://api.weixin.qq.com/sns/oauth2/access_token")
@@ -83,6 +88,7 @@ public class UserServiceImpl implements UserService {
                     .toUriString();
             String userinfoResp = webClient.get().uri(userinfoUrl).retrieve().bodyToMono(String.class).block();
             JsonNode userinfoJson = mapper.readTree(userinfoResp);
+            logger.info("WeChat user info: {}", userinfoJson);
 
             if (userinfoJson.has("errcode")) {
                 return ApiResponse.error(400, "获取微信用户信息失败: " + userinfoJson.get("errmsg").asText());
@@ -130,8 +136,11 @@ public class UserServiceImpl implements UserService {
             Map<String, Object> data = new HashMap<>();
             data.put("userId", user.getId());
             data.put("username", user.getUserDisplayName());
+            data.put("phone", user.getPhone());
+            data.put("avatar", user.getAvatar());
             data.put("token", token);
 
+            logger.info("WeChat login user: {}", user);
             return ApiResponse.success(data);
         } catch (Exception e) {
             e.printStackTrace();

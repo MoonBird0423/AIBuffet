@@ -4,6 +4,8 @@ import com.aibuffet.common.ApiResponse;
 import com.aibuffet.model.User;
 import com.aibuffet.service.OSSService;
 import com.aibuffet.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.aibuffet.dto.WeChatLoginRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,6 +19,7 @@ import java.io.IOException;
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     @Autowired
     private UserService userService;
@@ -107,10 +110,12 @@ public class UserController {
      */
     @PostMapping("/wechat-login")
     public ResponseEntity<ApiResponse> wechatLogin(@RequestBody WeChatLoginRequest request) {
+        logger.info("微信登录请求参数: code={}, state={}", request != null ? request.getCode() : null, request != null ? request.getState() : null);
         if (request == null || request.getCode() == null) {
             return ResponseEntity.badRequest().body(ApiResponse.error(400, "code不能为空"));
         }
         ApiResponse resp = ((com.aibuffet.service.impl.UserServiceImpl) userService).loginWithWeChat(request.getCode(), request.getState());
+        logger.info("微信登录返回: {}", resp);
         if (resp.getCode() == 200) {
             return ResponseEntity.ok(resp);
         } else {
