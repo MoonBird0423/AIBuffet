@@ -79,27 +79,23 @@ public class AuthenticationFilter extends OncePerRequestFilter {
             throw new RuntimeException("Token validation failed");
         }
 
-        // 从token中获取用户信息
-        String phone = jwtUtil.getPhoneFromToken(token);
+        // 从token中获取用户ID
         Long userId = jwtUtil.getUserIdFromToken(token);
-        
-        logger.debug("Extracted phone: {}, userId: {}", phone, userId);
-        
+        logger.debug("Extracted userId: {}", userId);
         User user = userRepository.findById(userId).orElse(null);
-
-        if (user != null && user.getPhone().equals(phone)) {
+        if (user != null) {
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 user,
                 null,
                 user.getAuthorities()
             );
             SecurityContextHolder.getContext().setAuthentication(auth);
-            logger.info("Auth SUCCESS - userId: {}, phone: {}", userId, phone);
+            logger.info("Auth SUCCESS - userId: {}", userId);
             logger.debug("SecurityContext set with auth: {}", auth);
         } else {
-            logger.warn("User not found or phone number mismatch for userId: {}, phone: {}", userId, phone);
+            logger.warn("User not found for userId: {}", userId);
             SecurityContextHolder.clearContext();
-            throw new RuntimeException("User not found or phone number mismatch");
+            throw new RuntimeException("User not found");
         }
     }
 }

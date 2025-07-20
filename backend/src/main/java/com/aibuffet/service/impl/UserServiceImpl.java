@@ -115,7 +115,10 @@ public class UserServiceImpl implements UserService {
                 knowledgeBaseService.createKnowledgeBase(request, user.getId());
             } else {
                 user.setOpenidApp1(openid);
+                logger.info("nickname before setUsername: {}", nickname);
                 user.setUsername(nickname);
+                logger.info("user after setUsername: {}", user);
+                logger.info("user.username field: {}", user.getUserDisplayName());
                 user.setAvatar(userinfoJson.get("headimgurl").asText());
                 user = userRepository.save(user);
             }
@@ -136,7 +139,7 @@ public class UserServiceImpl implements UserService {
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             // 生成JWT Token
-            String token = jwtUtil.generateToken(user.getUsername(), user.getId());
+            String token = jwtUtil.generateToken(user.getId());
 
             Map<String, Object> data = new HashMap<>();
             data.put("userId", user.getId());
@@ -204,7 +207,7 @@ public class UserServiceImpl implements UserService {
 
             // 使用JwtUtil生成token
             System.out.println("生成JWT Token");
-            String token = jwtUtil.generateToken(phone, user.getId());
+            String token = jwtUtil.generateToken(user.getId());
             System.out.println("JWT Token生成成功");
 
             System.out.println("准备返回用户信息");

@@ -32,6 +32,10 @@ public class User implements UserDetails {
     @Column(unique = true)
     private String username;
 
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
     private String password;
 
     @Column(unique = true)
@@ -82,7 +86,7 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
-        return this.phone; // 使用手机号作为唯一标识
+        return this.username;
     }
 
     @Override

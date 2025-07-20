@@ -30,17 +30,15 @@ public class JwtUtil {
 
     /**
      * 生成JWT Token
-     * @param phone 用户手机号
      * @param userId 用户ID
      * @return JWT Token
      */
-    public String generateToken(String phone, Long userId) {
+    public String generateToken(Long userId) {
         Date now = new Date();
         Date expirationDate = new Date(now.getTime() + expirationTime);
 
         return Jwts.builder()
-                .setSubject(phone)
-                .claim("userId", userId)
+                .setSubject(String.valueOf(userId))
                 .setIssuedAt(now)
                 .setExpiration(expirationDate)
                 .signWith(key, SignatureAlgorithm.HS512)
@@ -48,21 +46,22 @@ public class JwtUtil {
     }
 
     /**
-     * 从token中获取用户手机号
+     * 从token中获取用户ID（字符串形式）
      * @param token JWT Token
-     * @return 用户手机号
+     * @return 用户ID字符串
      */
-    public String getPhoneFromToken(String token) {
+    public String getUserIdStringFromToken(String token) {
         return getClaimsFromToken(token).getSubject();
     }
 
-    /**
-     * 从token中获取用户ID
-     * @param token JWT Token
-     * @return 用户ID
-     */
+    // 如需Long类型可自行转换
     public Long getUserIdFromToken(String token) {
-        return getClaimsFromToken(token).get("userId", Long.class);
+        String idStr = getUserIdStringFromToken(token);
+        try {
+            return Long.valueOf(idStr);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /**

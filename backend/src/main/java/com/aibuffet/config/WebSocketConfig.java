@@ -113,24 +113,18 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 
                 // 获取用户信息
                 try {
-                    String phone = jwtUtil.getPhoneFromToken(token);
                     Long userId = jwtUtil.getUserIdFromToken(token);
-                    
-                    logger.info("[WebSocket Auth] 提取用户信息 - 手机: {}, 用户ID: {}", phone, userId);
-                    
+                    logger.info("[WebSocket Auth] 提取用户信息 - 用户ID: {}", userId);
                     User user = userRepository.findById(userId).orElse(null);
-                    if (user == null || !user.getPhone().equals(phone)) {
-                        logger.warn("[WebSocket Auth] WebSocket连接用户信息验证失败: userId={}, phone={}", userId, phone);
+                    if (user == null) {
+                        logger.warn("[WebSocket Auth] WebSocket连接用户信息验证失败: userId={}", userId);
                         return false;
                     }
-                    
                     // 将用户信息存储到WebSocket session属性中
                     attributes.put("user", user);
-                    logger.info("[WebSocket Auth] WebSocket认证成功: userId={}, phone={}", userId, phone);
-                    
+                    logger.info("[WebSocket Auth] WebSocket认证成功: userId={}", userId);
                     // 使用INFO级别日志
                     logger.info("[WebSocket Auth] ===== WebSocket握手认证成功 =====");
-                    
                     return true;
                 } catch (Exception e) {
                     logger.warn("[WebSocket Auth] 获取用户信息时发生异常: {}", e.getMessage());
