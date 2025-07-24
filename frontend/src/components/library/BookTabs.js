@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import InterpretationViewer from '../knowledge/InterpretationViewer';
 import MindmapViewer from '../knowledge/MindmapViewer';
 import QuizViewer from '../knowledge/QuizViewer';
+import QuizJsonRenderer from '../knowledge/QuizJsonRenderer';
 import AudioPlayer from '../common/AudioPlayer';
 
 function BookTabs({ activeTab, onTabChange, content, loading = false, contentStatus = 'loading', audioUrl, hasAudio, bookTitle, bookId }) {
@@ -89,8 +90,22 @@ function BookTabs({ activeTab, onTabChange, content, loading = false, contentSta
             );
           case 'mindmap':
             return <MindmapViewer content={content} height="1000px" />;
-          case 'quiz':
-            return <QuizViewer questions={content} useMaxHeight={false} />;
+          case 'quiz': {
+            // 判断是否为JSON格式
+            let isJson = false;
+            if (typeof content === 'string') {
+              const trimmed = content.trim();
+              isJson = (trimmed.startsWith('{') || trimmed.startsWith('['));
+              try {
+                JSON.parse(trimmed);
+              } catch {
+                isJson = false;
+              }
+            }
+            return isJson
+              ? <QuizJsonRenderer content={content} />
+              : <QuizViewer questions={content} useMaxHeight={false} />;
+          }
           default:
             return null;
         }
