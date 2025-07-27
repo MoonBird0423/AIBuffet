@@ -1,6 +1,8 @@
 package com.aibuffet.controller;
 
 import com.aibuffet.common.ApiResponse;
+import com.aibuffet.common.BenefitCheck;
+import com.aibuffet.common.BenefitUsage;
 import com.aibuffet.common.ErrorCode;
 import com.aibuffet.model.User;
 import com.aibuffet.service.AudioSynthesisService;
@@ -12,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.Authentication;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -180,6 +181,8 @@ public class DocumentAudioController {
      * @param docId 文档ID
      * @return 多角色语音合成结果
      */
+    @BenefitCheck("api:documents:synthesizeMultiRoleAudio")
+    @BenefitUsage(identifier = "api:documents:synthesizeMultiRoleAudio", amount = 1)
     @PostMapping("/{docId}/audio/multi-role-synthesize")
     public ResponseEntity<ApiResponse<Map<String, Object>>> synthesizeMultiRoleAudio(
             @PathVariable Long docId,

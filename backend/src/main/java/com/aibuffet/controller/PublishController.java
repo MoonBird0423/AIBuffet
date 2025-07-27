@@ -1,6 +1,8 @@
 package com.aibuffet.controller;
 
 import com.aibuffet.common.ApiResponse;
+import com.aibuffet.common.BenefitCheck;
+import com.aibuffet.common.BenefitUsage;
 import com.aibuffet.common.ErrorCode;
 import com.aibuffet.dto.InterpretationResponse;
 import com.aibuffet.dto.MindmapResponse;
@@ -55,6 +57,8 @@ public class PublishController {
         }
     }
 
+    @BenefitCheck("api:publish:generateInterpretation")
+    @BenefitUsage(identifier = "api:publish:generateInterpretation", amount = 1)
     @PostMapping("/docs/{docId}/interpretation/generate")
     public ApiResponse<Void> generateInterpretation(
             @PathVariable Long docId,
@@ -97,6 +101,8 @@ public class PublishController {
         }
     }
 
+    @BenefitCheck("api:publish:generateMindmap")
+    @BenefitUsage(identifier = "api:publish:generateMindmap", amount = 1)
     @PostMapping("/docs/{docId}/mindmap/generate")
     public ApiResponse<Void> generateMindmap(
             @PathVariable Long docId,
@@ -139,6 +145,8 @@ public class PublishController {
         }
     }
 
+    @BenefitCheck("api:publish:generateQuiz")
+    @BenefitUsage(identifier = "api:publish:generateQuiz", amount = 1)
     @PostMapping("/docs/{docId}/quiz/generate")
     public ApiResponse<Void> generateQuiz(
             @PathVariable Long docId,
