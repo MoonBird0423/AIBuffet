@@ -20,6 +20,7 @@ import {
 } from '../../services/api';
 import MindmapViewer from './MindmapViewer';
 import QuizViewer from './QuizViewer';
+import QuizJsonRenderer from './QuizJsonRenderer';
 import InterpretationViewer from './InterpretationViewer';
 import AudioPlayer from '../common/AudioPlayer';
 import ProgressBar from '../common/ProgressBar';
@@ -786,7 +787,33 @@ function InterpretationModal({ isOpen, onClose, fileName, documentId }) {
               />
             ) : quiz ? (
               <div className="space-y-4">
-                <QuizViewer questions={quiz} />
+                {
+                  (() => {
+                    let isJson = false;
+                    if (typeof quiz === 'string') {
+                      const trimmed = quiz.trim();
+                      isJson = (trimmed.startsWith('{') || trimmed.startsWith('['));
+                      try {
+                        JSON.parse(trimmed);
+                      } catch {
+                        isJson = false;
+                      }
+                    }
+                    return isJson
+                      ? (
+                        <div
+                          style={{
+                            maxHeight: '60vh',
+                            overflowY: 'auto',
+                            padding: '24px 0 24px 24px'
+                          }}
+                        >
+                          <QuizJsonRenderer content={quiz} />
+                        </div>
+                      )
+                      : <QuizViewer questions={quiz} />;
+                  })()
+                }
                 <div className="flex justify-center gap-3">
                   <button
                     onClick={() => openEditModal('quiz', quiz)}
