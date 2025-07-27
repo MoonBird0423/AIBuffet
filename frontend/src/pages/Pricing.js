@@ -35,9 +35,11 @@ function Pricing() {
 <div className="flex flex-col items-center">
   <Link to="/login" className="text-lg font-semibold bg-white text-blue-600 rounded-full px-8 py-3 hover:bg-gray-100 transition mb-6 mx-auto">立即注册</Link>
   <ul className="text-white text-left space-y-3 mt-6 w-full">
-    <li><i className="fas fa-check text-white mr-2"></i>100+精品图书文字解读</li>
-    <li><i className="fas fa-check text-white mr-2"></i>100+精品图书语音解读</li>
-    <li><i className="fas fa-check text-white mr-2"></i>100次-图书知识问答</li>
+    <li><i className="fas fa-check text-white mr-2"></i>海量图书文字解读</li>
+    <li><i className="fas fa-check text-white mr-2"></i>海量图书语音解读</li>
+    <li><i className="fas fa-check text-white mr-2"></i>海量图书思维导图</li>
+    <li><i className="fas fa-check text-white mr-2"></i>海量图书测试题</li>
+    <li><i className="fas fa-check text-white mr-2"></i>【10次/月】图书知识问答</li>
   </ul>
 </div>
             </div>
@@ -48,16 +50,16 @@ function Pricing() {
               <div className="text-4xl font-bold text-white mb-2">低至9.9元/月</div>
 <button className="text-lg font-semibold bg-white text-purple-600 rounded-full px-8 py-3 hover:bg-gray-100 transition mb-6" onClick={() => handleOpenModal('vip')}>立即购买</button>
               <ul className="text-white text-left space-y-3 mt-6">
-                <li><i className="fas fa-check text-white mr-2"></i>100+精品图书文字解读</li>
-                <li><i className="fas fa-check text-white mr-2"></i>100+精品图书语音解读</li>
-                <li><i className="fas fa-check text-white mr-2"></i>100+精品图书脑图</li>
-                <li><i className="fas fa-check text-white mr-2"></i>100+精品图书测试题</li>
-                <li><i className="fas fa-check text-white mr-2"></i>100本/月-图书上传</li>
-                <li><i className="fas fa-check text-white mr-2"></i>10次/月-AI文字解读</li>
-                <li><i className="fas fa-check text-white mr-2"></i>5次/月-AI语音生成</li>
-                <li><i className="fas fa-check text-white mr-2"></i>10次/月-AI脑图生成</li>
-                <li><i className="fas fa-check text-white mr-2"></i>10次/月-AI测试题生成</li>
-                <li><i className="fas fa-check text-white mr-2"></i>无限次-图书知识问答</li>
+                <li><i className="fas fa-check text-white mr-2"></i>海量图书文字解读</li>
+                <li><i className="fas fa-check text-white mr-2"></i>海量图书语音解读</li>
+                <li><i className="fas fa-check text-white mr-2"></i>海量图书思维导图</li>
+                <li><i className="fas fa-check text-white mr-2"></i>海量图书测试题</li>
+                <li><i className="fas fa-check text-white mr-2"></i>【20本/月】图书上传</li>
+                <li><i className="fas fa-check text-white mr-2"></i>【10次/月】AI文字解读</li>
+                <li><i className="fas fa-check text-white mr-2"></i>【5次/月】AI语音生成</li>
+                <li><i className="fas fa-check text-white mr-2"></i>【10次/月】AI脑图生成</li>
+                <li><i className="fas fa-check text-white mr-2"></i>【10次/月】AI测试题生成</li>
+                <li><i className="fas fa-check text-white mr-2"></i>【1000次/月】图书知识问答</li>
               </ul>
             </div>
 
@@ -67,17 +69,16 @@ function Pricing() {
               <div className="text-4xl font-bold text-white mb-2">低至19.9元/月</div>
 <button className="text-lg font-semibold bg-white text-orange-600 rounded-full px-8 py-3 hover:bg-gray-100 transition mb-6" onClick={() => handleOpenModal('svip')}>立即购买</button>
 <ul className="text-white text-left space-y-3 mt-6">
-                <li><i className="fas fa-check text-white mr-2"></i>100+精品图书文字解读</li>
-                <li><i className="fas fa-check text-white mr-2"></i>100+精品图书语音解读</li>
-                <li><i className="fas fa-check text-white mr-2"></i>100+精品图书脑图</li>
-                <li><i className="fas fa-check text-white mr-2"></i>100+精品图书测试题</li>
-                <li><i className="fas fa-check text-white mr-2"></i>200本/月-图书上传</li>
-                <li><i className="fas fa-check text-white mr-2"></i>20次/月-AI文字解读</li>
-                <li><i className="fas fa-check text-white mr-2"></i>10次/月-AI语音生成</li>
-                <li><i className="fas fa-check text-white mr-2"></i>20次/月-AI脑图生成</li>
-                <li><i className="fas fa-check text-white mr-2"></i>20次/月-AI测试题生成</li>
-                <li><i className="fas fa-check text-white mr-2"></i>无限次-图书知识问答</li>
-                <li><i className="fas fa-check text-white mr-2"></i>无限次-知识库问答</li>
+                <li><i className="fas fa-check text-white mr-2"></i>海量图书文字解读</li>
+                <li><i className="fas fa-check text-white mr-2"></i>海量图书语音解读</li>
+                <li><i className="fas fa-check text-white mr-2"></i>海量图书思维导图</li>
+                <li><i className="fas fa-check text-white mr-2"></i>海量图书测试题</li>
+                <li><i className="fas fa-check text-white mr-2"></i>【40本/月】图书上传</li>
+                <li><i className="fas fa-check text-white mr-2"></i>【20次/月】AI文字解读</li>
+                <li><i className="fas fa-check text-white mr-2"></i>【10次/月】AI语音生成</li>
+                <li><i className="fas fa-check text-white mr-2"></i>【20次/月】AI脑图生成</li>
+                <li><i className="fas fa-check text-white mr-2"></i>【20次/月】AI测试题生成</li>
+                <li><i className="fas fa-check text-white mr-2"></i>【无限次】图书知识问答</li>
               </ul>
             </div>
           </div>
@@ -100,69 +101,63 @@ function Pricing() {
               </thead>
               <tbody className="text-gray-700">
                 <tr>
-                  <td className="py-3 px-2">热门图书文字解读</td>
+                  <td className="py-3 px-2">海量图书文字解读</td>
                   <td><i className="fas fa-check text-green-400"></i></td>
                   <td><i className="fas fa-check text-green-400"></i></td>
                   <td><i className="fas fa-check text-green-400"></i></td>
                 </tr>
                 <tr className="bg-gray-50">
-                  <td className="py-3 px-2">热门图书语音解读</td>
+                  <td className="py-3 px-2">海量图书语音解读</td>
                   <td><i className="fas fa-check text-green-400"></i></td>
                   <td><i className="fas fa-check text-green-400"></i></td>
                   <td><i className="fas fa-check text-green-400"></i></td>
                 </tr>
                 <tr>
-                  <td className="py-3 px-2">热门图书脑图</td>
-                  <td><i className="fas fa-times text-gray-300"></i></td>
+                  <td className="py-3 px-2">海量图书思维导图</td>
+                  <td><i className="fas fa-check text-green-400"></i></td>
                   <td><i className="fas fa-check text-green-400"></i></td>
                   <td><i className="fas fa-check text-green-400"></i></td>
                 </tr>
                 <tr className="bg-gray-50">
-                  <td className="py-3 px-2">热门图书知识测试题</td>
-                  <td><i className="fas fa-times text-gray-300"></i></td>
+                  <td className="py-3 px-2">海量图书测试题</td>
+                  <td><i className="fas fa-check text-green-400"></i></td>
                   <td><i className="fas fa-check text-green-400"></i></td>
                   <td><i className="fas fa-check text-green-400"></i></td>
                 </tr>
                 <tr>
                   <td className="py-3 px-2">上传图书</td>
                   <td><i className="fas fa-times text-gray-300"></i></td>
-                  <td>100本/月</td>
-                  <td>200本/月</td>
+                  <td>20本/月</td>
+                  <td>40本/月</td>
                 </tr>
                 <tr className="bg-gray-50">
-                  <td className="py-3 px-2">生成对话式文字解读</td>
+                  <td className="py-3 px-2">AI文字解读</td>
                   <td><i className="fas fa-times text-gray-300"></i></td>
                   <td>10次/月</td>
                   <td>20次/月</td>
                 </tr>
                 <tr>
-                  <td className="py-3 px-2">生成对话式语音解读</td>
+                  <td className="py-3 px-2">AI语音生成</td>
                   <td><i className="fas fa-times text-gray-300"></i></td>
                   <td>5次/月</td>
                   <td>10次/月</td>
                 </tr>
                 <tr className="bg-gray-50">
-                  <td className="py-3 px-2">生成核心知识脑图</td>
+                  <td className="py-3 px-2">AI脑图生成</td>
                   <td><i className="fas fa-times text-gray-300"></i></td>
                   <td>10次/月</td>
                   <td>20次/月</td>
                 </tr>
                 <tr>
-                  <td className="py-3 px-2">生成核心知识测试题</td>
+                  <td className="py-3 px-2">AI测试题生成</td>
                   <td><i className="fas fa-times text-gray-300"></i></td>
                   <td>10次/月</td>
                   <td>20次/月</td>
                 </tr>
                 <tr className="bg-gray-50">
-                  <td className="py-3 px-2">图书问答</td>
-                  <td><span className="text-green-600 font-bold">100次/月</span></td>
-                  <td><span className="text-green-600 font-bold">不限次数</span></td>
-                  <td><span className="text-green-600 font-bold">不限次数</span></td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-2">知识库问答</td>
-                  <td><i className="fas fa-times text-gray-300"></i></td>
-                  <td><i className="fas fa-times text-gray-300"></i></td>
+                  <td className="py-3 px-2">图书知识问答</td>
+                  <td><span className="text-green-600 font-bold">10次/月</span></td>
+                  <td><span className="text-green-600 font-bold">1000次/月</span></td>
                   <td><span className="text-green-600 font-bold">不限次数</span></td>
                 </tr>
               </tbody>
