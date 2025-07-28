@@ -13,6 +13,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+import com.aibuffet.common.BenefitException;
+import com.aibuffet.common.ErrorCode;
+import com.aibuffet.service.MemberBenefitService;
 
 import java.util.List;
 import java.util.Map;
@@ -31,6 +34,9 @@ public class ChatCompletionWebSocketHandler extends TextWebSocketHandler {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private MemberBenefitService memberBenefitService;
+
     @Value("${ai.chat.default.model}")
     private String defaultModel;
 
@@ -43,6 +49,17 @@ public class ChatCompletionWebSocketHandler extends TextWebSocketHandler {
             logger.info("[WebSocket Handler] ===== WebSocket消息处理器被调用 =====");
             logger.info("[WebSocket Handler] 收到WebSocket消息: {}", message.getPayload());
             
+            // 1. 权限检查
+            User user = (User) session.getAttributes().get("user");
+            if (user == null) {
+                throw new BenefitException(ErrorCode.UNAUTHORIZED, "用户未认证");
+            }
+            
+            if (!memberBenefitService.checkBenefit(user.getId(), "api:chat:send")) {
+                throw new BenefitException(ErrorCode.PERMISSION_DENIED, 
+                    "聊天权限不足或权益已用完");
+            }
+
             Map<String, Object> req = objectMapper.readValue(message.getPayload(), Map.class);
             
             // Token已经在握手时验证，这里不再需要验证
@@ -61,21 +78,13 @@ public class ChatCompletionWebSocketHandler extends TextWebSocketHandler {
                 }
             }
             
-            // 获取用户ID（从session属性中获取）
-            Long userId = getUserIdFromSession(session);
-            if (userId == null) {
-                logger.error("[WebSocket Handler] 无法从WebSocket会话获取用户ID");
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("error", "用户未认证"))));
-                return;
-            }
-            
-            logger.info("[WebSocket Handler] 收到WebSocket聊天完成请求，用户: {}, 包含questionTarget: {}", userId, hasQuestionTarget);
+            logger.info("[WebSocket Handler] 收到WebSocket聊天完成请求，用户: {}, 包含questionTarget: {}", user.getId(), hasQuestionTarget);
             
             // 对消息进行增强处理
             String messagesJson = objectMapper.writeValueAsString(messages);
             logger.info("[WebSocket Handler] 原始消息JSON长度: {}", messagesJson.length());
             
-            String enhancedJson = chatService.enhanceMessageWithReferences(messagesJson, userId);
+            String enhancedJson = chatService.enhanceMessageWithReferences(messagesJson, user.getId());
             logger.info("[WebSocket Handler] 增强后消息JSON长度: {}", enhancedJson.length());
             
             messages = objectMapper.readValue(enhancedJson, List.class);
@@ -85,13 +94,21 @@ public class ChatCompletionWebSocketHandler extends TextWebSocketHandler {
             logger.info("[WebSocket Handler] ===== 开始调用ChatCompletionService =====");
             
             chatCompletionService.streamChatCompletionWebSocket(messages, modelName, session);
+
+            // 2. 记录权益使用
+            memberBenefitService.recordBenefitUsage(
+                user.getId(),
+                "api:chat:send",
+                1,
+                user.getRoleId()
+            );
+        } catch (BenefitException e) {
+            logger.warn("[WebSocket Handler] 权限检查失败: {}", e.getMessage());
+            sendErrorResponse(session, e.getErrorCode(), e.getMessage());
         } catch (Exception e) {
             logger.error("[WebSocket Handler] 处理WebSocket聊天完成请求时发生错误", e);
-            try {
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("error", "参数解析失败: " + e.getMessage()))));
-            } catch (Exception ignore) {
-                logger.error("[WebSocket Handler] 发送错误消息到WebSocket会话时发生错误", ignore);
-            }
+            sendErrorResponse(session, ErrorCode.SYSTEM_ERROR, 
+                "处理消息失败: " + e.getMessage());
         }
     }
     
@@ -99,6 +116,20 @@ public class ChatCompletionWebSocketHandler extends TextWebSocketHandler {
      * 从WebSocket会话中获取用户ID
      * 注意：这个方法需要根据你的WebSocket认证机制来实现
      */
+    private void sendErrorResponse(WebSocketSession session, ErrorCode errorCode, String message) {
+        try {
+            session.sendMessage(new TextMessage(
+                objectMapper.writeValueAsString(Map.of(
+                    "error", message,
+                    "code", errorCode.getCode(),
+                    "message", errorCode.getMessage()
+                ))
+            ));
+        } catch (Exception ex) {
+            logger.error("[WebSocket Handler] 发送错误消息失败", ex);
+        }
+    }
+
     private Long getUserIdFromSession(WebSocketSession session) {
         try {
             // 从session属性中获取用户信息
@@ -116,4 +147,4 @@ public class ChatCompletionWebSocketHandler extends TextWebSocketHandler {
             return null;
         }
     }
-} 
+}
