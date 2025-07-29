@@ -322,6 +322,18 @@ export function createChatWebSocket({ messages, onMessage, onError, onFinish }) 
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
+      if (data.error) {
+        // 新增：区分权限错误和其他错误
+        if (data.code === 4002) {
+          onError?.({
+            isPermissionError: true,
+            message: data.message || '权限不足'
+          });
+        } else {
+          onError?.(data);
+        }
+        return;
+      }
       if (data.done) {
         finished = true;
         onFinish?.();

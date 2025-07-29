@@ -374,7 +374,9 @@ function Chat() {
         onError: async (error) => {
           console.error('Model invocation error:', error);
           
-          if (error.response?.data?.error) {
+          if (error.isPermissionError) {
+            ToastManager.error(error.message);
+          } else if (error.response?.data?.error) {
             setError(error.response.data.error);
           } else {
             setError('模型调用失败，请重试');
@@ -679,6 +681,7 @@ function Chat() {
           showPromptTemplates={showPromptTemplates}
           onTogglePromptTemplates={togglePromptTemplates}
           questionTarget={questionTarget}
+          processing={currentSessionId ? processingMap.get(currentSessionId) : false}
         />
       </div>
     </div>
