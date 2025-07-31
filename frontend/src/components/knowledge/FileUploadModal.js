@@ -22,44 +22,30 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
   const [totalSize, setTotalSize] = useState(0);
 
   const onDrop = useCallback((acceptedFiles) => {
-    // 计算已选文件的总大小
-    const currentTotalSize = files.reduce((sum, file) => sum + file.size, 0);
-    
-    const validFiles = acceptedFiles.filter(file => {
-      const extension = '.' + file.name.split('.').pop().toLowerCase();
-      const isValidType = Object.values(ALLOWED_FILE_TYPES).flat().includes(extension);
-      const isValidSize = file.size <= MAX_FILE_SIZE;
-      const newTotalSize = currentTotalSize + file.size;
-      const isValidTotalSize = newTotalSize <= MAX_REQUEST_SIZE;
-
-      if (!isValidType) {
-        ToastManager.error(`不支持的文件格式: ${file.name}`);
-      }
-      if (!isValidSize) {
-        ToastManager.error(`文件大小超出限制 (50MB): ${file.name} (${formatFileSize(file.size)})`);
-      }
-      if (!isValidTotalSize) {
-        ToastManager.error(`添加此文件后总大小将超出限制 (1GB)`);
-      }
-
-      return isValidType && isValidSize && isValidTotalSize;
-    });
-
-    // 清除已存在的相同文件
-    const existingFileNames = new Set(files.map(f => f.name));
-    const newValidFiles = validFiles.filter(file => !existingFileNames.has(file.name));
-
-    if (newValidFiles.length > 0) {
-      const newTotalSize = currentTotalSize + newValidFiles.reduce((sum, file) => sum + file.size, 0);
-      setTotalSize(newTotalSize);
-      setFiles(prev => [...prev, ...newValidFiles]);
-      // 清除新文件的错误状态
-      setFileErrors(prev => {
-        const newErrors = { ...prev };
-        newValidFiles.forEach(file => delete newErrors[file.name]);
-        return newErrors;
-      });
+    if (files.length > 0) {
+      ToastManager.error('每次只能上传一个文件');
+      return;
     }
+    
+    const file = acceptedFiles[0]; // 只取第一个文件
+    const currentTotalSize = 0; // 重置为0，因为只允许一个文件
+    
+    const extension = '.' + file.name.split('.').pop().toLowerCase();
+    const isValidType = Object.values(ALLOWED_FILE_TYPES).flat().includes(extension);
+    const isValidSize = file.size <= MAX_FILE_SIZE;
+
+    if (!isValidType) {
+      ToastManager.error(`不支持的文件格式: ${file.name}`);
+      return;
+    }
+    if (!isValidSize) {
+      ToastManager.error(`文件大小超出限制 (50MB): ${file.name} (${formatFileSize(file.size)})`);
+      return;
+    }
+
+    setTotalSize(file.size);
+    setFiles([file]);
+    setFileErrors({});
   }, [files]);
 
   const removeFile = (index) => {
@@ -75,7 +61,7 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    multiple: true
+    multiple: false  // 限制单文件上传
   });
 
   const formatFileSize = (bytes) => {
@@ -253,7 +239,7 @@ const FileUploadModal = ({ isOpen, onClose, knowledgeBaseId, onUploadComplete })
             <h3 className="font-medium mb-2">上传说明：</h3>
             <div className="space-y-2">
               <p className="text-sm text-gray-600">
-                1、文件大小：单个文件≤{formatFileSize(MAX_FILE_SIZE)}，单次上传≤{formatFileSize(MAX_REQUEST_SIZE)}
+                1、文件大小：单个文件≤{formatFileSize(MAX_FILE_SIZE)}
               </p>
               <p className="text-sm text-gray-600">
                 2、文件格式：
