@@ -19,4 +19,8 @@ public interface OrderRepository extends JpaRepository<UserOrder, Long> {
             Long userId, String memberType, Integer periodMonths, String payType, String payStatus);
 
     Page<UserOrder> findByUserIdOrderByCreateTimeDesc(Long userId, Pageable pageable);
+
+    List<UserOrder> findByUserIdAndPayStatusOrderByCreateTimeDesc(Long userId, String payStatus);
+
+    Page<UserOrder> findByUserIdAndPayStatusOrderByCreateTimeDesc(Long userId, String payStatus, Pageable pageable);
 }

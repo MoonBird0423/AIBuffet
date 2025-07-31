@@ -68,7 +68,7 @@ public class OrderController {
             @RequestParam Long userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        org.springframework.data.domain.Page<UserOrder> orderPage = orderService.getUserOrders(userId, page, size);
+        org.springframework.data.domain.Page<UserOrder> orderPage = orderService.getUserOrders(userId, "已支付", page, size);
         Map<String, Object> result = new java.util.HashMap<>();
         result.put("content", orderPage.getContent());
         result.put("totalElements", orderPage.getTotalElements());

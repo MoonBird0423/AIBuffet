@@ -107,6 +107,7 @@ public class UserServiceImpl implements UserService {
                 user.setAvatar(userinfoJson.get("headimgurl").asText());
                 user.setOpenidApp1(openid);
                 user.setUnionid(unionid);
+                user.setRoleId(3L); // 设置角色为普通用户
                 user = userRepository.save(user);
 
                 // 创建默认知识库
@@ -178,6 +179,7 @@ public class UserServiceImpl implements UserService {
                         newUser.setPhone(phone);
                         String defaultUsername = "用户" + phone.substring(7);
                         newUser.setUsername(defaultUsername);
+                        newUser.setRoleId(3L); // 设置角色为普通用户
                         System.out.println("创建新用户 - 默认用户名: " + defaultUsername);
                         User savedUser = userRepository.save(newUser);
 

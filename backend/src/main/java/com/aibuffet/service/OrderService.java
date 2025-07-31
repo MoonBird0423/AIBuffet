@@ -14,7 +14,11 @@ public interface OrderService {
 
     void handleWeChatNotify(String notifyBody, String serial, String signature, String timestamp, String nonce);
 
-    List<UserOrder> getUserOrders(Long userId);
-
-    Page<UserOrder> getUserOrders(Long userId, int page, int size);
+    //List<UserOrder> getUserOrders(Long userId);
+    
+    List<UserOrder> getUserOrders(Long userId, String payStatus);
+    
+    //Page<UserOrder> getUserOrders(Long userId, int page, int size);
+    
+    Page<UserOrder> getUserOrders(Long userId, String payStatus, int page, int size);
 }

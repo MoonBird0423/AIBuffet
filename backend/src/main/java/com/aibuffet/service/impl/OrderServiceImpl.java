@@ -53,7 +53,7 @@ public class OrderServiceImpl implements OrderService {
         if (role == null) {
             throw new BenefitException(ErrorCode.RESOURCE_NOT_FOUND, "会员不存在");
         }
-
+        /**
         // 检查用户会员状态
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BenefitException(ErrorCode.RESOURCE_NOT_FOUND, "用户不存在"));
@@ -62,6 +62,7 @@ public class OrderServiceImpl implements OrderService {
                 throw new BenefitException(ErrorCode.MEMBER_ALREADY_EXISTS, ErrorCode.MEMBER_ALREADY_EXISTS.getMessage());
             }
         }
+        */
 
         // 查找是否有相同条件的未支付订单
         Optional<UserOrder> existingOrder = orderRepository.findFirstByUserIdAndMemberTypeAndPeriodMonthsAndPayTypeAndPayStatus(
@@ -165,12 +166,19 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<UserOrder> getUserOrders(Long userId) {
+    public List<UserOrder> getUserOrders(Long userId, String payStatus) {
+        if (payStatus != null) {
+            return orderRepository.findByUserIdAndPayStatusOrderByCreateTimeDesc(userId, payStatus);
+        }
         return orderRepository.findByUserIdOrderByCreateTimeDesc(userId);
     }
 
     @Override
-    public Page<UserOrder> getUserOrders(Long userId, int page, int size) {
+    public Page<UserOrder> getUserOrders(Long userId, String payStatus, int page, int size) {
+        if (payStatus != null) {
+            return orderRepository.findByUserIdAndPayStatusOrderByCreateTimeDesc(
+                userId, payStatus, PageRequest.of(page, size));
+        }
         return orderRepository.findByUserIdOrderByCreateTimeDesc(userId, PageRequest.of(page, size));
     }
 }
