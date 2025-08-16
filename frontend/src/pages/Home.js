@@ -41,7 +41,7 @@ function Home() {
   const showSlide = (index) => {
     setCurrentSlide(index);
   };  return (    <div className="font-sf">      {/* Hero Section */}
-      <section className="min-h-screen py-8 flex flex-col items-center justify-center relative overflow-hidden" style={{
+      <section className="min-h-screen pt-16 pb-8 flex flex-col items-center justify-center relative overflow-hidden" style={{
         background: 'linear-gradient(180deg, #667eea 0%, #764ba2 50%, #667eea 100%)',
         minHeight: '120vh'
       }}>
@@ -84,7 +84,7 @@ function Home() {
                   <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 rounded-full transform -skew-x-12 group-hover:animate-pulse"></div>
                   <span className="relative flex items-center justify-center">
                     <i className="fas fa-upload mr-2 text-yellow-300"></i>
-                    上传图书
+                    智能解读
                   </span>
                 </button>
               </Link>

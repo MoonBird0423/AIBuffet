@@ -15,7 +15,7 @@ function Logo({ to = '/' }) {
         {/* Logo文字 */}
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent group-hover:from-blue-500 group-hover:via-indigo-500 group-hover:to-purple-500 transition-all duration-300">
-            书意
+            书意解读
           </h1>
         </div>
       </div>

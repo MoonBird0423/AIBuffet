@@ -17,7 +17,7 @@ function Navbar() {
             <Link to="/" className="text-2xl font-bold text-white hover:text-gray-300 transition-colors">
               <div className="flex items-center space-x-2">
                 <img src="/书意渐变透明.png" alt="Logo" className="h-8 w-8"/>
-                <span>书意</span>
+                <span>书意解读</span>
               </div>
             </Link>
           </div>
