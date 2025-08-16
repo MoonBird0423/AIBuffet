@@ -376,6 +376,10 @@ function Chat() {
           
           if (error.isPermissionError) {
             ToastManager.error(error.message);
+            // 当权限错误时，自动打开购买弹窗
+            window.dispatchEvent(new CustomEvent('showPurchaseModal', { 
+              detail: { type: 'vip' } 
+            }));
           } else if (error.response?.data?.error) {
             setError(error.response.data.error);
           } else {

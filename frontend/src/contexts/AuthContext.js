@@ -12,6 +12,12 @@ export function AuthProvider({ children }) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // 购买弹窗状态管理
+  const [purchaseModal, setPurchaseModal] = useState({
+    open: false,
+    defaultType: 'vip'
+  });
 
   // 用户数据变化时保存到localStorage
   useEffect(() => {
@@ -137,6 +143,15 @@ export function AuthProvider({ children }) {
     setError(null);
   };
 
+  // 购买弹窗控制方法
+  const showPurchaseModal = (type = 'vip') => {
+    setPurchaseModal({ open: true, defaultType: type });
+  };
+
+  const hidePurchaseModal = () => {
+    setPurchaseModal({ open: false, defaultType: 'vip' });
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -147,7 +162,11 @@ export function AuthProvider({ children }) {
       updateAvatar, 
       updateUsername,
       clearError,
-      isAuthenticated: !!user 
+      isAuthenticated: !!user,
+      // 购买弹窗相关
+      purchaseModal,
+      showPurchaseModal,
+      hidePurchaseModal
     }}>
       {children}
     </AuthContext.Provider>
