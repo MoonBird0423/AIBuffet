@@ -26,7 +26,9 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
         WHERE kbf.kb_id = :knowledgeBaseId 
         AND d.status = 'ACTIVE'
         AND kbf.relation_type = :relationType
-        ORDER BY d.uploaded_at DESC
+        ORDER BY 
+            CASE WHEN :sortDirection = 'ASC' THEN d.uploaded_at END ASC,
+            CASE WHEN :sortDirection = 'DESC' THEN d.uploaded_at END DESC
         """, 
         countQuery = """
             SELECT COUNT(DISTINCT d.id) FROM doc_files d
@@ -36,7 +38,7 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
             AND kbf.relation_type = :relationType
             """,
         nativeQuery = true)
-    Page<DocFile> findByKbIdAndRelationType(Long knowledgeBaseId, String relationType, Pageable pageable);
+    Page<DocFile> findByKbIdAndRelationType(Long knowledgeBaseId, String relationType, String sortDirection, Pageable pageable);
 
     // 根据关系类型和关键词查询知识库文档
     @Query(value = """
@@ -46,7 +48,9 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
         AND d.status = 'ACTIVE'
         AND kbf.relation_type = :relationType
         AND d.file_name LIKE %:keyword%
-        ORDER BY d.uploaded_at DESC
+        ORDER BY 
+            CASE WHEN :sortDirection = 'ASC' THEN d.uploaded_at END ASC,
+            CASE WHEN :sortDirection = 'DESC' THEN d.uploaded_at END DESC
         """, 
         countQuery = """
             SELECT COUNT(DISTINCT d.id) FROM doc_files d
@@ -61,6 +65,7 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
         Long knowledgeBaseId,
         String relationType,
         String keyword,
+        String sortDirection,
         Pageable pageable);
 
     DocFile findByFileUrl(String fileUrl);
@@ -81,7 +86,9 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
                 d.uploaded_at, d.status, d.md5_hash, d.error_message, d.processing_status,
                 d.cover_url, d.category, d.author, d.publish_status, d.description,
                 d.extracted_text, d.openai_file_id
-        ORDER BY d.uploaded_at DESC
+        ORDER BY 
+            CASE WHEN :sortDirection = 'ASC' THEN d.uploaded_at END ASC,
+            CASE WHEN :sortDirection = 'DESC' THEN d.uploaded_at END DESC
         """, 
         countQuery = """
             SELECT COUNT(DISTINCT d.id) FROM doc_files d
@@ -91,7 +98,7 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
             """,
         nativeQuery = true)
     @QueryHints({@QueryHint(name = "org.hibernate.cacheable", value = "false")})
-    Page<DocFile> findByKbId(Long knowledgeBaseId, Pageable pageable);
+    Page<DocFile> findByKbId(Long knowledgeBaseId, String sortDirection, Pageable pageable);
 
     // 带关键词和分类的知识库文档查询
     @Query(value = """
@@ -101,7 +108,9 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
         AND d.status = 'ACTIVE'
         AND d.file_name LIKE %:keyword%
         AND d.category = :category
-        ORDER BY d.uploaded_at DESC
+        ORDER BY 
+            CASE WHEN :sortDirection = 'ASC' THEN d.uploaded_at END ASC,
+            CASE WHEN :sortDirection = 'DESC' THEN d.uploaded_at END DESC
         """, 
         countQuery = """
             SELECT COUNT(DISTINCT d.id) FROM doc_files d
@@ -112,7 +121,7 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
             AND d.category = :category
             """,
         nativeQuery = true)
-    Page<DocFile> findByKbIdAndFileNameContainingAndCategory(Long knowledgeBaseId, String keyword, String category, Pageable pageable);
+    Page<DocFile> findByKbIdAndFileNameContainingAndCategory(Long knowledgeBaseId, String keyword, String category, String sortDirection, Pageable pageable);
 
     // 带关键词的知识库文档查询
     @Query(value = """
@@ -121,7 +130,9 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
         WHERE kbf.kb_id = :knowledgeBaseId 
         AND d.status = 'ACTIVE'
         AND d.file_name LIKE %:keyword%
-        ORDER BY d.uploaded_at DESC
+        ORDER BY 
+            CASE WHEN :sortDirection = 'ASC' THEN d.uploaded_at END ASC,
+            CASE WHEN :sortDirection = 'DESC' THEN d.uploaded_at END DESC
         """, 
         countQuery = """
             SELECT COUNT(DISTINCT d.id) FROM doc_files d
@@ -131,7 +142,7 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
             AND d.file_name LIKE %:keyword%
             """,
         nativeQuery = true)
-    Page<DocFile> findByKbIdAndFileNameContaining(Long knowledgeBaseId, String keyword, Pageable pageable);
+    Page<DocFile> findByKbIdAndFileNameContaining(Long knowledgeBaseId, String keyword, String sortDirection, Pageable pageable);
 
     // 带分类的知识库文档查询
     @Query(value = """
@@ -146,7 +157,9 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
                 d.uploaded_at, d.status, d.md5_hash, d.error_message, d.processing_status,
                 d.cover_url, d.category, d.author, d.publish_status, d.description,
                 d.extracted_text, d.openai_file_id
-        ORDER BY d.uploaded_at DESC
+        ORDER BY 
+            CASE WHEN :sortDirection = 'ASC' THEN d.uploaded_at END ASC,
+            CASE WHEN :sortDirection = 'DESC' THEN d.uploaded_at END DESC
         """, 
         countQuery = """
             SELECT COUNT(DISTINCT d.id) FROM doc_files d
@@ -156,7 +169,7 @@ public interface DocFileRepository extends JpaRepository<DocFile, Long> {
             AND d.category = :category
             """,
         nativeQuery = true)
-    Page<DocFile> findByKbIdAndCategory(Long knowledgeBaseId, String category, Pageable pageable);
+    Page<DocFile> findByKbIdAndCategory(Long knowledgeBaseId, String category, String sortDirection, Pageable pageable);
 
     // 以下是公共图书馆查询方法
     

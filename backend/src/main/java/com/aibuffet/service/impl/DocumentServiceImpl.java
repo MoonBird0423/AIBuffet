@@ -16,6 +16,7 @@ import com.aibuffet.dto.DocFileSummary;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -238,16 +239,24 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<DocFileSummary> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, String relationType, int page, int size, Long userId) {
+    public Page<DocFileSummary> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, String relationType, String sortBy, int page, int size, Long userId) {
         long startTime = System.currentTimeMillis();
-        logger.info("DocumentService: 开始优化查询文档列表: knowledgeBaseId={}, keyword={}, category={}, relationType={}, page={}, size={}, userId={}", 
-            knowledgeBaseId, keyword, category, relationType, page, size, userId);
+        logger.info("DocumentService: 开始优化查询文档列表: knowledgeBaseId={}, keyword={}, category={}, relationType={}, sortBy={}, page={}, size={}, userId={}", 
+            knowledgeBaseId, keyword, category, relationType, sortBy, page, size, userId);
         
-        PageRequest pageRequest = PageRequest.of(page, size);
+        // 根据sortBy参数确定排序方向
+        String sortDirection = "oldest".equals(sortBy) ? "ASC" : "DESC";
+        
+        // 对于知识库查询，创建不带排序的PageRequest，因为排序在SQL中处理
+        // 对于公共图书馆查询，保持原有的Sort逻辑
+        PageRequest pageRequest;
         Page<DocFile> result;
         
         if (knowledgeBaseId != null) {
-            logger.info("DocumentService: 使用知识库查询分支");
+            logger.info("DocumentService: 使用知识库查询分支，排序方向: {}", sortDirection);
+            // 知识库查询使用不带排序的PageRequest，排序在SQL中处理
+            pageRequest = PageRequest.of(page, size);
+            
             // 如果指定了关系类型，优先使用关系类型查询
             if (relationType != null) {
                 // 将字符串转换为枚举类型
@@ -259,11 +268,11 @@ public class DocumentServiceImpl implements DocumentService {
                     if (keyword != null) {
                         logger.info("DocumentService: 执行知识库下的关系类型+关键词查询");
                         result = docFileRepository.findByKbIdAndRelationTypeAndFileNameContaining(
-                            knowledgeBaseId, relationTypeEnum.name(), keyword, pageRequest);
+                            knowledgeBaseId, relationTypeEnum.name(), keyword, sortDirection, pageRequest);
                     } else {
                         logger.info("DocumentService: 执行知识库下的关系类型查询");
                         result = docFileRepository.findByKbIdAndRelationType(
-                            knowledgeBaseId, relationTypeEnum.name(), pageRequest);
+                            knowledgeBaseId, relationTypeEnum.name(), sortDirection, pageRequest);
                     }
                 } catch (IllegalArgumentException e) {
                     logger.warn("DocumentService: 无效的关系类型: {}", relationType);
@@ -275,22 +284,27 @@ public class DocumentServiceImpl implements DocumentService {
                 if (keyword != null && category != null) {
                     logger.info("DocumentService: 执行知识库下的关键词+分类查询");
                     result = docFileRepository.findByKbIdAndFileNameContainingAndCategory(
-                        knowledgeBaseId, keyword, category.name(), pageRequest);
+                        knowledgeBaseId, keyword, category.name(), sortDirection, pageRequest);
                 } else if (keyword != null) {
                     logger.info("DocumentService: 执行知识库下的关键词查询");
                     result = docFileRepository.findByKbIdAndFileNameContaining(
-                        knowledgeBaseId, keyword, pageRequest);
+                        knowledgeBaseId, keyword, sortDirection, pageRequest);
                 } else if (category != null) {
                     logger.info("DocumentService: 执行知识库下的分类查询");
                     result = docFileRepository.findByKbIdAndCategory(
-                        knowledgeBaseId, category.name(), pageRequest);
+                        knowledgeBaseId, category.name(), sortDirection, pageRequest);
                 } else {
                     logger.info("DocumentService: 执行知识库下的全部查询");
                     result = docFileRepository.findByKbId(
-                        knowledgeBaseId, pageRequest);
+                        knowledgeBaseId, sortDirection, pageRequest);
                 }
             }
         } else {
+            // 公共图书馆查询保持原有的Sort逻辑
+            Sort sort = "oldest".equals(sortBy) ? 
+                Sort.by(Sort.Direction.ASC, "uploadedAt") : 
+                Sort.by(Sort.Direction.DESC, "uploadedAt");
+            pageRequest = PageRequest.of(page, size, sort);
             logger.info("DocumentService: 使用优化的公共图书馆查询分支");
             // 使用新的投影查询方法
             if (keyword != null && category != null) {

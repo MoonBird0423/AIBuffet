@@ -34,12 +34,13 @@ public interface DocumentService {
      * @param keyword 搜索关键词，可选，用于搜索文档名称
      * @param category 文档分类，可选
      * @param relationType 关联关系类型，可选，用于区分上传和收藏
+     * @param sortBy 排序方式，newest（最新）或oldest（最旧）
      * @param page 页码，从0开始
      * @param size 每页大小
      * @param userId 用户ID，可选，为null时只返回公开发布的文档
      * @return 分页的文档列表
      */
-    Page<DocFileSummary> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, String relationType, int page, int size, Long userId);
+    Page<DocFileSummary> getDocuments(Long knowledgeBaseId, String keyword, DocFile.Category category, String relationType, String sortBy, int page, int size, Long userId);
 
     /**
      * 重新处理文档

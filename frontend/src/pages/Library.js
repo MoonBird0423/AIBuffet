@@ -10,6 +10,7 @@ function Library() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -57,7 +58,8 @@ function Library() {
       setLoading(true);
       setError(null);
       const params = {
-        keyword: debouncedKeyword || undefined
+        keyword: debouncedKeyword || undefined,
+        sortBy: sortBy
       };
       if (selectedCategory !== 'all') {
         params.category = selectedCategory;
@@ -108,7 +110,7 @@ function Library() {
     setDocuments([]);
     setHasMore(true);
     fetchDocuments(true);
-  }, [debouncedKeyword, selectedCategory]);
+  }, [debouncedKeyword, selectedCategory, sortBy]);
 
   // 骨架屏组件
   const SkeletonCard = () => (
@@ -169,6 +171,18 @@ function Library() {
                     {selectedCategory === 'all' ? '全部图书' : categories.find(c => c.id === selectedCategory)?.name}
                   </h2>
                   <p className="text-gray-600 mt-1">共找到 {documents.length} 本图书</p>
+                </div>
+                {/* 排序选择器 */}
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-500">排序：</span>
+                  <select 
+                    value={sortBy} 
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="newest">最新</option>
+                    <option value="oldest">最旧</option>
+                  </select>
                 </div>
               </div>
 

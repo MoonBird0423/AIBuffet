@@ -159,15 +159,16 @@ public class DocumentController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) DocFile.Category category,
             @RequestParam(required = false) String relationType,
+            @RequestParam(defaultValue = "newest") String sortBy,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @AuthenticationPrincipal(errorOnInvalidType = false) User user) {
         try {
             long startTime = System.currentTimeMillis();
             Long userId = user != null ? user.getId() : null;
-            logger.info("DocumentController: 接收到查询请求: knowledgeBaseId={}, keyword={}, category={}, relationType={}, page={}, size={}, userId={}", 
-                knowledgeBaseId, keyword, category, relationType, page, size, userId);
-            Page<DocFileSummary> documents = documentService.getDocuments(knowledgeBaseId, keyword, category, relationType, page, size, userId);
+            logger.info("DocumentController: 接收到查询请求: knowledgeBaseId={}, keyword={}, category={}, relationType={}, sortBy={}, page={}, size={}, userId={}", 
+                knowledgeBaseId, keyword, category, relationType, sortBy, page, size, userId);
+            Page<DocFileSummary> documents = documentService.getDocuments(knowledgeBaseId, keyword, category, relationType, sortBy, page, size, userId);
             long duration = System.currentTimeMillis() - startTime;
             logger.info("DocumentController: 查询完成，返回结果数量: {}, 耗时: {}ms", documents.getContent().size(), duration);
             
