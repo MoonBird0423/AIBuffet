@@ -2,9 +2,13 @@ package com.aibuffet.service.impl;
 
 import com.aibuffet.model.UserOrder;
 import com.aibuffet.model.User;
+import com.aibuffet.model.UserBenefit;
+import com.aibuffet.model.RoleBenefit;
 import com.aibuffet.repository.OrderRepository;
 import com.aibuffet.repository.UserRepository;
 import com.aibuffet.repository.RoleRepository;
+import com.aibuffet.repository.UserBenefitRepository;
+import com.aibuffet.repository.RoleBenefitRepository;
 import com.aibuffet.service.OrderService;
 import com.aibuffet.common.WeChatPayUtil;
 import com.aibuffet.common.BenefitException;
@@ -26,6 +30,8 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final UserBenefitRepository userBenefitRepository;
+    private final RoleBenefitRepository roleBenefitRepository;
     private final WeChatPayUtil weChatPayUtil;
 
     @Value("${wechatpay.appid}")
@@ -37,10 +43,14 @@ public class OrderServiceImpl implements OrderService {
     @Value("${wechatpay.merchant_id}")
     private String merchantId;
 
-    public OrderServiceImpl(OrderRepository orderRepository, UserRepository userRepository, RoleRepository roleRepository, WeChatPayUtil weChatPayUtil) {
+    public OrderServiceImpl(OrderRepository orderRepository, UserRepository userRepository, RoleRepository roleRepository, 
+                           UserBenefitRepository userBenefitRepository, RoleBenefitRepository roleBenefitRepository, 
+                           WeChatPayUtil weChatPayUtil) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.userBenefitRepository = userBenefitRepository;
+        this.roleBenefitRepository = roleBenefitRepository;
         this.weChatPayUtil = weChatPayUtil;
     }
 
@@ -111,7 +121,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void updateUserRoleAfterPayment(UserOrder order) {
-        // 只负责角色和过期时间处理
+        // 1. 设置用户角色和过期时间
         String memberType = order.getMemberType();
         com.aibuffet.model.Role role = roleRepository.findByName(memberType);
         if (role == null) {
@@ -122,6 +132,51 @@ public class OrderServiceImpl implements OrderService {
         user.setRoleId(role.getId());
         user.setExpireTime(LocalDateTime.now().plusMonths(order.getPeriodMonths()));
         userRepository.save(user);
+        
+        // 2. 赠送角色权益
+        grantRoleBenefitsToUser(order.getUserId(), role.getId());
+    }
+    
+    /**
+     * 给用户赠送角色权益（30天有效期）
+     */
+    private void grantRoleBenefitsToUser(Long userId, Long roleId) {
+        // 查询角色的所有权益
+        List<RoleBenefit> roleBenefits = roleBenefitRepository.findByRoleId(roleId);
+        
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime endTime = now.plusDays(30); // 赠送30天权益
+        
+        for (RoleBenefit roleBenefit : roleBenefits) {
+            try {
+                // 检查是否已存在相同的赠送权益记录
+                Optional<UserBenefit> existingBenefit = userBenefitRepository
+                    .findByUserIdAndBenefitIdAndSourceType(userId, roleBenefit.getBenefitId(), 0);
+                
+                UserBenefit userBenefit;
+                if (existingBenefit.isPresent()) {
+                    // 如果已存在赠送权益，更新时间和数量
+                    userBenefit = existingBenefit.get();
+                    userBenefit.setAmount(roleBenefit.getQuota());
+                    userBenefit.setStartTime(now);
+                    userBenefit.setEndTime(endTime);
+                } else {
+                    // 创建新的用户权益记录
+                    userBenefit = new UserBenefit();
+                    userBenefit.setUserId(userId);
+                    userBenefit.setBenefitId(roleBenefit.getBenefitId());
+                    userBenefit.setAmount(roleBenefit.getQuota());
+                    userBenefit.setSourceType(0); // 0 = 赠送权限
+                    userBenefit.setStartTime(now);
+                    userBenefit.setEndTime(endTime);
+                }
+                
+                userBenefitRepository.save(userBenefit);
+            } catch (Exception e) {
+                // 记录错误但不影响整个支付流程
+                System.err.println("赠送权益失败 - 用户ID: " + userId + ", 权益ID: " + roleBenefit.getBenefitId() + ", 错误: " + e.getMessage());
+            }
+        }
     }
 
     @Override

@@ -12,11 +12,13 @@ import com.aibuffet.repository.BenefitUsageRepository;
 import com.aibuffet.repository.RoleBenefitRepository;
 import com.aibuffet.repository.RoleRepository;
 import com.aibuffet.repository.UserRepository;
+import com.aibuffet.repository.UserBenefitRepository;
 import com.aibuffet.common.ApiResponse;
 import com.aibuffet.service.MemberBenefitService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -28,19 +30,22 @@ public class MemberBenefitServiceImpl implements MemberBenefitService {
     private final RoleBenefitRepository roleBenefitRepository;
     private final BenefitUsageRepository benefitUsageRepository;
     private final UserRepository userRepository;
+    private final UserBenefitRepository userBenefitRepository;
 
     public MemberBenefitServiceImpl(
             BenefitRepository benefitRepository,
             RoleRepository roleRepository,
             RoleBenefitRepository roleBenefitRepository,
             BenefitUsageRepository benefitUsageRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            UserBenefitRepository userBenefitRepository
     ) {
         this.benefitRepository = benefitRepository;
         this.roleRepository = roleRepository;
         this.roleBenefitRepository = roleBenefitRepository;
         this.benefitUsageRepository = benefitUsageRepository;
         this.userRepository = userRepository;
+        this.userBenefitRepository = userBenefitRepository;
     }
 
     @Override
@@ -49,8 +54,9 @@ public class MemberBenefitServiceImpl implements MemberBenefitService {
         // 查询用户
         User user = userRepository.findById(userId).orElse(null);
         if (user == null || user.getRoleId() == null) return false;
+        
         // 检查角色是否过期
-        if (user.getExpireTime() != null && java.time.LocalDateTime.now().isAfter(user.getExpireTime())) {
+        if (user.getExpireTime() != null && LocalDateTime.now().isAfter(user.getExpireTime())) {
             return false;
         }
 
@@ -60,16 +66,38 @@ public class MemberBenefitServiceImpl implements MemberBenefitService {
 
         // 查询角色权益
         List<RoleBenefit> roleBenefits = roleBenefitRepository.findByRoleIdAndBenefitId(user.getRoleId(), benefit.getId());
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        
+        LocalDateTime now = LocalDateTime.now();
         int year = now.getYear();
         int month = now.getMonthValue();
-
+        
+        // 查询本月已使用的权益
+        int usedAmount = benefitUsageRepository.sumByUserAndRoleAndBenefitThisMonth(userId, user.getRoleId(), benefit.getId(), year, month);
+        
+        // 查询当前有效的赠送权益
+        int giftBenefitAmount = userBenefitRepository.sumValidGiftBenefitsByUserAndBenefit(userId, benefit.getId(), now);
+        
+        // 计算总可用权益并判断
         for (RoleBenefit rb : roleBenefits) {
-            int used = benefitUsageRepository.sumByUserAndRoleAndBenefitThisMonth(userId, user.getRoleId(), benefit.getId(), year, month);
-            if (rb.getQuota() == -1 || (rb.getQuota() > 0 && used < rb.getQuota())) {
+            int roleBenefitQuota = (rb.getQuota() == -1) ? Integer.MAX_VALUE : rb.getQuota();
+            int totalAvailable = roleBenefitQuota + giftBenefitAmount;
+            
+            // 如果角色权益是无限制(-1)，直接返回true
+            if (rb.getQuota() == -1) {
+                return true;
+            }
+            
+            // 检查总可用权益是否大于已使用权益
+            if (usedAmount < totalAvailable) {
                 return true;
             }
         }
+        
+        // 如果没有角色权益，但有赠送权益，也需要检查
+        if (roleBenefits.isEmpty() && giftBenefitAmount > usedAmount) {
+            return true;
+        }
+        
         return false;
     }
 
