@@ -65,9 +65,9 @@ function BookTabs({ activeTab, onTabChange, content, loading = false, contentSta
         return (
           <div className="flex flex-col justify-center items-center" style={{ minHeight: '400px' }}>
             <div className="text-center">
-              <i className="fas fa-exclamation-triangle text-4xl text-red-400 mb-4"></i>
-              <h3 className="text-xl font-medium text-red-600 mb-2">加载失败</h3>
-              <p className="text-gray-500 max-w-md">获取内容时发生错误，请刷新页面重试</p>
+              <i className="fas fa-exclamation-triangle text-4xl text-yellow-400 mb-4"></i>
+              <h3 className="text-xl font-medium text-yellow-600 mb-2">加载失败</h3>
+              <p className="text-gray-500 max-w-md">登录即可获取内容</p>
             </div>
           </div>
         );

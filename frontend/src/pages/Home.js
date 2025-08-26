@@ -63,7 +63,7 @@ function Home() {
           {/* Subtitle */}
           <div className="mb-4 max-w-5xl mx-auto">
             <p className="text-xl lg:text-2xl text-white/90 leading-relaxed mx-auto font-light">
-              获取图书深度语音解读、知识脑图、知识测试、知识问答，跨入高效阅读时代。
+              AI生成语音解读、知识脑图、知识测试、知识问答，跨入高效阅读时代。
             </p>
           </div>
 
