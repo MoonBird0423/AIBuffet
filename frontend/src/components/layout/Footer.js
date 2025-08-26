@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 function Footer() {
   return (
@@ -14,6 +15,16 @@ function Footer() {
                 alt="书意Logo"
                 className="h-12 w-auto object-contain"
               />
+            </div>
+            
+            {/* 关于我们链接 */}
+            <div className="mb-4">
+              <Link 
+                to="/about-us"
+                className="text-gray-400 hover:text-gray-300 transition-colors duration-200 text-sm lg:text-base underline"
+              >
+                关于我们
+              </Link>
             </div>
             
             {/* 版权和备案信息 */}

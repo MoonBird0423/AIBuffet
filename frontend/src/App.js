@@ -7,6 +7,7 @@ import Chat from './pages/Chat';
 import Login from './pages/Login';
 import BookDetails from './pages/BookDetails';
 import Pricing from './pages/Pricing';
+import AboutUs from './pages/AboutUs';
 import WechatCallback from './pages/WechatCallback';
 import MainLayout from './components/layout/MainLayout';
 import ToastContainer from './components/common/Toast';
@@ -64,6 +65,7 @@ function AppContent() {
           <Route path="/library" element={<Library />} />
           <Route path="/book/:id" element={<BookDetails />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/about-us" element={<AboutUs />} />
           
           {/* 需要登录的页面 */}
           <Route path="/my-knowledge" element={
