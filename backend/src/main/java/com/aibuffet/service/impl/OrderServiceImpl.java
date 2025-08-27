@@ -155,11 +155,22 @@ public class OrderServiceImpl implements OrderService {
                 
                 UserBenefit userBenefit;
                 if (existingBenefit.isPresent()) {
-                    // 如果已存在赠送权益，更新时间和数量
+                    // 如果已存在赠送权益，根据旧数据结束日期判断更新逻辑
                     userBenefit = existingBenefit.get();
-                    userBenefit.setAmount(roleBenefit.getQuota());
-                    userBenefit.setStartTime(now);
-                    userBenefit.setEndTime(endTime);
+                    LocalDateTime oldEndTime = userBenefit.getEndTime();
+                    
+                    if (now.isAfter(oldEndTime)) {
+                        // 当前日期超过旧数据结束日期，重新开始新的30天周期
+                        userBenefit.setAmount(roleBenefit.getQuota());
+                        userBenefit.setStartTime(now);
+                        userBenefit.setEndTime(endTime);
+                    } else {
+                        // 当前日期未超过旧数据结束日期，延续并累加
+                        userBenefit.setAmount(userBenefit.getAmount() + roleBenefit.getQuota());
+                        userBenefit.setStartTime(now);
+                        // 结束日期取较大者：旧数据结束日期 vs 当前日期+30天
+                        userBenefit.setEndTime(oldEndTime.isAfter(endTime) ? oldEndTime : endTime);
+                    }
                 } else {
                     // 创建新的用户权益记录
                     userBenefit = new UserBenefit();
