@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import UserAccountModal from '../auth/UserAccountModal';
 import LogoutConfirmModal from '../auth/LogoutConfirmModal';
 
-function UserProfile({ className = '' }) {
+function UserProfile({ className = '', onMenuClick }) {
   const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -14,6 +14,11 @@ function UserProfile({ className = '' }) {
   const isInNavbar = className.includes('text-white');
 
   const handleClick = () => {
+    // 如果有回调函数，先调用它（用于关闭移动端菜单）
+    if (onMenuClick) {
+      onMenuClick();
+    }
+    
     if (!user) {
       navigate('/login');
     } else {
