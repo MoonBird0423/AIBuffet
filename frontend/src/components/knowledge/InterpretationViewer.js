@@ -34,11 +34,10 @@ function InterpretationViewer({ content, useMaxHeight = true }) {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div 
-        className="interpretation-content markdown-content"
+        className="interpretation-content markdown-content p-2 md:p-4"
         style={{
           ...(useMaxHeight ? { maxHeight: '60vh' } : {}),
-          overflowY: 'auto',
-          padding: '24px 0 24px 24px'
+          overflowY: 'auto'
         }}
         dangerouslySetInnerHTML={{
           __html: renderContent()

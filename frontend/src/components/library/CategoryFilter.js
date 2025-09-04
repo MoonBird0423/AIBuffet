@@ -1,12 +1,25 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { DocumentCategory } from '../../services/api';
 import { 
   FaGlobeAmericas, FaHeart, FaChartLine, FaChild, 
   FaBook, FaLaptopCode, FaUserTie, FaCoins, 
-  FaHistory, FaBriefcase, FaHeartbeat, FaStar
+  FaHistory, FaBriefcase, FaHeartbeat, FaStar, FaChevronDown
 } from 'react-icons/fa';
 
 function CategoryFilter({ selectedCategory, onSelectCategory }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 检测屏幕尺寸
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
   const categoryIcons = {
     'all': FaGlobeAmericas,
     'MINDFULNESS': FaHeart,
@@ -32,6 +45,31 @@ function CategoryFilter({ selectedCategory, onSelectCategory }) {
     return <IconComponent />;
   };
 
+  const selectedCategoryData = categories.find(cat => cat.id === selectedCategory);
+
+  // 移动端下拉选择器
+  if (isMobile) {
+    return (
+      <div className="relative">
+        <select
+          value={selectedCategory}
+          onChange={(e) => onSelectCategory(e.target.value)}
+          className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 pr-10 text-gray-700 text-sm font-medium appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+        >
+          {categories.map(category => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
+        </select>
+        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+          <FaChevronDown className="text-gray-400 text-sm" />
+        </div>
+      </div>
+    );
+  }
+
+  // 桌面端按钮列表
   return (
     <div className="bg-white rounded-3xl p-6 shadow-lg sticky top-24">
       <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">

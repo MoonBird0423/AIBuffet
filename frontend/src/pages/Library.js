@@ -130,10 +130,10 @@ function Library() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4">
-              探索知识海洋
+              每日图书推荐
             </h1>
             <p className="text-xl text-white/90 mb-8">
-              以下内容均由AI生成，如有侵权请联系删除
+              定期更新精品图书，建议收藏网址
             </p>
           </div>
           
@@ -193,14 +193,14 @@ function Library() {
               )}
               
               {loading && documents.length === 0 ? (
-                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
                   {Array.from({ length: 6 }).map((_, index) => (
                     <SkeletonCard key={index} />
                   ))}
                 </div>
               ) : documents.length > 0 ? (
                 <>
-                  <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
                     {documents.map((document, index) => (
                       <div 
                         key={document.id}

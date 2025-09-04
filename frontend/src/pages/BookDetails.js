@@ -212,8 +212,8 @@ function BookDetails() {
     <div className="min-h-screen bg-gray-50">
 
       {/* 顶部渐变背景区域 */}
-      <div className="bg-gradient-to-tr from-[#667eea] to-[#764ba2] pb-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="bg-gradient-to-tr from-[#667eea] to-[#764ba2] pb-4 md:pb-12">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           {/* 图书基本信息 */}
           <div style={{paddingTop: '112px'}}>
             <BookInfo 
@@ -227,7 +227,7 @@ function BookDetails() {
 
       {/* 主内容区域 */}
       <div className="bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 pt-2 md:pt-6">
           {/* 主标题 */}
           <div className="text-center mb-8">
             <h3 className="text-2xl font-bold text-gray-900 mb-2">AI伴读，直达书魂</h3>

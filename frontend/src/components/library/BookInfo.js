@@ -6,13 +6,13 @@ function BookInfo({ bookData, onFavorite, onShare }) {
   // 如果没有数据，显示骨架屏
   if (!bookData) {
     return (
-      <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-4 animate-pulse">
+      <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-2 md:p-4 animate-pulse">
         <div className="flex flex-col lg:flex-row">          {/* 封面图片骨架 */}
-          <div className="lg:w-1/3 p-8 flex justify-center">
+          <div className="lg:w-1/3 p-4 md:p-8 flex justify-center">
             <div className="w-60 bg-gray-200/50 rounded-xl" style={{height: '360px'}} />
           </div>
           {/* 信息区域骨架 */}
-          <div className="lg:w-2/3 p-8">
+          <div className="lg:w-2/3 p-4 md:p-8">
             <div className="h-8 bg-gray-200/50 rounded w-3/4 mb-4" />
             <div className="h-6 bg-gray-200/50 rounded w-1/4 mb-4" />
             <div className="h-4 bg-gray-200/50 rounded w-1/6 mb-6" />
@@ -27,10 +27,10 @@ function BookInfo({ bookData, onFavorite, onShare }) {
   }
 
   return (
-    <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-4">
+    <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-2 md:p-4">
       <div className="flex flex-col lg:flex-row">
         {/* 左侧封面图片 */}
-        <div className="lg:w-1/3 p-8 flex justify-center">
+        <div className="lg:w-1/3 p-4 md:p-8 flex justify-center">
           <div className="relative">
             {bookData.coverUrl ? (
               <img
@@ -54,7 +54,7 @@ function BookInfo({ bookData, onFavorite, onShare }) {
         </div>
 
         {/* 右侧图书信息 */}
-        <div className="lg:w-2/3 p-8">
+        <div className="lg:w-2/3 p-4 md:p-8">
           <div className="mb-6">
             <h1 className="text-4xl font-bold text-white mb-4">{bookData.fileName}</h1>
             <p className="text-xl text-white/80 mb-2">
@@ -73,7 +73,7 @@ function BookInfo({ bookData, onFavorite, onShare }) {
           </div>
 
           {/* CTA Buttons */}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex items-center gap-3">
             <button 
               onClick={() => {
                 openChatWindow({
@@ -82,7 +82,7 @@ function BookInfo({ bookData, onFavorite, onShare }) {
                   name: bookData.fileName
                 });
               }}
-              className="bg-white text-purple-600 px-8 py-4 rounded-2xl text-lg font-semibold hover:bg-white/90 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+              className="flex-1 bg-white text-purple-600 px-4 md:px-8 py-3 md:py-4 rounded-2xl text-base md:text-lg font-semibold hover:bg-white/90 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
             >
               <i className="fas fa-comments mr-2"></i>
               知识问答
@@ -91,20 +91,22 @@ function BookInfo({ bookData, onFavorite, onShare }) {
             {onFavorite && (
               <button
                 onClick={onFavorite}
-                className="bg-transparent border-2 border-white/50 text-white px-6 py-3 rounded-2xl text-base font-medium hover:bg-white hover:text-purple-600 hover:border-white transition-all duration-200"
+                className="bg-transparent border-2 border-white/50 text-white px-3 md:px-6 py-3 rounded-2xl text-base font-medium hover:bg-white hover:text-purple-600 hover:border-white transition-all duration-200"
+                title="收藏到知识库"
               >
-                <i className="fas fa-heart mr-2"></i>
-                收藏到知识库
+                <i className="fas fa-heart"></i>
+                <span className="ml-2 hidden md:inline">收藏到知识库</span>
               </button>
             )}
             
             {onShare && (
               <button 
                 onClick={onShare}
-                className="bg-transparent border-2 border-white/50 text-white px-6 py-3 rounded-2xl text-base font-medium hover:bg-white hover:text-purple-600 hover:border-white transition-all duration-200"
+                className="bg-transparent border-2 border-white/50 text-white px-3 md:px-6 py-3 rounded-2xl text-base font-medium hover:bg-white hover:text-purple-600 hover:border-white transition-all duration-200"
+                title="分享"
               >
-                <i className="fas fa-share mr-2"></i>
-                分享
+                <i className="fas fa-share"></i>
+                <span className="ml-2 hidden md:inline">分享</span>
               </button>
             )}
           </div>

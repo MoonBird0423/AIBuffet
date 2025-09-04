@@ -127,7 +127,7 @@ function BookTabs({ activeTab, onTabChange, content, loading = false, contentSta
   return (
     <div className="bg-white rounded-3xl shadow-xl">
       {/* Tab Navigation */}
-      <div className="flex justify-center p-6 pb-0">
+      <div className="flex justify-center p-3 pb-0 md:p-6">
         <div className="bg-gray-100 rounded-2xl p-2">
           <div className="flex space-x-2">            {tabs.map(tab => (
               <button
@@ -149,7 +149,7 @@ function BookTabs({ activeTab, onTabChange, content, loading = false, contentSta
           </div>
         </div>
       </div>      {/* 内容区域 */}
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <div 
           className="relative transition-opacity duration-200 ease-in-out"
           style={{ minHeight: '400px' }}
