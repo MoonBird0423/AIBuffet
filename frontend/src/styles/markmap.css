@@ -51,3 +51,76 @@
   background-color: #f3f4f6 !important;
   border-color: #9ca3af;
 }
+
+/* 移动端特定样式 */
+@media (max-width: 768px) {
+  .markmap-wrapper {
+    padding: 16px 12px; /* 减少移动端内边距 */
+    border-radius: 8px; /* 稍小的圆角 */
+  }
+  
+  .markmap-mobile {
+    font-size: 14px; /* 移动端字体稍大一些 */
+  }
+  
+  /* 移动端工具栏调整 */
+  .custom-toolbar {
+    top: 8px !important;
+    right: 8px !important;
+    transform: scale(0.9); /* 稍微缩小工具栏 */
+  }
+  
+  .custom-toolbar .mm-toolbar-item {
+    padding: 6px 8px !important; /* 增加触摸区域 */
+    min-width: 32px !important;
+    min-height: 32px !important;
+  }
+  
+  /* 全屏状态下的样式 */
+  .markmap-wrapper:fullscreen {
+    padding: 20px;
+    background: white;
+  }
+  
+  .markmap-wrapper:fullscreen .custom-toolbar {
+    top: 20px !important;
+    right: 20px !important;
+    transform: scale(1); /* 全屏时恢复正常大小 */
+  }
+}
+
+/* 桌面端样式 */
+@media (min-width: 769px) {
+  .markmap-desktop {
+    font-size: 16px;
+  }
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+  .markmap-wrapper {
+    /* 触摸设备特定的优化 */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  
+  /* 增加触摸区域 */
+  .markmap circle,
+  .markmap rect {
+    cursor: pointer;
+  }
+  
+  /* 工具栏触摸优化 */
+  .custom-toolbar .mm-toolbar-item {
+    padding: 8px 12px !important;
+    margin: 2px !important;
+  }
+}
+
+/* 横屏模式优化 */
+@media (max-width: 768px) and (orientation: landscape) {
+  .markmap-wrapper {
+    height: 70vh !important; /* 横屏时稍微减少高度 */
+  }
+}

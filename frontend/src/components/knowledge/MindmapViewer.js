@@ -23,6 +23,20 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
   const markmapRef = useRef();
   const containerRef = useRef();
 
+  // 移动端检测函数
+  const isMobile = () => {
+    return window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  };
+
+  // 获取响应式高度
+  const getResponsiveHeight = () => {
+    if (isMobile()) {
+      // 移动端使用视口高度的80%，最小500px
+      return Math.max(window.innerHeight * 0.8, 500) + 'px';
+    }
+    return height;
+  };
+
   // 全屏功能
   const toggleFullscreen = () => {
     const container = containerRef.current;
@@ -77,8 +91,20 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
       
       expandAll(transformedRoot);
       
-      // 创建Markmap实例，使用默认配置以确保线条正确显示
-      const mm = Markmap.create(svg, undefined, transformedRoot);
+      // 根据设备类型配置markmap选项
+      const markmapOptions = {
+        duration: 500,
+        maxWidth: isMobile() ? 200 : 300,
+        spacingVertical: isMobile() ? 8 : 10,
+        spacingHorizontal: isMobile() ? 60 : 80,
+        autoFit: true,
+        pan: true,
+        zoom: true,
+        initialExpandLevel: isMobile() ? 2 : 3,
+      };
+      
+      // 创建Markmap实例
+      const mm = Markmap.create(svg, markmapOptions, transformedRoot);
       markmapRef.current = mm;
       
       // 创建工具栏并添加自定义全屏按钮
@@ -111,10 +137,63 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
       toolbarEl.classList.add('custom-toolbar');
       
       // 将工具栏添加到容器
-      container.append(toolbarEl);      const resizeObserver = new ResizeObserver(() => {
+      container.append(toolbarEl);
+
+      // 移动端初始缩放优化
+      if (isMobile()) {
+        setTimeout(() => {
+          try {
+            // 确保 markmap 实例和 DOM 已经完全初始化
+            if (!mm || !mm.state) {
+              console.warn('Markmap实例未完全初始化');
+              return;
+            }
+            
+            // 设置初始缩放以确保内容在移动端更好地显示
+            mm.fit();
+            
+            setTimeout(() => {
+              try {
+                // 安全检查 transform 是否存在
+                if (!mm.state || !mm.state.transform) {
+                  console.warn('Markmap transform 状态未准备好');
+                  return;
+                }
+                
+                const currentTransform = mm.state.transform;
+                
+                // 确保 transform 对象有必需的属性
+                if (typeof currentTransform.k !== 'number' || 
+                    typeof currentTransform.x !== 'number' || 
+                    typeof currentTransform.y !== 'number') {
+                  console.warn('Transform 属性不完整:', currentTransform);
+                  return;
+                }
+                
+                const scale = Math.min(currentTransform.k * 1.5, 2); // 增加50%缩放，最大2倍
+                mm.setTransform({
+                  x: currentTransform.x,
+                  y: currentTransform.y,
+                  k: scale
+                });
+              } catch (transformError) {
+                console.error('设置移动端缩放失败:', transformError);
+              }
+            }, 150);
+          } catch (error) {
+            console.error('移动端初始化失败:', error);
+          }
+        }, 300);
+      }
+
+      const resizeObserver = new ResizeObserver(() => {
         const { width, height } = container.getBoundingClientRect();
         svg.setAttribute('width', width);
         svg.setAttribute('height', height);
+        // 移动端窗口大小变化时重新适配
+        if (isMobile() && mm) {
+          setTimeout(() => mm.fit(), 100);
+        }
       });
       
       resizeObserver.observe(container);
@@ -143,13 +222,13 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
     <div 
       ref={containerRef}
       className="markmap-wrapper bg-white rounded-lg p-6 shadow-sm border border-gray-200 relative" 
-      style={{ height: height, width: '100%' }}
+      style={{ height: getResponsiveHeight(), width: '100%' }}
     >
       <svg 
         ref={svgRef}
-        className="markmap"
+        className={`markmap ${isMobile() ? 'markmap-mobile' : 'markmap-desktop'}`}
         style={{ width: '100%', height: '100%' }}
-        viewBox="0 0 800 600"
+        viewBox={isMobile() ? undefined : "0 0 800 600"}
         preserveAspectRatio="xMidYMid meet"
       />
     </div>
