@@ -60,162 +60,245 @@ const MindmapViewer = memo(({ content, height = '600px' }) => {
   useEffect(() => {
     if (!content || !svgRef.current || !containerRef.current) return;
 
-    try {
-      const svg = svgRef.current;
-      const container = containerRef.current;
-      svg.innerHTML = '';
-      
-      const transformer = new Transformer();  // 使用默认配置，不传入任何参数
-
-      const { width, height } = container.getBoundingClientRect();
-      svg.setAttribute('width', width);
-      svg.setAttribute('height', height);
-
-      const markdownContent = parseAndConvertToMarkdown(content);
-
-      let transformedRoot;
+    const initMarkmap = () => {
       try {
-        const result = transformer.transform(markdownContent);
-        transformedRoot = result.root;
-      } catch (error) {
-        console.error('转换脑图数据失败:', error);        throw new Error('脑图数据转换失败');
-      }
-      
-      // 初始化时展开所有节点
-      const expandAll = (node) => {
-        if (node.children) {
-          node.state = { collapsed: false };
-          node.children.forEach(expandAll);
-        }
-      };
-      
-      expandAll(transformedRoot);
-      
-      // 根据设备类型配置markmap选项
-      const markmapOptions = {
-        duration: 500,
-        maxWidth: isMobile() ? 200 : 300,
-        spacingVertical: isMobile() ? 8 : 10,
-        spacingHorizontal: isMobile() ? 60 : 80,
-        autoFit: true,
-        pan: true,
-        zoom: true,
-        initialExpandLevel: isMobile() ? 2 : 3,
-      };
-      
-      // 创建Markmap实例
-      const mm = Markmap.create(svg, markmapOptions, transformedRoot);
-      markmapRef.current = mm;
-      
-      // 创建工具栏并添加自定义全屏按钮
-      const toolbar = Toolbar.create(mm);
-      
-      // 创建全屏工具栏项
-      const fullscreenItem = {
-        id: 'fullscreen',
-        title: '全屏显示',
-        content: '⛶',
-        onClick: (e) => {
-          e.preventDefault();
-          toggleFullscreen();
-        }
-      };
-      
-      // 获取默认工具栏项并添加全屏按钮
-      const items = [...Toolbar.defaultItems, fullscreenItem];
-      toolbar.setItems(items);
-      
-      const toolbarEl = toolbar.render();
-      
-      // 设置工具栏样式
-      toolbarEl.style.position = 'absolute';
-      toolbarEl.style.top = '0.5rem';
-      toolbarEl.style.right = '0.5rem';
-      toolbarEl.style.zIndex = '1000';
-      
-      // 添加自定义CSS类来隐藏markmap图标
-      toolbarEl.classList.add('custom-toolbar');
-      
-      // 将工具栏添加到容器
-      container.append(toolbarEl);
-
-      // 移动端初始缩放优化
-      if (isMobile()) {
-        setTimeout(() => {
-          try {
-            // 确保 markmap 实例和 DOM 已经完全初始化
-            if (!mm || !mm.state) {
-              console.warn('Markmap实例未完全初始化');
-              return;
-            }
-            
-            // 设置初始缩放以确保内容在移动端更好地显示
-            mm.fit();
-            
-            setTimeout(() => {
-              try {
-                // 安全检查 transform 是否存在
-                if (!mm.state || !mm.state.transform) {
-                  console.warn('Markmap transform 状态未准备好');
-                  return;
-                }
-                
-                const currentTransform = mm.state.transform;
-                
-                // 确保 transform 对象有必需的属性
-                if (typeof currentTransform.k !== 'number' || 
-                    typeof currentTransform.x !== 'number' || 
-                    typeof currentTransform.y !== 'number') {
-                  console.warn('Transform 属性不完整:', currentTransform);
-                  return;
-                }
-                
-                const scale = Math.min(currentTransform.k * 1.5, 2); // 增加50%缩放，最大2倍
-                mm.setTransform({
-                  x: currentTransform.x,
-                  y: currentTransform.y,
-                  k: scale
-                });
-              } catch (transformError) {
-                console.error('设置移动端缩放失败:', transformError);
-              }
-            }, 150);
-          } catch (error) {
-            console.error('移动端初始化失败:', error);
-          }
-        }, 300);
-      }
-
-      const resizeObserver = new ResizeObserver(() => {
+        const svg = svgRef.current;
+        const container = containerRef.current;
+        
+        if (!svg || !container) return;
+        
+        svg.innerHTML = '';
+        
+        // 1. 容器尺寸验证
         const { width, height } = container.getBoundingClientRect();
+        if (width <= 0 || height <= 0) {
+          console.warn('容器尺寸无效，等待重新渲染');
+          setTimeout(initMarkmap, 100);
+          return;
+        }
+        
         svg.setAttribute('width', width);
         svg.setAttribute('height', height);
-        // 移动端窗口大小变化时重新适配
+
+        // 2. 数据处理和验证
+        const transformer = new Transformer();
+        const markdownContent = parseAndConvertToMarkdown(content);
+
+        let transformedRoot;
+        try {
+          const result = transformer.transform(markdownContent);
+          transformedRoot = result.root;
+          
+          // 验证数据完整性
+          if (!transformedRoot || typeof transformedRoot !== 'object') {
+            throw new Error('转换后的数据无效');
+          }
+        } catch (error) {
+          console.error('转换脑图数据失败:', error);
+          throw new Error('脑图数据转换失败');
+        }
+        
+        // 3. 展开节点
+        const expandAll = (node) => {
+          if (node && node.children && Array.isArray(node.children)) {
+            node.state = { collapsed: false };
+            node.children.forEach(expandAll);
+          }
+        };
+        
+        expandAll(transformedRoot);
+        
+        // 4. 简化的 markmap 配置 - 优先稳定性
+        let markmapOptions;
+        try {
+          if (isMobile()) {
+            // 移动端使用保守的配置
+            markmapOptions = {
+              autoFit: true,
+              pan: true,
+              zoom: true,
+              maxWidth: 200,
+              spacingVertical: 10,
+              spacingHorizontal: 60
+            };
+          } else {
+            // 桌面端使用默认配置
+            markmapOptions = undefined;
+          }
+        } catch (configError) {
+          console.warn('配置markmap选项失败，使用默认配置:', configError);
+          markmapOptions = undefined;
+        }
+        
+        // 5. 创建 Markmap 实例（带错误回退）
+        let mm;
+        try {
+          mm = Markmap.create(svg, markmapOptions, transformedRoot);
+          markmapRef.current = mm;
+        } catch (createError) {
+          console.error('使用自定义配置创建markmap失败，尝试默认配置:', createError);
+          try {
+            // 回退到默认配置
+            mm = Markmap.create(svg, undefined, transformedRoot);
+            markmapRef.current = mm;
+          } catch (fallbackError) {
+            console.error('创建markmap完全失败:', fallbackError);
+            throw new Error('无法创建脑图实例');
+          }
+        }
+
+        // 6. 创建工具栏
+        try {
+          const toolbar = Toolbar.create(mm);
+          
+          const fullscreenItem = {
+            id: 'fullscreen',
+            title: '全屏显示',
+            content: '⛶',
+            onClick: (e) => {
+              e.preventDefault();
+              toggleFullscreen();
+            }
+          };
+          
+          const items = [...Toolbar.defaultItems, fullscreenItem];
+          toolbar.setItems(items);
+          
+          const toolbarEl = toolbar.render();
+          
+          toolbarEl.style.position = 'absolute';
+          toolbarEl.style.top = '0.5rem';
+          toolbarEl.style.right = '0.5rem';
+          toolbarEl.style.zIndex = '1000';
+          toolbarEl.classList.add('custom-toolbar');
+          
+          container.append(toolbarEl);
+          
+          // 清理函数中需要移除工具栏
+          svg.toolbarElement = toolbarEl;
+        } catch (toolbarError) {
+          console.warn('创建工具栏失败:', toolbarError);
+          // 工具栏失败不影响核心功能
+        }
+
+        // 7. 移动端优化（简化版）
         if (isMobile() && mm) {
-          setTimeout(() => mm.fit(), 100);
+          // 使用更安全的方式进行移动端优化
+          requestAnimationFrame(() => {
+            try {
+              if (mm && mm.fit) {
+                mm.fit();
+                
+                // 简单的缩放优化，不依赖复杂的 transform 状态
+                setTimeout(() => {
+                  try {
+                    if (mm && mm.state && mm.state.transform && mm.setTransform) {
+                      const transform = mm.state.transform;
+                      if (transform && 
+                          typeof transform.k === 'number' && 
+                          typeof transform.x === 'number' && 
+                          typeof transform.y === 'number' &&
+                          !isNaN(transform.k) && 
+                          !isNaN(transform.x) && 
+                          !isNaN(transform.y)) {
+                        
+                        // 只做轻微的缩放调整
+                        const newScale = Math.min(transform.k * 1.2, 1.8);
+                        mm.setTransform({
+                          x: transform.x,
+                          y: transform.y,
+                          k: newScale
+                        });
+                      }
+                    }
+                  } catch (scaleError) {
+                    console.warn('移动端缩放调整失败:', scaleError);
+                    // 失败了也不影响基本功能
+                  }
+                }, 200);
+              }
+            } catch (mobileError) {
+              console.warn('移动端优化失败:', mobileError);
+            }
+          });
         }
-      });
-      
-      resizeObserver.observe(container);
-      return () => {
-        resizeObserver.disconnect();
-        if (toolbarEl && toolbarEl.parentNode) {
-          toolbarEl.parentNode.removeChild(toolbarEl);
+
+        // 8. 响应式处理
+        const resizeObserver = new ResizeObserver((entries) => {
+          try {
+            for (const entry of entries) {
+              const { width, height } = entry.contentRect;
+              if (width > 0 && height > 0) {
+                svg.setAttribute('width', width);
+                svg.setAttribute('height', height);
+                
+                if (mm && mm.fit) {
+                  setTimeout(() => mm.fit(), 100);
+                }
+              }
+            }
+          } catch (resizeError) {
+            console.warn('窗口大小调整处理失败:', resizeError);
+          }
+        });
+        
+        resizeObserver.observe(container);
+        
+        // 清理函数
+        svg.resizeObserver = resizeObserver;
+        
+      } catch (error) {
+        console.error('初始化脑图失败:', error);
+        
+        // 显示错误信息
+        const svg = svgRef.current;
+        if (svg) {
+          svg.innerHTML = '';
+          try {
+            const errorText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            errorText.setAttribute('x', '50%');
+            errorText.setAttribute('y', '50%');
+            errorText.setAttribute('text-anchor', 'middle');
+            errorText.setAttribute('fill', '#666');
+            errorText.setAttribute('font-size', '14');
+            errorText.textContent = '脑图加载失败，请刷新重试';
+            svg.appendChild(errorText);
+          } catch (errorDisplayError) {
+            console.error('显示错误信息失败:', errorDisplayError);
+          }
         }
-      };
-    } catch (error) {
-      console.error('渲染脑图失败:', error);
-      // 显示错误信息在SVG中
-      if (svgRef.current) {
-        const errorText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        errorText.setAttribute('x', '50%');
-        errorText.setAttribute('y', '50%');
-        errorText.setAttribute('text-anchor', 'middle');
-        errorText.setAttribute('fill', '#666');
-        errorText.textContent = '脑图渲染失败，请检查数据格式';
-        svgRef.current.appendChild(errorText);
       }
-    }
+    };
+
+    // 延迟初始化，确保DOM完全渲染
+    const timeoutId = setTimeout(initMarkmap, 50);
+
+    return () => {
+      clearTimeout(timeoutId);
+      
+      // 清理资源
+      const svg = svgRef.current;
+      if (svg) {
+        if (svg.resizeObserver) {
+          svg.resizeObserver.disconnect();
+        }
+        if (svg.toolbarElement && svg.toolbarElement.parentNode) {
+          svg.toolbarElement.parentNode.removeChild(svg.toolbarElement);
+        }
+      }
+      
+      // 清理 markmap 实例
+      if (markmapRef.current) {
+        try {
+          if (markmapRef.current.destroy) {
+            markmapRef.current.destroy();
+          }
+        } catch (destroyError) {
+          console.warn('清理markmap实例失败:', destroyError);
+        }
+        markmapRef.current = null;
+      }
+    };
   }, [content]);
 
   return (
