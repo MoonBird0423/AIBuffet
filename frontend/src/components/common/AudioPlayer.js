@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useAudio } from '../../contexts/AudioContext';
 import '../../styles/audioPlayer.css';
 
-const AudioPlayer = ({ audioUrl, bookTitle, bookId, className = '' }) => {
+const AudioPlayer = ({ audioUrl, bookTitle, bookId, className = '', shouldAutoplay = false, onAutoplayTriggered }) => {
   const { currentAudio, playAudio, togglePlay, setCurrentTime, setVolume, setPlaybackRate } = useAudio();
 
   // 当组件加载时，如果当前没有播放任何音频，则初始化为当前音频
@@ -21,6 +21,22 @@ const AudioPlayer = ({ audioUrl, bookTitle, bookId, className = '' }) => {
       });
     }
   };
+
+  // 自动播放逻辑
+  useEffect(() => {
+    if (shouldAutoplay && audioUrl && bookTitle && bookId) {
+      // 延迟一点时间确保组件完全渲染
+      const timer = setTimeout(() => {
+        handlePlayClick();
+        // 通知父组件自动播放已触发
+        if (onAutoplayTriggered) {
+          onAutoplayTriggered();
+        }
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [shouldAutoplay, audioUrl, bookTitle, bookId, onAutoplayTriggered]);
 
   const handleProgressClick = (e) => {
     const progressBar = e.currentTarget;

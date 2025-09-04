@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { getDocument, getInterpretation, getMindmap, getQuiz, getAudioStatus } from '../services/api';
 import BookInfo from '../components/library/BookInfo';
@@ -10,6 +10,7 @@ import { ToastManager } from '../components/common/Toast';
 function BookDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   useDocumentTitle('图书详情 | 书意');
   const [bookData, setBookData] = useState(null);
   const [activeTab, setActiveTab] = useState('interpretation');
@@ -26,6 +27,7 @@ function BookDetails() {
   // 音频相关状态
   const [audioUrl, setAudioUrl] = useState(null);
   const [hasAudio, setHasAudio] = useState(false);
+  const [shouldAutoplay, setShouldAutoplay] = useState(false);
   
   // 收藏相关状态
   const [showFavoriteModal, setShowFavoriteModal] = useState(false);
@@ -149,10 +151,26 @@ function BookDetails() {
       if (response.code === 200) {
         setHasAudio(response.data.hasAudio);
         setAudioUrl(response.data.audioUrl);
+        
+        // 检查是否需要自动播放
+        const autoplayParam = searchParams.get('autoplay') === 'true';
+        if (autoplayParam && response.data.hasAudio && response.data.audioUrl) {
+          // 设置自动播放状态
+          setShouldAutoplay(true);
+          
+          // 清理 URL 参数
+          searchParams.delete('autoplay');
+          setSearchParams(searchParams, { replace: true });
+        }
       }
     } catch (error) {
       console.error('检查音频状态失败:', error);
     }
+  };
+  
+  const triggerAutoplay = (audioUrl) => {
+    // 触发自动播放的逻辑将通过 BookTabs 组件传递给 AudioPlayer
+    console.log('触发自动播放:', audioUrl);
   };
 
   const handleShare = async () => {
@@ -247,6 +265,8 @@ function BookDetails() {
                 hasAudio={hasAudio}
                 bookTitle={bookData?.fileName}
                 bookId={id}
+                shouldAutoplay={shouldAutoplay}
+                onAutoplayTriggered={() => setShouldAutoplay(false)}
               />
             </div>
           )}

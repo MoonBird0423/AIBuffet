@@ -5,7 +5,7 @@ import QuizViewer from '../knowledge/QuizViewer';
 import QuizJsonRenderer from '../knowledge/QuizJsonRenderer';
 import AudioPlayer from '../common/AudioPlayer';
 
-function BookTabs({ activeTab, onTabChange, content, loading = false, contentStatus = 'loading', audioUrl, hasAudio, bookTitle, bookId }) {
+function BookTabs({ activeTab, onTabChange, content, loading = false, contentStatus = 'loading', audioUrl, hasAudio, bookTitle, bookId, shouldAutoplay = false, onAutoplayTriggered }) {
 
   const tabs = [
     { key: 'interpretation', label: '图书解读' },
@@ -81,7 +81,13 @@ function BookTabs({ activeTab, onTabChange, content, loading = false, contentSta
                 {/* 音频播放器 - 只有当音频存在时才显示 */}
                 {hasAudio && audioUrl && (
                   <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6">
-                    <AudioPlayer audioUrl={audioUrl} bookTitle={bookTitle} bookId={bookId} />
+                    <AudioPlayer 
+                      audioUrl={audioUrl} 
+                      bookTitle={bookTitle} 
+                      bookId={bookId}
+                      shouldAutoplay={shouldAutoplay}
+                      onAutoplayTriggered={onAutoplayTriggered}
+                    />
                   </div>
                 )}
                 {/* 解读内容 */}
