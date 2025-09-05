@@ -5,6 +5,7 @@ import ChatHeader from '../components/chat/ChatHeader';
 import ChatMessages from '../components/chat/ChatMessages';
 import ChatInput from '../components/chat/ChatInput';
 import ChatSidebar from '../components/chat/ChatSidebar';
+import MobileChatDrawer from '../components/chat/MobileChatDrawer';
 import { getChatSession, createChatSession, updateChatSession, invokeModel } from '../services/api';
 import { ToastManager } from '../components/common/Toast';
 import streamDebugger from '../utils/streamDebug';
@@ -27,13 +28,37 @@ function Chat() {
   const [loadingRetryCount, setLoadingRetryCount] = useState(0);
   const [questionTarget, setQuestionTarget] = useState(null); // {type: 'book'|'knowledge', id: string, name: string}
   const [showNoTargetHint, setShowNoTargetHint] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
   const sidebarRef = useRef(null);
+  const mobileDrawerRef = useRef(null);
   const abortControllerRef = useRef(null);
   const retryTimeoutRef = useRef(null);
 
   // 从URL参数获取会话ID
   const sessionId = new URLSearchParams(location.search).get('session');
+
+  // 检测移动端设备
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+
+    return () => {
+      window.removeEventListener('resize', checkIsMobile);
+    };
+  }, []);
+
+  // 当从移动端切换到桌面端时，关闭移动端抽屉
+  useEffect(() => {
+    if (!isMobile && isMobileDrawerOpen) {
+      setIsMobileDrawerOpen(false);
+    }
+  }, [isMobile, isMobileDrawerOpen]);
 
   useEffect(() => {
     const authUser = localStorage.getItem('auth_user');
@@ -252,6 +277,10 @@ function Chat() {
           if (sidebarRef.current) {
             sidebarRef.current.handleChatCreated(newSession);
           }
+          // 通知移动端抽屉
+          if (mobileDrawerRef.current) {
+            mobileDrawerRef.current.handleChatCreated(newSession);
+          }
           
           // 更新URL并触发路由更新
           navigate(`/chat?session=${activeSessionId}`);
@@ -302,6 +331,10 @@ function Chat() {
           
           if (sidebarRef.current) {
             sidebarRef.current.handleChatUpdated(updatedChat);
+          }
+          // 通知移动端抽屉
+          if (mobileDrawerRef.current) {
+            mobileDrawerRef.current.handleChatUpdated(updatedChat);
           }
         } catch (error) {
           console.error('Update session error:', error);
@@ -394,6 +427,10 @@ function Chat() {
               if (sidebarRef.current) {
                 sidebarRef.current.handleChatUpdated(updatedChat);
               }
+              // 通知移动端抽屉
+              if (mobileDrawerRef.current) {
+                mobileDrawerRef.current.handleChatUpdated(updatedChat);
+              }
             } catch (saveError) {
               console.error('Failed to save partial response:', saveError);
             }
@@ -455,6 +492,10 @@ function Chat() {
 
             if (sidebarRef.current) {
               sidebarRef.current.handleChatUpdated(updatedChat);
+            }
+            // 通知移动端抽屉
+            if (mobileDrawerRef.current) {
+              mobileDrawerRef.current.handleChatUpdated(updatedChat);
             }
             
             // 输出性能分析报告
@@ -549,6 +590,26 @@ function Chat() {
     setInputFocusKey(prev => prev + 1);
   };
 
+  // 处理移动端菜单打开
+  const handleMobileMenuOpen = () => {
+    setIsMobileDrawerOpen(true);
+  };
+
+  // 处理移动端菜单关闭
+  const handleMobileMenuClose = () => {
+    setIsMobileDrawerOpen(false);
+  };
+
+  // 处理移动端抽屉删除成功
+  const handleMobileDeleteSuccess = async (deletedSessionId) => {
+    if (mobileDrawerRef.current) {
+      mobileDrawerRef.current.handleChatDeleted(deletedSessionId);
+    }
+    if (sidebarRef.current) {
+      sidebarRef.current.handleChatDeleted(deletedSessionId);
+    }
+  };
+
   // 处理提问对象选择
   const handleTargetSelect = (target) => {
     setQuestionTarget(target);
@@ -636,19 +697,34 @@ function Chat() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <ChatSidebar
-        ref={sidebarRef}
+      {/* 桌面端侧边栏 */}
+      <div className="hidden md:block">
+        <ChatSidebar
+          ref={sidebarRef}
+          onNewChat={handleNewChat}
+          onDeleteSuccess={async (deletedSessionId) => {
+            if (sidebarRef.current) {
+              sidebarRef.current.handleChatDeleted(deletedSessionId);
+            }
+          }}
+        />
+      </div>
+
+      {/* 移动端抽屉 */}
+      <MobileChatDrawer
+        ref={mobileDrawerRef}
+        isOpen={isMobileDrawerOpen}
+        onClose={handleMobileMenuClose}
         onNewChat={handleNewChat}
-        onDeleteSuccess={async (deletedSessionId) => {
-          if (sidebarRef.current) {
-            sidebarRef.current.handleChatDeleted(deletedSessionId);
-          }
-        }}
+        onDeleteSuccess={handleMobileDeleteSuccess}
       />
+
+      {/* 主对话区域 */}
       <div className="flex-1 flex flex-col">
         <ChatHeader
           questionTarget={questionTarget}
           showNoTargetHint={showNoTargetHint}
+          onMenuClick={handleMobileMenuOpen}
         />
         {error && (
           <div className="bg-red-50 p-4">
