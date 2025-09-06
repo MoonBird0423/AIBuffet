@@ -19,6 +19,11 @@ export function AuthProvider({ children }) {
     defaultType: 'vip'
   });
 
+  // 登录弹窗状态管理
+  const [loginModal, setLoginModal] = useState({
+    open: false
+  });
+
   // 用户数据变化时保存到localStorage
   useEffect(() => {
     if (user) {
@@ -152,6 +157,15 @@ export function AuthProvider({ children }) {
     setPurchaseModal({ open: false, defaultType: 'vip' });
   };
 
+  // 登录弹窗控制方法
+  const showLoginModal = () => {
+    setLoginModal({ open: true });
+  };
+
+  const hideLoginModal = () => {
+    setLoginModal({ open: false });
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -166,7 +180,11 @@ export function AuthProvider({ children }) {
       // 购买弹窗相关
       purchaseModal,
       showPurchaseModal,
-      hidePurchaseModal
+      hidePurchaseModal,
+      // 登录弹窗相关
+      loginModal,
+      showLoginModal,
+      hideLoginModal
     }}>
       {children}
     </AuthContext.Provider>

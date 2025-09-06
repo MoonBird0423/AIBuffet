@@ -6,7 +6,7 @@ import CaptchaModal from './CaptchaModal';
 import authApi from '../../services/auth';
 import { ToastManager } from '../common/Toast';
 
-function LoginForm() {
+function LoginForm({ onLoginSuccess }) {
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [countdown, setCountdown] = useState(0);
@@ -72,10 +72,15 @@ function LoginForm() {
         ToastManager.info(`欢迎加入AI自助餐！您的默认用户名为：${userData.username}`);
       }
       
-      // 智能跳转逻辑：检查是否有来源页面，否则跳转到首页
-      const redirectTo = location.state?.from?.pathname || '/';
-      // 使用replace模式导航，防止用户返回到登录页
-      navigate(redirectTo, { replace: true });
+      // 如果有onLoginSuccess回调，调用它（用于弹窗模式）
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      } else {
+        // 智能跳转逻辑：检查是否有来源页面，否则跳转到首页
+        const redirectTo = location.state?.from?.pathname || '/';
+        // 使用replace模式导航，防止用户返回到登录页
+        navigate(redirectTo, { replace: true });
+      }
     } catch (error) {
       setError(error.message || '登录失败，请稍后重试');
       if (error.response?.data?.code === 2004) {
@@ -163,26 +168,6 @@ function LoginForm() {
             登录 / 注册
           </button>
           
-          <div className="mt-6 text-xs text-center text-gray-500">
-            <p className="leading-relaxed">
-              注册登录即代表已阅读并同意我们的
-              <a
-                href="/terms"
-                target="_blank"
-                className="text-blue-600 hover:text-blue-500 mx-1 underline underline-offset-2 hover:underline-offset-4 transition-all duration-200"
-              >
-                用户协议
-              </a>
-              与
-              <a
-                href="/privacy"
-                target="_blank"
-                className="text-blue-600 hover:text-blue-500 mx-1 underline underline-offset-2 hover:underline-offset-4 transition-all duration-200"
-              >
-                隐私政策
-              </a>
-            </p>
-          </div>
         </div>
       </form>
     </div>

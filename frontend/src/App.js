@@ -12,6 +12,7 @@ import WechatCallback from './pages/WechatCallback';
 import MainLayout from './components/layout/MainLayout';
 import ToastContainer from './components/common/Toast';
 import PurchaseModal from './components/common/PurchaseModal';
+import UserLoginModal from './components/auth/UserLoginModal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AudioProvider } from './contexts/AudioContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -21,7 +22,7 @@ import './index.css';
 
 // 内部组件，用于处理购买弹窗逻辑
 function AppContent() {
-  const { purchaseModal, showPurchaseModal, hidePurchaseModal } = useAuth();
+  const { purchaseModal, showPurchaseModal, hidePurchaseModal, loginModal, hideLoginModal } = useAuth();
 
   // 监听全局购买弹窗事件
   useEffect(() => {
@@ -85,6 +86,12 @@ function AppContent() {
         open={purchaseModal.open}
         onClose={hidePurchaseModal}
         defaultType={purchaseModal.defaultType}
+      />
+      
+      {/* 全局登录弹窗 */}
+      <UserLoginModal 
+        isOpen={loginModal.open}
+        onClose={hideLoginModal}
       />
       </Router>
     </AudioProvider>

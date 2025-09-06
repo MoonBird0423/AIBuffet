@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import UserAccountModal from '../auth/UserAccountModal';
 import LogoutConfirmModal from '../auth/LogoutConfirmModal';
 
 function UserProfile({ className = '', onMenuClick }) {
-  const { user, loading, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user, loading, logout, showLoginModal } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -20,7 +18,8 @@ function UserProfile({ className = '', onMenuClick }) {
     }
     
     if (!user) {
-      navigate('/login');
+      // 改为打开登录弹窗而不是跳转页面
+      showLoginModal();
     } else {
       setIsModalOpen(true);
     }
