@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import UserAccountModal from '../auth/UserAccountModal';
 import LogoutConfirmModal from '../auth/LogoutConfirmModal';
 
 function UserProfile({ className = '', onMenuClick }) {
-  const { user, loading, logout, showLoginModal } = useAuth();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { user, loading, logout, showLoginModal, showAccountModal } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // 检测是否在导航栏中使用（根据className判断）
@@ -21,12 +19,11 @@ function UserProfile({ className = '', onMenuClick }) {
       // 改为打开登录弹窗而不是跳转页面
       showLoginModal();
     } else {
-      setIsModalOpen(true);
+      showAccountModal();
     }
   };
 
   const handleClose = () => {
-    setIsModalOpen(false);
     setShowLogoutConfirm(false);
   };
 
@@ -73,13 +70,6 @@ function UserProfile({ className = '', onMenuClick }) {
           {user ? user.username : "点击登录"}
         </span>
       </div>
-
-      {/* 账户信息弹窗 */}
-      <UserAccountModal
-        isOpen={isModalOpen}
-        onClose={handleClose}
-        onLogout={handleLogout}
-      />
 
       {/* 退出确认弹窗 */}
       <LogoutConfirmModal

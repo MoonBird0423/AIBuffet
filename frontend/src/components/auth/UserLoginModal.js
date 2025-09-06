@@ -67,7 +67,7 @@ function UserLoginModal({ isOpen, onClose }) {
         {/* 引导语 - 高级样式 */}
         <div className="text-center mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100">
           <h3 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3">
-            登录-书意解读
+            书意解读
           </h3>
           <p className="text-sm text-gray-700 leading-relaxed">
             <span>

@@ -24,6 +24,11 @@ export function AuthProvider({ children }) {
     open: false
   });
 
+  // 账户弹窗状态管理
+  const [accountModal, setAccountModal] = useState({
+    open: false
+  });
+
   // 用户数据变化时保存到localStorage
   useEffect(() => {
     if (user) {
@@ -166,6 +171,15 @@ export function AuthProvider({ children }) {
     setLoginModal({ open: false });
   };
 
+  // 账户弹窗控制方法
+  const showAccountModal = () => {
+    setAccountModal({ open: true });
+  };
+
+  const hideAccountModal = () => {
+    setAccountModal({ open: false });
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -184,7 +198,11 @@ export function AuthProvider({ children }) {
       // 登录弹窗相关
       loginModal,
       showLoginModal,
-      hideLoginModal
+      hideLoginModal,
+      // 账户弹窗相关
+      accountModal,
+      showAccountModal,
+      hideAccountModal
     }}>
       {children}
     </AuthContext.Provider>

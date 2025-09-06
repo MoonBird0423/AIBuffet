@@ -21,8 +21,8 @@ function formatAmount(amount) {
   return (amount / 100).toFixed(2) + ' 元';
 }
 
-function UserAccountModal({ isOpen, onClose, onLogout }) {
-  const { user, loading, error, updateAvatar, updateUsername } = useAuth();
+function UserAccountModal({ isOpen, onClose }) {
+  const { user, loading, error, updateAvatar, updateUsername, logout } = useAuth();
   const [editingUsername, setEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [activeTab, setActiveTab] = useState('profile');
@@ -85,6 +85,15 @@ function UserAccountModal({ isOpen, onClose, onLogout }) {
     try {
       await updateAvatar(file);
     } catch (err) {}
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      onClose(); // 退出登录后关闭弹窗
+    } catch (err) {
+      // 错误已在AuthContext中处理
+    }
   };
 
   if (!isOpen) return null;
@@ -212,9 +221,9 @@ function UserAccountModal({ isOpen, onClose, onLogout }) {
                 <span>{formatDateTime(user?.expireTime)}</span>
               </div>
             </div>
-            <div className="mt-6">
+              <div className="mt-6">
               <button
-                onClick={onLogout}
+                onClick={handleLogout}
                 disabled={loading}
                 className="w-full py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
               >
