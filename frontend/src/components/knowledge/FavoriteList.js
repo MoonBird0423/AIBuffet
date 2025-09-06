@@ -5,6 +5,19 @@ import { ToastManager } from '../common/Toast';
 import Tooltip from '../common/Tooltip';
 
 const FavoriteList = ({ knowledgeBaseId }) => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 检测移动端
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
   const truncateFileName = (fileName) => {
     if (fileName.length > 20) {
       const ext = fileName.split('.').pop();
@@ -72,11 +85,6 @@ const FavoriteList = ({ knowledgeBaseId }) => {
 
   return (
     <div className="space-y-4">
-      {/* 头部 */}
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">我的收藏</h2>
-        <p className="text-gray-600">您收藏的精选图书</p>
-      </div>
 
       {/* 收藏列表 */}
       {books.length === 0 ? (
@@ -85,40 +93,73 @@ const FavoriteList = ({ knowledgeBaseId }) => {
         </div>
       ) : (
         <>
-          {/* 图书列表 */}
-          {books.map(book => (
-            <div key={book.id} className="flex items-center p-6 bg-gray-50 rounded-2xl hover:shadow-lg transition-all duration-200">
-              <img 
-                src={book.coverUrl || '/default-cover.png'} 
-                alt={book.fileName}
-                className="w-16 h-20 object-cover rounded-lg"
-              />
-              <div className="flex-1 ml-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-1">
-                  <Tooltip content={book.fileName} position="top">
-                    <span 
-                      className="truncate block hover:text-blue-600 hover:underline transition-colors cursor-pointer"
-                      onClick={() => handleLearn(book.id)}
-                    >
-                      {truncateFileName(book.fileName)}
-                    </span>
-                  </Tooltip>
-                </h3>
-                <p className="text-gray-600 mb-2">{book.author || '未知作者'}</p>
-              </div>
-              <div className="flex space-x-3">
-                <button 
-                  onClick={() => {
-                    setSelectedBook(book);
-                    setShowConfirmModal(true);
-                  }}
-                  className="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200"
-                >
-                  取消收藏
-                </button>
-              </div>
+          {/* 移动端网格布局 */}
+          {isMobile ? (
+            <div className="grid grid-cols-3 gap-4">
+              {books.map(book => (
+                <div key={book.id} className="relative group">
+                  <div 
+                    className="aspect-[3/4] bg-gray-100 rounded-xl overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-200"
+                    onClick={() => handleLearn(book.id)}
+                  >
+                    <img 
+                      src={book.coverUrl || '/default-cover.png'} 
+                      alt={book.fileName}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {/* 移动端取消收藏按钮 */}
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedBook(book);
+                      setShowConfirmModal(true);
+                    }}
+                    className="absolute top-2 right-2 w-6 h-6 bg-black bg-opacity-50 text-white rounded-full flex items-center justify-center text-xs hover:bg-opacity-70 transition-all duration-200"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
             </div>
-          ))}
+          ) : (
+            /* PC端列表布局 */
+            <div className="space-y-4">
+              {books.map(book => (
+                <div key={book.id} className="flex items-center p-6 bg-gray-50 rounded-2xl hover:shadow-lg transition-all duration-200">
+                  <img 
+                    src={book.coverUrl || '/default-cover.png'} 
+                    alt={book.fileName}
+                    className="w-16 h-20 object-cover rounded-lg"
+                  />
+                  <div className="flex-1 ml-6">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-1">
+                      <Tooltip content={book.fileName} position="top">
+                        <span 
+                          className="truncate block hover:text-blue-600 hover:underline transition-colors cursor-pointer"
+                          onClick={() => handleLearn(book.id)}
+                        >
+                          {truncateFileName(book.fileName)}
+                        </span>
+                      </Tooltip>
+                    </h3>
+                    <p className="text-gray-600 mb-2">{book.author || '未知作者'}</p>
+                  </div>
+                  <div className="flex space-x-3">
+                    <button 
+                      onClick={() => {
+                        setSelectedBook(book);
+                        setShowConfirmModal(true);
+                      }}
+                      className="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200"
+                    >
+                      取消收藏
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* 分页 */}
           {totalPages > 1 && (

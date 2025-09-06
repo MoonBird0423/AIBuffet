@@ -13,6 +13,19 @@ function KnowledgeBaseContent({ knowledgeBase }) {
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [activeTab, setActiveTab] = useState('collections'); // 新增选项卡状态
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 检测移动端
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
 
   // 获取文件列表
   const fetchFiles = async () => {
@@ -82,51 +95,64 @@ function KnowledgeBaseContent({ knowledgeBase }) {
         {/* 我的上传选项卡 */}
         {activeTab === 'uploads' && (
           <div className="tab-content p-8">
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h2 className="text-3xl font-bold text-gray-900">我的上传</h2>
-                <p className="text-gray-600 mt-1">上传图书进行智能解读和对话</p>
-              </div>
-              <div className="flex space-x-3">
-                <button
-                  onClick={fetchFiles}
-                  className="floating-button bg-gray-100 text-gray-700 px-6 py-3 rounded-2xl font-medium hover:bg-gray-200 transition-all duration-200"
-                >
-                  <i className="fas fa-refresh mr-2"></i>
-                  刷新
-                </button>                <button
-                  onClick={() => setIsUploadModalOpen(true)}
-                  className="floating-button bg-gray-100 text-gray-700 px-6 py-3 rounded-2xl font-medium hover:bg-gray-200 transition-all duration-200"
-                >
-                  <i className="fas fa-plus mr-2"></i>
-                  上传图书
-                </button>
-              </div>
-            </div>
-
-            {/* 文件列表 */}
-            {error ? (
-              <div className="text-center py-8">
-                <p className="text-red-600 mb-4">{error}</p>
-                <button
-                  onClick={() => setError(null)}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
-                >
-                  重试
-                </button>
+            {/* 移动端友好提示 */}
+            {isMobile ? (
+              <div className="text-center py-16">
+                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-blue-100 to-purple-100 rounded-3xl flex items-center justify-center">
+                  <i className="fas fa-mobile-alt text-3xl text-gray-400"></i>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">移动端暂不支持上传</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  为了更好的上传体验，请在PC端上传管理图书<br />
+                </p>
               </div>
             ) : (
-              <FileList 
-                files={files}
-                isLoading={isLoading}
-                knowledgeBaseId={knowledgeBase.id}
-                onError={setError}
-                page={page}
-                pageSize={20}
-                total={total}
-                onPageChange={setPage}
-                onRefresh={fetchFiles}
-              />
+              /* PC端正常显示 */
+              <>
+                <div className="flex justify-end items-center mb-8">
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={fetchFiles}
+                      className="floating-button bg-gray-100 text-gray-700 px-6 py-3 rounded-2xl font-medium hover:bg-gray-200 transition-all duration-200"
+                    >
+                      <i className="fas fa-refresh mr-2"></i>
+                      刷新
+                    </button>
+                    <button
+                      onClick={() => setIsUploadModalOpen(true)}
+                      className="floating-button bg-gray-100 text-gray-700 px-6 py-3 rounded-2xl font-medium hover:bg-gray-200 transition-all duration-200"
+                    >
+                      <i className="fas fa-plus mr-2"></i>
+                      上传图书
+                    </button>
+                  </div>
+                </div>
+
+                {/* 文件列表 */}
+                {error ? (
+                  <div className="text-center py-8">
+                    <p className="text-red-600 mb-4">{error}</p>
+                    <button
+                      onClick={() => setError(null)}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+                    >
+                      重试
+                    </button>
+                  </div>
+                ) : (
+                  <FileList 
+                    files={files}
+                    isLoading={isLoading}
+                    knowledgeBaseId={knowledgeBase.id}
+                    onError={setError}
+                    page={page}
+                    pageSize={20}
+                    total={total}
+                    onPageChange={setPage}
+                    onRefresh={fetchFiles}
+                  />
+                )}
+              </>
             )}
           </div>
         )}

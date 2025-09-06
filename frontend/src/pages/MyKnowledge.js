@@ -90,7 +90,7 @@ function MyKnowledge() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row gap-8">
             {/* 左侧知识库列表 */}
-            <div className="lg:w-1/4">
+            <div className="w-full lg:w-1/4">
               <KnowledgeBaseList
                 knowledgeBases={knowledgeBases}
                 selectedKnowledgeBase={selectedKnowledgeBase}
@@ -100,7 +100,7 @@ function MyKnowledge() {
             </div>
             
             {/* 右侧内容区 */}
-            <div className="lg:w-3/4">
+            <div className="w-full lg:w-3/4">
               {selectedKnowledgeBase ? (
                 <KnowledgeBaseContent
                   knowledgeBase={selectedKnowledgeBase}
@@ -108,7 +108,10 @@ function MyKnowledge() {
               ) : (
                 <div className="bg-white rounded-3xl shadow-xl p-8 text-center text-gray-500">
                   {knowledgeBases.length === 0 ? 
-                    '暂无知识库，点击左侧"+"按钮创建新知识库' : 
+                    <div>
+                      <span className="hidden md:inline">暂无知识库，点击左侧"+"按钮创建新知识库</span>
+                      <span className="md:hidden">暂无知识库，请在PC端创建知识库</span>
+                    </div> : 
                     '请选择一个知识库'
                   }
                 </div>

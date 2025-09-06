@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../common/Modal';
 import Popover from '../common/Popover';
 import { createKnowledgeBase, updateKnowledgeBase, deleteKnowledgeBase } from '../../services/api';
@@ -10,6 +10,28 @@ function KnowledgeBaseList({ knowledgeBases = [], selectedKnowledgeBase, onSelec
   const [editingKnowledgeBase, setEditingKnowledgeBase] = useState(null);
   const [newKnowledgeBaseName, setNewKnowledgeBaseName] = useState('');
   const [error, setError] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 检测移动端
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  // 移动端下拉选择器处理函数
+  const handleMobileSelect = (e) => {
+    const selectedId = parseInt(e.target.value);
+    const selected = knowledgeBases.find(kb => kb.id === selectedId);
+    if (selected) {
+      onSelect(selected);
+    }
+  };
 
   const handleCreate = async () => {
     if (!newKnowledgeBaseName.trim()) {
@@ -84,101 +106,139 @@ function KnowledgeBaseList({ knowledgeBases = [], selectedKnowledgeBase, onSelec
       {/* 列表头部 */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-gray-900">我的知识库</h2>
-        <button 
-          onClick={() => setIsCreateModalOpen(true)}
-          className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center hover:shadow-lg transition-all duration-200"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-      </div>
-
-      {/* 知识库列表 */}
-      <div className="space-y-3">
-        {knowledgeBases.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-2xl flex items-center justify-center">
-              <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </div>
-            <p className="font-medium">暂无知识库</p>
-            <p className="mt-1 text-sm">点击右上角"+"按钮创建新知识库</p>
-          </div>
-        ) : (
-          knowledgeBases.map((knowledgeBase) => (
-            <div 
-              key={knowledgeBase.id}
-              onClick={() => onSelect(knowledgeBase)}
-              className={`knowledge-card rounded-2xl p-4 cursor-pointer transition-all duration-200 ${
-                selectedKnowledgeBase?.id === knowledgeBase.id 
-                  ? 'bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200' 
-                  : 'bg-gray-50 hover:bg-gray-100'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center flex-1">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mr-3 ${
-                    selectedKnowledgeBase?.id === knowledgeBase.id 
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
-                      : 'bg-white text-gray-600'
-                  }`}>
-                    <i className="fas fa-book-open"></i>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className={`font-medium truncate ${
-                      selectedKnowledgeBase?.id === knowledgeBase.id 
-                        ? 'text-blue-700' 
-                        : 'text-gray-900'
-                    }`}>
-                      {knowledgeBase.name}
-                    </h3>
-                  </div>
-                </div>                <div onClick={(e) => e.stopPropagation()}>
-                  <Popover
-                    trigger={
-                      <button 
-                        className="p-2 w-8 h-8 rounded-full text-gray-400 hover:text-gray-600 hover:bg-white"
-                      >
-                        <i className="fas fa-ellipsis-v"></i>
-                      </button>
-                    }
-                    content={                    <div className="py-1">
-                      <button
-                        onClick={() => openChatWindow({
-                          type: 'knowledge',
-                          id: knowledgeBase.id,
-                          name: knowledgeBase.name
-                        })}
-                        className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        <i className="fas fa-comments mr-2"></i>
-                        智能问答
-                      </button>
-                      <button
-                        onClick={() => handleEditClick(knowledgeBase)}
-                        className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        <i className="fas fa-edit mr-2"></i>
-                        编辑
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(knowledgeBase)}
-                        className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                      >
-                        <i className="fas fa-trash mr-2"></i>
-                        删除
-                      </button>
-                    </div>
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-          ))
+        {/* PC端显示新增按钮，移动端隐藏 */}
+        {!isMobile && (
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center hover:shadow-lg transition-all duration-200"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
         )}
       </div>
+
+      {/* 移动端下拉选择器 */}
+      {isMobile && knowledgeBases.length > 0 ? (
+        <div className="mb-4">
+          <select
+            value={selectedKnowledgeBase?.id || ''}
+            onChange={handleMobileSelect}
+            className="w-full px-4 py-3 border border-gray-300 rounded-2xl bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          >
+            <option value="">请选择知识库</option>
+            {knowledgeBases.map((knowledgeBase) => (
+              <option key={knowledgeBase.id} value={knowledgeBase.id}>
+                {knowledgeBase.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
+      {/* PC端知识库卡片列表 */}
+      {!isMobile && (
+        <div className="space-y-3">
+          {knowledgeBases.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-2xl flex items-center justify-center">
+                <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <p className="font-medium">暂无知识库</p>
+              <p className="mt-1 text-sm">点击右上角"+"按钮创建新知识库</p>
+            </div>
+          ) : (
+            knowledgeBases.map((knowledgeBase) => (
+              <div 
+                key={knowledgeBase.id}
+                onClick={() => onSelect(knowledgeBase)}
+                className={`knowledge-card rounded-2xl p-4 cursor-pointer transition-all duration-200 ${
+                  selectedKnowledgeBase?.id === knowledgeBase.id 
+                    ? 'bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200' 
+                    : 'bg-gray-50 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center flex-1">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center mr-3 ${
+                      selectedKnowledgeBase?.id === knowledgeBase.id 
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
+                        : 'bg-white text-gray-600'
+                    }`}>
+                      <i className="fas fa-book-open"></i>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`font-medium truncate ${
+                        selectedKnowledgeBase?.id === knowledgeBase.id 
+                          ? 'text-blue-700' 
+                          : 'text-gray-900'
+                      }`}>
+                        {knowledgeBase.name}
+                      </h3>
+                    </div>
+                  </div>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Popover
+                      trigger={
+                        <button 
+                          className="p-2 w-8 h-8 rounded-full text-gray-400 hover:text-gray-600 hover:bg-white"
+                        >
+                          <i className="fas fa-ellipsis-v"></i>
+                        </button>
+                      }
+                      content={
+                        <div className="py-1">
+                          <button
+                            onClick={() => openChatWindow({
+                              type: 'knowledge',
+                              id: knowledgeBase.id,
+                              name: knowledgeBase.name
+                            })}
+                            className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            <i className="fas fa-comments mr-2"></i>
+                            智能问答
+                          </button>
+                          <button
+                            onClick={() => handleEditClick(knowledgeBase)}
+                            className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            <i className="fas fa-edit mr-2"></i>
+                            编辑
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(knowledgeBase)}
+                            className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                          >
+                            <i className="fas fa-trash mr-2"></i>
+                            删除
+                          </button>
+                        </div>
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* 移动端空状态 */}
+      {isMobile && knowledgeBases.length === 0 && (
+        <div className="text-center py-12 text-gray-500">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-2xl flex items-center justify-center">
+            <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+          </div>
+          <p className="font-medium">暂无知识库</p>
+          <p className="mt-1 text-sm">请在PC端创建知识库</p>
+        </div>
+      )}
 
       {/* 创建知识库弹窗 */}
       <Modal
