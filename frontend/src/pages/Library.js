@@ -68,22 +68,9 @@ function Library() {
       // 计算当前页码
       const currentPage = isInitial ? 0 : Math.floor(documents.length / pageSize);
       
-      console.log('Library: 发送请求参数:', { page: currentPage, size: pageSize, ...params });
-      const startTime = performance.now();
       const response = await getDocuments(currentPage, pageSize, params);
-      const endTime = performance.now();
-      const networkTime = endTime - startTime;
-      
-      console.log('Library: 接收到响应:', response);
-      console.log(`Library: 请求耗时 ${networkTime.toFixed(2)}ms`);
       
       const newDocuments = response.data?.content || [];
-      
-      // 记录服务器处理耗时
-      if (response.data?.serverProcessTime) {
-        console.log(`Library: 服务器处理耗时 ${response.data.serverProcessTime}ms`);
-        console.log(`Library: 网络传输耗时 ${(networkTime - response.data.serverProcessTime).toFixed(2)}ms`);
-      }
       
       // 更新文档列表
       setDocuments(prev => isInitial ? newDocuments : [...prev, ...newDocuments]);
