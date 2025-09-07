@@ -36,8 +36,8 @@ function BookInfo({ bookData, onFavorite, onShare }) {
               <img
                 src={bookData.coverUrl}
                 alt={bookData.fileName}
-                className="w-60 object-cover rounded-xl shadow-2xl"
-                style={{height: '360px'}}
+                className="w-40 md:w-60 object-cover rounded-xl shadow-2xl"
+                style={{height: '240px md:360px'}}
                 onError={(e) => {
                   e.target.style.display = 'none';
                   e.target.nextElementSibling.style.display = 'flex';
@@ -45,29 +45,29 @@ function BookInfo({ bookData, onFavorite, onShare }) {
               />
             ) : null}
             <div 
-              className={`w-60 bg-white/20 backdrop-blur-sm rounded-xl shadow-2xl flex items-center justify-center ${bookData.coverUrl ? 'hidden' : ''}`}
-              style={{height: '360px'}}
+              className={`w-40 md:w-60 bg-white/20 backdrop-blur-sm rounded-xl shadow-2xl flex items-center justify-center ${bookData.coverUrl ? 'hidden' : ''}`}
+              style={{height: '240px md:360px'}}
             >
-              <BookOpenIcon className="h-20 w-20 text-white/70" />
+              <BookOpenIcon className="h-12 md:h-20 w-12 md:w-20 text-white/70" />
             </div>
           </div>
         </div>
 
         {/* 右侧图书信息 */}
         <div className="lg:w-2/3 p-4 md:p-8">
-          <div className="mb-6">
-            <h1 className="text-4xl font-bold text-white mb-4">{bookData.fileName}</h1>
-            <p className="text-xl text-white/80 mb-2">
+          <div className="mb-4 md:mb-6">
+            <h1 className="text-2xl md:text-4xl font-bold text-white mb-2 md:mb-4">{bookData.fileName}</h1>
+            <p className="text-base md:text-xl text-white/80 mb-2">
               {bookData.author || '未知作者'}
             </p>
-            <div className="flex items-center text-white/70">
+            <div className="flex items-center text-white/70 text-sm md:text-base">
               <i className="fas fa-heart mr-2"></i>
               <span>{(bookData.favoriteCount || 0).toLocaleString()}次收藏</span>
             </div>
           </div>
 
-          <div className="prose max-w-none mb-8">
-            <p className="text-white/90 text-lg leading-relaxed">
+          <div className="prose max-w-none mb-4 md:mb-8">
+            <p className="text-white/90 text-sm md:text-lg leading-relaxed">
               {bookData.description || '暂无简介'}
             </p>
           </div>

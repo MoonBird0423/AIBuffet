@@ -276,7 +276,7 @@ function BookDetails() {
       <div className="bg-gradient-to-tr from-[#667eea] to-[#764ba2] pb-4 md:pb-12">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           {/* 图书基本信息 */}
-          <div style={{paddingTop: '112px'}}>
+          <div className="pt-20 md:pt-28">
             <BookInfo 
               bookData={bookData} 
               onFavorite={handleFavoriteWithAuth}
@@ -290,9 +290,8 @@ function BookDetails() {
       <div className="bg-gray-50">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 pt-2 md:pt-6">
           {/* 主标题 */}
-          <div className="text-center mb-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">AI伴读，直达书魂</h3>
-            <div className="w-24 h-1 bg-gradient-to-r from-indigo-500 to-purple-500 mx-auto rounded-full"></div>
+          <div className="text-center mb-4 md:mb-6">
+            <h3 className="text-xl md:text-2xl font-bold text-gray-900">AI伴读，直达书魂</h3>
           </div>
 
           {/* 内容选项卡 */}
