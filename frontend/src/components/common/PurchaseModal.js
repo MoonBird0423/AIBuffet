@@ -197,8 +197,8 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/40">
       <div className="bg-gray-100 rounded-3xl shadow-2xl w-full max-w-5xl p-0 relative flex flex-col md:flex-row border border-gray-200 items-stretch">
-        {/* 左侧权益介绍卡片 */}
-        <div className="w-full md:w-1/3 flex items-center justify-center p-6 md:pr-3">
+        {/* 左侧权益介绍卡片 - 移动端隐藏 */}
+        <div className="w-full md:w-1/3 flex items-center justify-center p-6 md:pr-3 hidden md:flex">
           <div className="bg-white rounded-2xl w-full h-full flex flex-col items-center p-6">
             <div className="flex flex-col items-center mb-6">
               <img
@@ -227,21 +227,21 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
             </button>
           </div>
         </div>
-        {/* 右侧支付区卡片 */}
+        {/* 右侧支付区卡片 - 移动端全宽 */}
         <div className="w-full md:w-2/3 flex items-center justify-center p-6 md:pl-3">
-          <div className="bg-white rounded-2xl w-full h-full flex flex-col items-center p-6">
-            {/* 选项卡 */}
-            <div className="flex mb-8 justify-center w-full">
-              <div className="bg-gray-100 rounded-2xl p-2 w-full">
-                <div className="flex gap-2">
+          <div className="bg-white rounded-2xl w-full h-full flex flex-col items-center p-4 md:p-6">
+            {/* 选项卡间距优化 */}
+            <div className="flex mb-6 md:mb-8 justify-center w-full">
+              <div className="bg-gray-100 rounded-xl md:rounded-2xl p-1 md:p-2 w-full">
+                <div className="flex gap-1 md:gap-2">
                   <button
-                    className={`flex-1 py-3 text-2xl font-bold rounded-xl transition-colors ${type === 'vip' ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white' : 'text-orange-500'}`}
+                    className={`flex-1 py-2 md:py-3 text-xl md:text-2xl font-bold rounded-lg md:rounded-xl transition-colors ${type === 'vip' ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white' : 'text-orange-500'}`}
                     onClick={() => { setType('vip'); setPlanIdx(0); }}
                   >
                     VIP
                   </button>
                   <button
-                    className={`flex-1 py-3 text-2xl font-bold rounded-xl transition-colors ${type === 'svip' ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white' : 'text-orange-500'}`}
+                    className={`flex-1 py-2 md:py-3 text-xl md:text-2xl font-bold rounded-lg md:rounded-xl transition-colors ${type === 'svip' ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white' : 'text-orange-500'}`}
                     onClick={() => { setType('svip'); setPlanIdx(0); }}
                   >
                     SVIP
@@ -249,30 +249,30 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
                 </div>
               </div>
             </div>
-            {/* 周期选项 */}
-            <div className="flex mb-8 justify-center w-full gap-8 flex-wrap">
+            {/* 周期选项 - 移动端优化 */}
+            <div className="flex mb-6 md:mb-8 justify-center w-full gap-3 md:gap-8 flex-nowrap md:flex-wrap overflow-x-auto">
               {plans.map((p, i) => (
                 <div
                   key={i}
                   onClick={() => setPlanIdx(i)}
-                  className={`cursor-pointer flex-1 min-w-[8rem] max-w-[12rem] px-6 py-4 flex flex-col items-center rounded-2xl border-2 transition-all duration-200 ${planIdx === i ? 'border-yellow-400 bg-yellow-50' : 'border-gray-200 bg-white'}`}
-                  style={{ flexBasis: '0', flexGrow: 1 }}
+                  className={`cursor-pointer min-w-[6rem] md:min-w-[8rem] max-w-[9rem] md:max-w-[12rem] px-3 md:px-6 py-2 md:py-4 flex flex-col items-center rounded-xl md:rounded-2xl border-2 transition-all duration-200 ${planIdx === i ? 'border-yellow-400 bg-yellow-50' : 'border-gray-200 bg-white'}`}
+                  style={{ flexShrink: 0 }}
                 >
-                  <div className="font-bold text-lg text-gray-700 mb-1">{p.label}</div>
-                  <div className="text-3xl text-orange-600 font-extrabold mb-1">¥{p.price}</div>
+                  <div className="font-bold text-sm md:text-lg text-gray-700 mb-1">{p.label}</div>
+                  <div className="text-xl md:text-3xl text-orange-600 font-extrabold mb-1">¥{p.price}</div>
                   <div className="text-xs text-gray-400">{p.desc}</div>
                 </div>
               ))}
             </div>
-            {/* 价格展示 */}
-            <div className="mb-8 flex items-end justify-center gap-4">
-              <div className="text-5xl font-extrabold text-orange-600 text-center leading-none">¥{price}</div>
-              <div className="text-lg text-gray-500 mb-1">{save > 0 ? `节省${save}元` : ''}</div>
+            {/* 价格展示间距优化 */}
+            <div className="mb-5 md:mb-8 flex items-end justify-center gap-2 md:gap-4">
+              <div className="text-3xl md:text-5xl font-extrabold text-orange-600 text-center leading-none">¥{price}</div>
+              <div className="text-sm md:text-lg text-gray-500 mb-0 md:mb-1">{save > 0 ? `节省${save}元` : ''}</div>
             </div>
-            {/* 微信支付标识 */}
-            <div className="flex items-center justify-center mb-4">
-              <i className="fab fa-weixin text-green-500 text-2xl mr-2"></i>
-              <span className="text-lg font-semibold text-gray-700">微信支付</span>
+            {/* 微信支付标识优化 */}
+            <div className="flex items-center justify-center mb-3 md:mb-4">
+              <i className="fab fa-weixin text-green-500 text-xl md:text-2xl mr-1 md:mr-2"></i>
+              <span className="text-base md:text-lg font-semibold text-gray-700">微信支付</span>
             </div>
             
             {/* 支付状态和二维码展示 */}
@@ -300,14 +300,14 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
               <div className="flex flex-col items-center">
                 {payStatus === '未支付' && (
                   <>
-                    <div className="w-48 h-48 bg-white rounded-xl flex items-center justify-center text-xl mb-2 border border-gray-200">
+                    <div className="w-36 h-36 md:w-48 md:h-48 bg-white rounded-lg md:rounded-xl flex items-center justify-center text-base md:text-xl mb-1 md:mb-2 border border-gray-200">
                       {qrCodeDataUrl ? (
                         <img src={qrCodeDataUrl} alt="支付二维码" className="w-full h-full object-contain" />
                       ) : (
                         <span className="text-gray-400">二维码加载中...</span>
                       )}
                     </div>
-                    <div className="mt-1 text-gray-500 text-base">请使用微信扫码支付</div>
+                    <div className="mt-0 md:mt-1 text-gray-500 text-sm md:text-base">请使用微信扫码支付</div>
                     <div className="mt-2 text-sm text-gray-400">订单号: {order.outTradeNo}</div>
                   </>
                 )}

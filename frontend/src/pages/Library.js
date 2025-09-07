@@ -130,10 +130,10 @@ function Library() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4">
-              每日图书推荐
+              好书分享会
             </h1>
             <p className="text-xl text-white/90 mb-8">
-              定期更新精品图书，建议收藏网址
+              默默老师图书分享会，让阅读更有趣
             </p>
           </div>
           
