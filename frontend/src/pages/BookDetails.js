@@ -5,6 +5,8 @@ import { getDocument, getInterpretation, getMindmap, getQuiz, getAudioStatus } f
 import BookInfo from '../components/library/BookInfo';
 import BookTabs from '../components/library/BookTabs';
 import FavoriteModal from '../components/library/FavoriteModal';
+import UserLoginModal from '../components/auth/UserLoginModal';
+import { useAuth } from '../contexts/AuthContext';
 import { ToastManager } from '../components/common/Toast';
 
 function BookDetails() {
@@ -31,6 +33,11 @@ function BookDetails() {
   
   // 收藏相关状态
   const [showFavoriteModal, setShowFavoriteModal] = useState(false);
+
+  // 登录相关状态
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginSuccessCallback, setLoginSuccessCallback] = useState(null);
+  const { isAuthenticated } = useAuth();
 
   // 页面加载时滚动到顶部
   useEffect(() => {
@@ -189,6 +196,28 @@ function BookDetails() {
   };
 
   const handleTabChange = (tabKey) => {
+    // 检查是否需要登录的tab
+    const requiresLogin = tabKey === 'mindmap' || tabKey === 'quiz';
+    
+    if (requiresLogin && !isAuthenticated) {
+      // 显示登录弹窗，并设置登录成功后的回调
+      setLoginSuccessCallback(() => () => {
+        // 登录成功后重新加载该tab的内容
+        setActiveTab(tabKey);
+        const cacheKey = `${id}-${tabKey}`;
+        // 清除缓存，强制重新加载
+        setContentCache(prev => {
+          const newCache = { ...prev };
+          delete newCache[cacheKey];
+          return newCache;
+        });
+        setContentStatus('loading');
+        setTabContent(null);
+      });
+      setShowLoginModal(true);
+      return;
+    }
+    
     setActiveTab(tabKey);
     const cacheKey = `${id}-${tabKey}`;
     
@@ -278,6 +307,13 @@ function BookDetails() {
         bookId={id}
         isOpen={showFavoriteModal}
         onClose={() => setShowFavoriteModal(false)}
+      />
+
+      {/* 登录弹窗 */}
+      <UserLoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLoginSuccess={loginSuccessCallback}
       />
     </div>
   );

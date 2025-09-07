@@ -168,21 +168,13 @@ apiClient.interceptors.response.use(
       } catch (toastError) {
         console.warn('无法显示Toast提示:', toastError);
       }
-      const authUser = localStorage.getItem('auth_user');
-      if (authUser) {
-        if (!window.location.pathname.includes('/login')) {
-          localStorage.removeItem('auth_user');
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 1000);
-        }
-      } else {
-        if (!window.location.pathname.includes('/login')) {
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 1000);
-        }
+      
+      // 触发登录弹窗事件而不是重定向
+      // 只有在非登录页面才触发登录弹窗
+      if (!window.location.pathname.includes('/login')) {
+        window.dispatchEvent(new CustomEvent('showLoginModal'));
       }
+      
       throw new Error('认证失败，请重新登录');
     }
     return Promise.reject(error);

@@ -28,6 +28,7 @@ function AppContent() {
     showPurchaseModal, 
     hidePurchaseModal, 
     loginModal, 
+    showLoginModal,
     hideLoginModal,
     accountModal,
     hideAccountModal
@@ -46,6 +47,22 @@ function AppContent() {
       window.removeEventListener('showPurchaseModal', handleShowPurchaseModal);
     };
   }, [showPurchaseModal]);
+
+  // 监听全局登录弹窗事件
+  useEffect(() => {
+    const handleShowLoginModal = () => {
+      // 如果当前已经在登录页面，不触发弹窗
+      if (!window.location.pathname.includes('/login')) {
+        showLoginModal();
+      }
+    };
+
+    window.addEventListener('showLoginModal', handleShowLoginModal);
+    
+    return () => {
+      window.removeEventListener('showLoginModal', handleShowLoginModal);
+    };
+  }, [showLoginModal]);
 
   return (
     <AudioProvider>

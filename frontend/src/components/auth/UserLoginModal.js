@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import LoginForm from './LoginForm';
 import { FaWeixin, FaMobile } from 'react-icons/fa';
 
-function UserLoginModal({ isOpen, onClose }) {
+function UserLoginModal({ isOpen, onClose, onLoginSuccess }) {
   const [tab, setTab] = useState('wechat');
   const { login } = useAuth();
 
@@ -46,6 +46,9 @@ function UserLoginModal({ isOpen, onClose }) {
 
   const handleLoginSuccess = () => {
     onClose(); // 登录成功后关闭弹窗
+    if (onLoginSuccess) {
+      onLoginSuccess(); // 调用登录成功回调
+    }
   };
 
   if (!isOpen) return null;
@@ -53,7 +56,7 @@ function UserLoginModal({ isOpen, onClose }) {
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
-      <div className="relative z-50 bg-white rounded-lg p-6 w-[400px] max-h-[90vh] flex flex-col shadow-xl">
+      <div className="relative z-50 bg-white rounded-lg p-6 w-[420px] max-h-[90vh] flex flex-col shadow-xl">
         {/* 关闭按钮 */}
         <button
           onClick={onClose}
@@ -117,32 +120,30 @@ function UserLoginModal({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* 内容区 - 固定高度确保切换时高度不变 */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="h-[280px] flex items-center justify-center">
-            {tab === 'wechat' ? (
-              <div className="flex flex-col items-center justify-center w-full">
-                <div className="flex justify-center w-full overflow-hidden">
-                  <div style={{ width: 300, height: 220, position: 'relative' }}>
-                    <div 
-                      id="wechat-login-container-modal" 
-                      style={{ 
-                        width: '100%', 
-                        height: '100%', 
-                        background: 'transparent',
-                        overflow: 'hidden'
-                      }} 
-                    />
-                  </div>
+        {/* 内容区 - 参考登录页面布局 */}
+        <div>
+          {tab === 'wechat' ? (
+            <div className="flex flex-col items-center justify-center w-full">
+              <div className="flex justify-center w-full">
+                <div style={{ width: 300, height: 220, position: 'relative' }}>
+                  <div 
+                    id="wechat-login-container-modal" 
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      background: 'transparent',
+                      overflow: 'hidden'
+                    }} 
+                  />
                 </div>
-                <div className="text-xs text-gray-500 mt-4 text-center">使用微信扫一扫，快速登录/注册</div>
               </div>
-            ) : (
-              <div className="max-w-md w-full mx-auto">
-                <LoginForm onLoginSuccess={handleLoginSuccess} />
-              </div>
-            )}
-          </div>
+              <div className="text-xs text-gray-500 mt-4 text-center">使用微信扫一扫，快速登录/注册</div>
+            </div>
+          ) : (
+            <div className="max-w-md w-full mx-auto">
+              <LoginForm onLoginSuccess={handleLoginSuccess} />
+            </div>
+          )}
         </div>
 
       </div>
