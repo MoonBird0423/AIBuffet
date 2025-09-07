@@ -59,10 +59,8 @@ function Home() {
           {/* Main Title */}
           <div className="mb-3 md:mb-4 mt-6 md:mt-8 max-w-6xl mx-auto">
             <h1 className="text-4xl lg:text-7xl font-bold text-white leading-tight tracking-tight">
-              <span className="text-white">问书答意</span>
-              <span>，</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-300">
-                懂你所惑
+                听懂每一本好书
               </span>
             </h1>
           </div>
@@ -70,7 +68,7 @@ function Home() {
           {/* Subtitle */}
           <div className="mb-3 md:mb-4 max-w-5xl mx-auto">
             <p className="text-lg lg:text-2xl text-white/90 leading-relaxed mx-auto font-light">
-              AI生成语音解读、知识脑图、知识测试、知识问答，跨入高效阅读时代。
+              AI深度解读、关键脑图梳理、趣味测试巩固，把阅读变成一种享受​
             </p>
           </div>
 
