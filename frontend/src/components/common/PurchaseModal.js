@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { createOrder, getOrderStatus } from '../../services/api';
 import QRCode from 'qrcode';
+import UserLoginModal from '../auth/UserLoginModal';
 
 const BENEFITS = {
   vip: [
@@ -56,6 +57,13 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   const [pollingInterval, setPollingInterval] = useState(null);
   const [error, setError] = useState(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // 登录成功回调
+  const handleLoginSuccess = () => {
+    setShowLoginModal(false);
+    handleCreateOrder(); // 重新创建订单获取二维码
+  };
 
   // 创建订单
   const handleCreateOrder = async () => {
@@ -281,7 +289,7 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
                   )
                 ) : (
                   <button
-                    onClick={() => navigate('/login')}
+                    onClick={() => setShowLoginModal(true)}
                     className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-xl transition-colors"
                   >
                     立即登录
@@ -335,6 +343,13 @@ function PurchaseModal({ open, onClose, defaultType = 'vip' }) {
           <i className="fas fa-times"></i>
         </button>
       </div>
+
+      {/* 登录弹窗 */}
+      <UserLoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
     </div>
   );
 }

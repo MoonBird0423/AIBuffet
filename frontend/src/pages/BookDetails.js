@@ -241,6 +241,20 @@ function BookDetails() {
     }
   };
 
+  // 收藏功能登录处理
+  const handleFavoriteWithAuth = () => {
+    if (!isAuthenticated) {
+      // 未登录时，先打开登录弹窗，设置登录成功后的回调
+      setLoginSuccessCallback(() => () => {
+        setShowFavoriteModal(true); // 登录成功后打开收藏弹窗
+      });
+      setShowLoginModal(true);
+    } else {
+      // 已登录时，直接打开收藏弹窗
+      setShowFavoriteModal(true);
+    }
+  };
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
@@ -265,7 +279,7 @@ function BookDetails() {
           <div style={{paddingTop: '112px'}}>
             <BookInfo 
               bookData={bookData} 
-              onFavorite={() => setShowFavoriteModal(true)}
+              onFavorite={handleFavoriteWithAuth}
               onShare={handleShare}
             />
           </div>
