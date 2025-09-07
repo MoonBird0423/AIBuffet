@@ -5,9 +5,8 @@ const QuickQuestions = ({ type, onSelect, disabled }) => {
   const questions = type === 'knowledge' 
     ? ['帮我总结知识库内容']
     : [
-      '请帮我写一篇读后感',
-      '作者的背景、立场或核心论点是什么？', 
-      '阅读本书最大的收获可能是什么？'
+      '全书读后感',
+      '作者背景与论点'
     ];
 
   return (

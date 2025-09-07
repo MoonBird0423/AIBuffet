@@ -120,7 +120,7 @@ function Library() {
               好书分享会
             </h1>
             <p className="text-xl text-white/90 mb-8">
-              默默老师图书分享会，让阅读更有趣
+              语音解读让阅读更轻松
             </p>
           </div>
           
