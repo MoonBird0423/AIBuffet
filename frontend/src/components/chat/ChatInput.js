@@ -73,26 +73,26 @@ function ChatInput({ onSend, questionTarget, processing = false }) {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        {/* 输入框 */}
-        <div className="relative rounded-lg shadow-sm">
-          <textarea
-            ref={textareaRef}
-            rows="3"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="block w-full px-4 py-3 border-0 resize-none focus:ring-0 rounded-lg bg-white text-gray-900"
-            placeholder={!questionTarget ? "请先选择提问对象..." : "输入消息..."}
-          />
-        </div>
-        
-        {/* 底部工具栏 */}
-        <div className="flex items-center justify-end">
+        {/* 输入框和发送按钮在同一行 */}
+        <div className="flex items-center gap-2">
+          {/* 输入框 */}
+          <div className="relative flex-1 rounded-lg shadow-sm">
+            <textarea
+              ref={textareaRef}
+              rows="3"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="block w-full px-4 py-3 border-0 resize-none focus:ring-0 rounded-lg bg-white text-gray-900"
+              placeholder={!questionTarget ? "请先选择提问对象..." : "输入消息..."}
+            />
+          </div>
+          
           {/* 发送按钮 */}
           <button 
             type="submit"
             disabled={isSendDisabled || !message.trim()}
-            className={`p-2 rounded-full transition-colors ${
+            className={`p-3 rounded-full transition-colors ${
               !isSendDisabled && message.trim()
                 ? 'bg-blue-500 hover:bg-blue-600 text-white' 
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
