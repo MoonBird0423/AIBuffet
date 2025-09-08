@@ -70,15 +70,22 @@ export function AuthProvider({ children }) {
       console.error('Login data is missing token:', userData);
       return;
     }
+    
     // 构造完整的用户数据
     const completeUserData = {
       ...userData,
       token: userData.token  // 确保token存在
     };
-    // 先保存token到状态
+    
+    // 先保存token到localStorage（确保立即生效）
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(completeUserData));
+    
+    // 再设置React状态
     setUser(completeUserData);
-    // 等待状态和localStorage写入完成
-    await new Promise(r => setTimeout(r, 0));
+    
+    // 等待状态更新和localStorage写入完成
+    await new Promise(resolve => setTimeout(resolve, 0));
+    
     // 拉取用户详细信息并合并
     await fetchUserProfile();
   };
